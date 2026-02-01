@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 import type { ProjectWithRelations, TaskPriority, ProjectStatus } from "@/types";
 import type { Profile } from "@/types";
 import { PROJECT_STATUS_CONFIG, PRIORITY_CONFIG, PROJECT_COLORS } from "@/types";
+import { useProjectAssignees } from "@/hooks/use-project-assignees";
 
 interface SidebarRowProps {
   label: string;
@@ -63,6 +64,9 @@ export function PropertiesPanel({
   onShowMembers,
 }: PropertiesPanelProps) {
   const statusConfig = PROJECT_STATUS_CONFIG[project.status];
+
+  // Filter lead options to only show project members
+  const { assignableProfiles: leadProfiles } = useProjectAssignees(project.id, profiles);
 
   return (
     <div className="space-y-0">
@@ -163,7 +167,7 @@ export function PropertiesPanel({
                 <span>No lead</span>
               </div>
             </SelectItem>
-            {profiles.map((profile) => (
+            {leadProfiles.map((profile) => (
               <SelectItem key={profile.id} value={profile.id}>
                 <div className="flex items-center gap-2">
                   <Avatar className="h-5 w-5">
