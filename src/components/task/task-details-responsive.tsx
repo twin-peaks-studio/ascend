@@ -11,6 +11,7 @@ interface TaskDetailsResponsiveProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onUpdate: (data: UpdateTaskInput) => Promise<void>;
+  onDelete?: (taskId: string) => void;
   profiles: Profile[];
   projects: Project[];
   loading?: boolean;
@@ -25,6 +26,7 @@ export function TaskDetailsResponsive({
   open,
   onOpenChange,
   onUpdate,
+  onDelete,
   profiles,
   projects,
   loading = false,
@@ -38,6 +40,7 @@ export function TaskDetailsResponsive({
         open={open}
         onOpenChange={onOpenChange}
         onUpdate={onUpdate}
+        onDelete={onDelete}
         profiles={profiles}
         loading={loading}
       />
@@ -50,6 +53,7 @@ export function TaskDetailsResponsive({
       open={open}
       onOpenChange={onOpenChange}
       onUpdate={onUpdate}
+      onDelete={onDelete}
       profiles={profiles}
       projects={projects}
       loading={loading}

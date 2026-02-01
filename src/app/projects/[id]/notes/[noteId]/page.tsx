@@ -52,7 +52,7 @@ export default function NoteDetailPage() {
     unlinkTaskFromNote,
     loading: noteMutationLoading,
   } = useNoteMutations();
-  const { updateTask } = useTaskMutations();
+  const { updateTask, deleteTask } = useTaskMutations();
 
   // Local editing state
   const [title, setTitle] = useState("");
@@ -64,6 +64,7 @@ export default function NoteDetailPage() {
   // Task details dialog state
   const [showTaskDetails, setShowTaskDetails] = useState(false);
   const [selectedTask, setSelectedTask] = useState<TaskWithProject | null>(null);
+  const [deleteTaskConfirm, setDeleteTaskConfirm] = useState<string | null>(null);
 
   // Auto-save debounce timer
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -228,6 +229,25 @@ export default function NoteDetailPage() {
     },
     [selectedTask, updateTask, setNote, content, title]
   );
+
+  // Handle task delete confirmation
+  const handleDeleteTaskConfirm = useCallback(async () => {
+    if (!deleteTaskConfirm) return;
+    const success = await deleteTask(deleteTaskConfirm);
+    if (success) {
+      // Remove task from local state, preserving current content/title
+      setNote((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          content: content,
+          title: title,
+          tasks: prev.tasks.filter((t) => t.id !== deleteTaskConfirm),
+        };
+      });
+    }
+    setDeleteTaskConfirm(null);
+  }, [deleteTaskConfirm, deleteTask, setNote, content, title]);
 
   // Handle delete note
   const handleDelete = useCallback(async () => {
@@ -495,8 +515,38 @@ export default function NoteDetailPage() {
             }
           }}
           onUpdate={handleTaskDetailsUpdate}
+          onDelete={(taskId) => {
+            setShowTaskDetails(false);
+            setSelectedTask(null);
+            setDeleteTaskConfirm(taskId);
+          }}
         />
       )}
+
+      {/* Delete Task Confirmation */}
+      <AlertDialog
+        open={!!deleteTaskConfirm}
+        onOpenChange={(open) => !open && setDeleteTaskConfirm(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Task</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this task? This action cannot be
+              undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteTaskConfirm}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AppShell>
   );
 }

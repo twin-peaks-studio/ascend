@@ -124,34 +124,96 @@ export default function ProjectTasksPage() {
 
   // Handle delete confirmation
   const handleDeleteConfirm = useCallback(async () => {
-    if (!deleteConfirm) return;
-    const success = await deleteTask(deleteConfirm);
-    if (success) {
-      refetch();
-    }
+    if (!deleteConfirm || !project) return;
+
+    // Store the task for potential rollback
+    const taskToDelete = project.tasks.find((t) => t.id === deleteConfirm);
+
+    // Optimistically remove the task
+    setProject((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        tasks: prev.tasks.filter((t) => t.id !== deleteConfirm),
+      };
+    });
     setDeleteConfirm(null);
-  }, [deleteConfirm, deleteTask, refetch]);
+
+    // Attempt the actual deletion
+    const success = await deleteTask(deleteConfirm);
+    if (!success && taskToDelete) {
+      // Rollback on failure - restore the task
+      setProject((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          tasks: [...prev.tasks, taskToDelete],
+        };
+      });
+    }
+  }, [deleteConfirm, deleteTask, project, setProject]);
 
   // Handle archive
   const handleArchive = useCallback(
     async (taskId: string) => {
+      if (!project) return;
+
+      // Store the task for potential rollback
+      const taskToArchive = project.tasks.find((t) => t.id === taskId);
+
+      // Optimistically remove the task (archived tasks don't show in list)
+      setProject((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          tasks: prev.tasks.filter((t) => t.id !== taskId),
+        };
+      });
+
       const success = await archiveTask(taskId);
-      if (success) {
-        refetch();
+      if (!success && taskToArchive) {
+        // Rollback on failure
+        setProject((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            tasks: [...prev.tasks, taskToArchive],
+          };
+        });
       }
     },
-    [archiveTask, refetch]
+    [archiveTask, project, setProject]
   );
 
   // Handle mark as duplicate
   const handleMarkDuplicate = useCallback(
     async (taskId: string, isDuplicate: boolean) => {
+      // Optimistically update the task
+      setProject((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          tasks: prev.tasks.map((t) =>
+            t.id === taskId ? { ...t, is_duplicate: isDuplicate } : t
+          ),
+        };
+      });
+
       const success = await markAsDuplicate(taskId, isDuplicate);
-      if (success) {
-        refetch();
+      if (!success) {
+        // Rollback on failure
+        setProject((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            tasks: prev.tasks.map((t) =>
+              t.id === taskId ? { ...t, is_duplicate: !isDuplicate } : t
+            ),
+          };
+        });
       }
     },
-    [markAsDuplicate, refetch]
+    [markAsDuplicate, setProject]
   );
 
   // Handle add task (from column header or list view)
@@ -392,6 +454,10 @@ export default function ProjectTasksPage() {
         profiles={profiles}
         projects={[project as Project]}
         onUpdate={handleDetailsUpdate}
+        onDelete={(taskId) => {
+          setShowDetailsDialog(false);
+          setDeleteConfirm(taskId);
+        }}
       />
 
       {/* Delete confirmation dialog */}

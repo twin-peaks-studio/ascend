@@ -9,6 +9,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useSearch } from "@/hooks/use-search";
@@ -31,11 +41,12 @@ export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
   const { results, loading, search, clearResults } = useSearch();
   const { profiles } = useProfiles();
   const { projects } = useProjects();
-  const { updateTask } = useTaskMutations();
+  const { updateTask, deleteTask } = useTaskMutations();
 
   // Task details state
   const [selectedTask, setSelectedTask] = useState<TaskWithProject | null>(null);
   const [showTaskDetails, setShowTaskDetails] = useState(false);
+  const [deleteTaskConfirm, setDeleteTaskConfirm] = useState<string | null>(null);
 
   // Debounced search
   useEffect(() => {
@@ -98,6 +109,14 @@ export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
     },
     [selectedTask, updateTask, projects]
   );
+
+  // Handle task delete confirmation
+  const handleDeleteTaskConfirm = useCallback(async () => {
+    if (!deleteTaskConfirm) return;
+    await deleteTask(deleteTaskConfirm);
+    setDeleteTaskConfirm(null);
+    setSelectedTask(null);
+  }, [deleteTaskConfirm, deleteTask]);
 
   const hasResults = results.tasks.length > 0 || results.projects.length > 0;
   const showNoResults = query.trim() && !loading && !hasResults;
@@ -225,7 +244,36 @@ export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
         profiles={profiles}
         projects={projects}
         onUpdate={handleTaskUpdate}
+        onDelete={(taskId) => {
+          setShowTaskDetails(false);
+          setDeleteTaskConfirm(taskId);
+        }}
       />
+
+      {/* Delete task confirmation */}
+      <AlertDialog
+        open={!!deleteTaskConfirm}
+        onOpenChange={(open) => !open && setDeleteTaskConfirm(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Task</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this task? This action cannot be
+              undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteTaskConfirm}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

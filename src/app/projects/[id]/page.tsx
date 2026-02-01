@@ -77,7 +77,7 @@ export default function ProjectDetailPage() {
   const { profiles } = useProfiles();
   const { updateProject, deleteProject, loading: projectMutationLoading } =
     useProjectMutations();
-  const { createTask, updateTask, loading: taskMutationLoading } = useTaskMutations();
+  const { createTask, updateTask, deleteTask, loading: taskMutationLoading } = useTaskMutations();
   const { createDocument, deleteDocument, loading: documentMutationLoading } =
     useDocumentMutations();
   const { members } = useProjectMembers(projectId);
@@ -120,6 +120,7 @@ export default function ProjectDetailPage() {
   const [showMembersDialog, setShowMembersDialog] = useState(false);
   const [deleteProjectConfirm, setDeleteProjectConfirm] = useState(false);
   const [deleteDocumentId, setDeleteDocumentId] = useState<string | null>(null);
+  const [deleteTaskConfirm, setDeleteTaskConfirm] = useState<string | null>(null);
   const [showTaskDetails, setShowTaskDetails] = useState(false);
   const [selectedTask, setSelectedTask] = useState<TaskWithProject | null>(null);
 
@@ -258,6 +259,23 @@ export default function ProjectDetailPage() {
     },
     [selectedTask, project, updateTask, setProject]
   );
+
+  // Handle task delete confirmation
+  const handleDeleteTaskConfirm = useCallback(async () => {
+    if (!deleteTaskConfirm) return;
+    const success = await deleteTask(deleteTaskConfirm);
+    if (success) {
+      // Optimistically remove from project's tasks list
+      setProject((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          tasks: prev.tasks.filter((t) => t.id !== deleteTaskConfirm),
+        };
+      });
+    }
+    setDeleteTaskConfirm(null);
+  }, [deleteTaskConfirm, deleteTask, setProject]);
 
   // Handle task status toggle (for list view)
   const handleTaskStatusToggle = useCallback(
@@ -798,6 +816,10 @@ export default function ProjectDetailPage() {
         profiles={profiles}
         projects={[project as Project]}
         onUpdate={handleTaskDetailsUpdate}
+        onDelete={(taskId) => {
+          setShowTaskDetails(false);
+          setDeleteTaskConfirm(taskId);
+        }}
       />
 
       {/* Document create dialog */}
@@ -932,6 +954,31 @@ export default function ProjectDetailPage() {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteDocument}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete task confirmation */}
+      <AlertDialog
+        open={!!deleteTaskConfirm}
+        onOpenChange={(open) => !open && setDeleteTaskConfirm(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Task</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this task? This action cannot be
+              undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteTaskConfirm}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Delete

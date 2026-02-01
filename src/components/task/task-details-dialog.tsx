@@ -11,6 +11,7 @@ import {
   Paperclip,
   ChevronDown,
   ChevronRight,
+  Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -51,6 +52,7 @@ interface TaskDetailsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onUpdate: (data: UpdateTaskInput) => Promise<void>;
+  onDelete?: (taskId: string) => void;
   profiles: Profile[];
   projects: Project[];
   loading?: boolean;
@@ -81,6 +83,7 @@ export function TaskDetailsDialog({
   open,
   onOpenChange,
   onUpdate,
+  onDelete,
   profiles,
   projects,
   loading = false,
@@ -560,8 +563,24 @@ export function TaskDetailsDialog({
               </Select>
             </SidebarRow>
 
-            {/* Spacer to push created by to bottom */}
+            {/* Spacer to push delete and created by to bottom */}
             <div className="flex-1" />
+
+            {/* Delete button */}
+            {onDelete && (
+              <div className="pt-4 border-t border-border/40">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10"
+                  onClick={() => onDelete(task.id)}
+                  disabled={loading}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete task
+                </Button>
+              </div>
+            )}
 
             {/* Created by info */}
             {task.created_at && (

@@ -113,33 +113,61 @@ export default function TasksPage() {
   // Handle delete confirmation
   const handleDeleteConfirm = useCallback(async () => {
     if (!deleteConfirm) return;
-    const success = await deleteTask(deleteConfirm);
-    if (success) {
-      refetch();
-    }
+
+    // Store the task for potential rollback
+    const taskToDelete = tasks.find((t) => t.id === deleteConfirm);
+
+    // Optimistically remove the task
+    setTasks((prev) => prev.filter((t) => t.id !== deleteConfirm));
     setDeleteConfirm(null);
-  }, [deleteConfirm, deleteTask, refetch]);
+
+    // Attempt the actual deletion
+    const success = await deleteTask(deleteConfirm);
+    if (!success && taskToDelete) {
+      // Rollback on failure - restore the task
+      setTasks((prev) => [...prev, taskToDelete]);
+    }
+  }, [deleteConfirm, deleteTask, tasks, setTasks]);
 
   // Handle archive
   const handleArchive = useCallback(
     async (taskId: string) => {
+      // Store the task for potential rollback
+      const taskToArchive = tasks.find((t) => t.id === taskId);
+
+      // Optimistically remove the task (archived tasks don't show in list)
+      setTasks((prev) => prev.filter((t) => t.id !== taskId));
+
       const success = await archiveTask(taskId);
-      if (success) {
-        refetch();
+      if (!success && taskToArchive) {
+        // Rollback on failure
+        setTasks((prev) => [...prev, taskToArchive]);
       }
     },
-    [archiveTask, refetch]
+    [archiveTask, tasks, setTasks]
   );
 
   // Handle mark as duplicate
   const handleMarkDuplicate = useCallback(
     async (taskId: string, isDuplicate: boolean) => {
+      // Optimistically update the task
+      setTasks((prev) =>
+        prev.map((t) =>
+          t.id === taskId ? { ...t, is_duplicate: isDuplicate } : t
+        )
+      );
+
       const success = await markAsDuplicate(taskId, isDuplicate);
-      if (success) {
-        refetch();
+      if (!success) {
+        // Rollback on failure
+        setTasks((prev) =>
+          prev.map((t) =>
+            t.id === taskId ? { ...t, is_duplicate: !isDuplicate } : t
+          )
+        );
       }
     },
-    [markAsDuplicate, refetch]
+    [markAsDuplicate, setTasks]
   );
 
   // Handle add task (from column header or list view)
@@ -356,6 +384,10 @@ export default function TasksPage() {
         profiles={profiles}
         projects={projects}
         onUpdate={handleDetailsUpdate}
+        onDelete={(taskId) => {
+          setShowDetailsDialog(false);
+          setDeleteConfirm(taskId);
+        }}
       />
 
       {/* Delete confirmation dialog */}

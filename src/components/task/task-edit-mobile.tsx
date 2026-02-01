@@ -13,6 +13,7 @@ import {
   ChevronRight,
   MoreHorizontal,
   AlignLeft,
+  Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -35,6 +36,12 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import { FileUpload } from "@/components/shared/file-upload";
@@ -52,6 +59,7 @@ interface TaskEditMobileProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onUpdate: (data: UpdateTaskInput) => Promise<void>;
+  onDelete?: (taskId: string) => void;
   profiles: Profile[];
   loading?: boolean;
 }
@@ -121,6 +129,7 @@ export function TaskEditMobile({
   open,
   onOpenChange,
   onUpdate,
+  onDelete,
   profiles,
   loading = false,
 }: TaskEditMobileProps) {
@@ -257,13 +266,28 @@ export function TaskEditMobile({
           >
             <X className="h-5 w-5" />
           </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-          >
-            <MoreHorizontal className="h-5 w-5" />
-          </Button>
+          {onDelete && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                >
+                  <MoreHorizontal className="h-5 w-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onClick={() => onDelete(task.id)}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete task
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
 
         {/* Scrollable content */}
