@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useLayoutEffect } from "react";
+import { useState, useRef, useLayoutEffect, useEffect } from "react";
 import {
   Calendar,
   Flag,
@@ -31,6 +31,7 @@ import { PRIORITY_OPTIONS } from "@/types";
 import type { CreateTaskInput } from "@/lib/validation";
 import { getInitials } from "@/lib/profile-utils";
 import { formatDueDate } from "@/lib/date-utils";
+import { useProjectAssignees } from "@/hooks/use-project-assignees";
 
 interface QuickAddTaskProps {
   open: boolean;
@@ -116,8 +117,18 @@ function QuickAddTaskForm({
     return () => clearTimeout(timer);
   }, []);
 
+  // Get assignable profiles based on selected project
+  const { assignableProfiles, canAssign } = useProjectAssignees(projectId, profiles);
+
+  // Clear assignee if project changes and current assignee is not in the new project's members
+  useEffect(() => {
+    if (assigneeId && !canAssign(assigneeId)) {
+      setAssigneeId(null);
+    }
+  }, [assigneeId, canAssign, projectId]);
+
   const selectedProject = projectId ? projects.find((p) => p.id === projectId) : null;
-  const selectedAssignee = assigneeId ? profiles.find((p) => p.id === assigneeId) : null;
+  const selectedAssignee = assigneeId ? assignableProfiles.find((p) => p.id === assigneeId) : null;
   const priorityConfig = PRIORITY_OPTIONS.find((p) => p.value === priority) || PRIORITY_OPTIONS[2];
 
   const handleSubmit = async () => {
@@ -262,7 +273,7 @@ function QuickAddTaskForm({
             </Popover>
 
             {/* Assignee chip */}
-            {profiles.length > 0 && (
+            {assignableProfiles.length > 0 && (
               <Popover open={assigneeOpen} onOpenChange={setAssigneeOpen}>
                 <PopoverTrigger asChild>
                   {selectedAssignee ? (
@@ -303,7 +314,7 @@ function QuickAddTaskForm({
                     <span className="flex-1">Unassigned</span>
                     {!assigneeId && <Check className="h-4 w-4" />}
                   </button>
-                  {profiles.map((profile) => (
+                  {assignableProfiles.map((profile) => (
                     <button
                       key={profile.id}
                       type="button"

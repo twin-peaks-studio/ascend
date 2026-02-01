@@ -40,6 +40,7 @@ import { Button } from "@/components/ui/button";
 import { FileUpload } from "@/components/shared/file-upload";
 import { AttachmentsList } from "@/components/shared/attachments-list";
 import { useAttachments } from "@/hooks/use-attachments";
+import { useProjectAssignees } from "@/hooks/use-project-assignees";
 import type { TaskWithProject, Profile, TaskPriority } from "@/types";
 import { PRIORITY_DISPLAY_LONG } from "@/types";
 import type { UpdateTaskInput } from "@/lib/validation";
@@ -170,12 +171,16 @@ export function TaskEditMobile({
     setHasCheckedAttachments(false);
   }
 
+  // Get assignable profiles based on task's project
+  const { assignableProfiles, canAssign } = useProjectAssignees(task?.project_id || null, profiles);
+
   if (!task) return null;
 
   const priorityConfig = PRIORITY_DISPLAY_LONG[task.priority];
   const isCompleted = task.status === "done";
   const isTaskOverdue = task.due_date && isOverdue(task.due_date);
-  const assignee = profiles.find((p) => p.id === task.assignee_id);
+  const assignee = assignableProfiles.find((p) => p.id === task.assignee_id) ||
+    profiles.find((p) => p.id === task.assignee_id);
 
   // Determine which fields are empty (for chip display)
   const hasDescription = !!task.description;
@@ -219,7 +224,10 @@ export function TaskEditMobile({
   };
 
   const handleAssigneeChange = async (assigneeId: string) => {
-    await onUpdate({ assignee_id: assigneeId === "__none__" ? null : assigneeId });
+    const newAssigneeId = assigneeId === "__none__" ? null : assigneeId;
+    // Only allow if the assignee is valid for this project
+    if (newAssigneeId && !canAssign(newAssigneeId)) return;
+    await onUpdate({ assignee_id: newAssigneeId });
     setAssigneeSelectOpen(false);
   };
 
@@ -402,7 +410,7 @@ export function TaskEditMobile({
                     <span>Unassigned</span>
                   </div>
                 </SelectItem>
-                {profiles.map((profile) => (
+                {assignableProfiles.map((profile) => (
                   <SelectItem key={profile.id} value={profile.id}>
                     <div className="flex items-center gap-2">
                       <Avatar className="h-5 w-5">
@@ -509,7 +517,7 @@ export function TaskEditMobile({
                   </Popover>
                 )}
                 {/* Assignee chip with Popover - rendered separately for proper positioning */}
-                {!hasAssignee && (
+                {!hasAssignee && assignableProfiles.length > 0 && (
                   <Popover open={assigneeSelectOpen} onOpenChange={setAssigneeSelectOpen}>
                     <PopoverTrigger asChild>
                       <button
@@ -521,7 +529,7 @@ export function TaskEditMobile({
                       </button>
                     </PopoverTrigger>
                     <PopoverContent className="w-56 p-1" side="top" align="start">
-                      {profiles.map((profile) => (
+                      {assignableProfiles.map((profile) => (
                         <button
                           key={profile.id}
                           type="button"

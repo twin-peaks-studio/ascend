@@ -39,6 +39,7 @@ import { Button } from "@/components/ui/button";
 import { FileUpload } from "@/components/shared/file-upload";
 import { AttachmentsList } from "@/components/shared/attachments-list";
 import { useAttachments } from "@/hooks/use-attachments";
+import { useProjectAssignees } from "@/hooks/use-project-assignees";
 import type { TaskWithProject, Profile, TaskStatus, TaskPriority, Project } from "@/types";
 import { PRIORITY_DISPLAY_SHORT, STATUS_CONFIG } from "@/types";
 import type { UpdateTaskInput } from "@/lib/validation";
@@ -123,6 +124,9 @@ export function TaskDetailsDialog({
     setHasCheckedAttachments(false);
   }
 
+  // Get assignable profiles based on task's project
+  const { assignableProfiles, canAssign } = useProjectAssignees(task?.project_id || null, profiles);
+
   if (!task) return null;
 
   const priorityConfig = PRIORITY_DISPLAY_SHORT[task.priority];
@@ -150,7 +154,10 @@ export function TaskDetailsDialog({
   };
 
   const handleAssigneeChange = async (assigneeId: string) => {
-    await onUpdate({ assignee_id: assigneeId === "__none__" ? null : assigneeId });
+    const newAssigneeId = assigneeId === "__none__" ? null : assigneeId;
+    // Only allow if the assignee is valid for this project
+    if (newAssigneeId && !canAssign(newAssigneeId)) return;
+    await onUpdate({ assignee_id: newAssigneeId });
   };
 
   const handlePriorityChange = async (priority: string) => {
@@ -162,7 +169,14 @@ export function TaskDetailsDialog({
   };
 
   const handleProjectChange = async (projectId: string) => {
-    await onUpdate({ project_id: projectId === "__none__" ? null : projectId });
+    const newProjectId = projectId === "__none__" ? null : projectId;
+    // When project changes, we need to check if current assignee is still valid
+    // If not, we'll clear the assignee along with the project change
+    const updates: UpdateTaskInput = { project_id: newProjectId };
+
+    // Note: We'll let the parent component handle clearing the assignee
+    // since this dialog doesn't have access to the new project's members immediately
+    await onUpdate(updates);
   };
 
   const handleKeyDown = (
@@ -178,7 +192,8 @@ export function TaskDetailsDialog({
     }
   };
 
-  const assignee = profiles.find((p) => p.id === task.assignee_id);
+  const assignee = assignableProfiles.find((p) => p.id === task.assignee_id) ||
+    profiles.find((p) => p.id === task.assignee_id);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -422,7 +437,7 @@ export function TaskDetailsDialog({
                       <span>Unassigned</span>
                     </div>
                   </SelectItem>
-                  {profiles.map((profile) => (
+                  {assignableProfiles.map((profile) => (
                     <SelectItem key={profile.id} value={profile.id}>
                       <div className="flex items-center gap-1.5 text-xs">
                         <Avatar className="h-3.5 w-3.5">

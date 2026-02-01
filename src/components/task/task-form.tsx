@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
 import { AssigneeSelector } from "@/components/task/assignee-selector";
+import { useProjectAssignees } from "@/hooks/use-project-assignees";
 import type { Task, TaskStatus, TaskPriority, Project, Profile } from "@/types";
 import type { CreateTaskInput, UpdateTaskInput } from "@/lib/validation";
 
@@ -55,6 +56,17 @@ export function TaskForm({
   const [assigneeId, setAssigneeId] = useState<string | null>(
     initialData?.assignee_id || null
   );
+
+  // Get assignable profiles based on selected project
+  const effectiveProjectId = projectId === NO_PROJECT_VALUE ? null : projectId;
+  const { assignableProfiles, canAssign } = useProjectAssignees(effectiveProjectId, profiles);
+
+  // Clear assignee if project changes and current assignee is not in the new project's members
+  useEffect(() => {
+    if (assigneeId && !canAssign(assigneeId)) {
+      setAssigneeId(null);
+    }
+  }, [assigneeId, canAssign]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -195,7 +207,7 @@ export function TaskForm({
         <AssigneeSelector
           value={assigneeId}
           onChange={setAssigneeId}
-          profiles={profiles}
+          profiles={assignableProfiles}
           placeholder="Assign to someone (optional)"
         />
       </div>
