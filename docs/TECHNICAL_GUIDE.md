@@ -108,7 +108,12 @@ src/
 │   └── projects/
 │       ├── page.tsx             # Projects list (/projects)
 │       └── [id]/
-│           └── page.tsx         # Project detail (/projects/[id])
+│           ├── page.tsx         # Project detail (/projects/[id])
+│           └── notes/
+│               ├── create/
+│               │   └── page.tsx # Create note (/projects/[id]/notes/create)
+│               └── [noteId]/
+│                   └── page.tsx # Note detail (/projects/[id]/notes/[noteId])
 │
 ├── components/
 │   ├── ui/                      # shadcn/ui components
@@ -151,6 +156,11 @@ src/
 │   │   ├── project-dialog.tsx   # Create project modal
 │   │   └── properties-panel.tsx # Reusable properties sidebar component
 │   │
+│   ├── note/                    # Note-related components
+│   │   ├── index.ts             # Barrel exports
+│   │   ├── note-list-item.tsx   # Note card for project page list
+│   │   └── quick-add-note-task.tsx # Inline task creation from note
+│   │
 │   ├── shortcuts-dialog.tsx     # Keyboard shortcuts modal
 │   │
 │   └── shared/                  # Shared/reusable components
@@ -164,6 +174,7 @@ src/
 │   ├── use-projects.ts          # Project CRUD operations
 │   ├── use-tasks.ts             # Task CRUD operations
 │   ├── use-documents.ts         # Document CRUD operations
+│   ├── use-notes.ts             # Note CRUD operations + task linking
 │   ├── use-keyboard-shortcuts.ts # Global keyboard shortcuts
 │   ├── use-media-query.ts       # Responsive breakpoint detection
 │   └── use-sidebar.tsx          # Sidebar collapse state context
@@ -225,6 +236,18 @@ src/
                       │ type (TEXT)             │
                       │ created_at (TSTZ)       │
                       └─────────────────────────┘
+
+┌─────────────────────┐       ┌─────────────────────┐       ┌─────────────────────┐
+│       notes         │       │     note_tasks      │       │       tasks         │
+├─────────────────────┤       ├─────────────────────┤       ├─────────────────────┤
+│ id (PK, UUID)       │◄──────│ note_id (FK, UUID)  │       │ id (PK, UUID)       │
+│ project_id (FK,UUID)│       │ task_id (FK, UUID)  │──────►│ (see above)         │
+│ title (TEXT)        │       │ created_at (TSTZ)   │       └─────────────────────┘
+│ content (TEXT)      │       │ UNIQUE(note_id,     │
+│ created_by (FK,UUID)│       │        task_id)     │
+│ created_at (TSTZ)   │       └─────────────────────┘
+│ updated_at (TSTZ)   │
+└─────────────────────┘
 ```
 
 ### Table Definitions
@@ -300,6 +323,57 @@ CREATE TABLE project_documents (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 ```
+
+#### notes
+
+```sql
+CREATE TABLE notes (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  content TEXT,
+  created_by UUID NOT NULL REFERENCES auth.users(id),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+**Columns:**
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | UUID | PK, auto-generated | Unique identifier |
+| `project_id` | UUID | FK, NOT NULL | Parent project |
+| `title` | TEXT | NOT NULL | Note title |
+| `content` | TEXT | nullable | Rich text content (markdown) |
+| `created_by` | UUID | FK, NOT NULL | User who created the note |
+| `created_at` | TIMESTAMPTZ | auto | Creation timestamp |
+| `updated_at` | TIMESTAMPTZ | auto | Last update timestamp |
+
+#### note_tasks (Junction Table)
+
+```sql
+CREATE TABLE note_tasks (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  note_id UUID NOT NULL REFERENCES notes(id) ON DELETE CASCADE,
+  task_id UUID NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(note_id, task_id)
+);
+```
+
+**Purpose:** Many-to-many relationship between notes and tasks. When a task is created from a note, a record is inserted here to link them.
+
+**Columns:**
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | UUID | PK | Unique identifier |
+| `note_id` | UUID | FK, NOT NULL | Parent note |
+| `task_id` | UUID | FK, NOT NULL | Linked task |
+| `created_at` | TIMESTAMPTZ | auto | When the link was created |
+
+**Cascade Behavior:**
+- Deleting a note removes all `note_tasks` records (tasks remain)
+- Deleting a task removes all `note_tasks` records (notes remain)
 
 ### Row Level Security (RLS)
 
@@ -495,6 +569,26 @@ export interface ProjectDocument {
   type: DocumentType;
   created_at: string;
 }
+
+// Note types
+export interface Note {
+  id: string;
+  project_id: string;
+  title: string;
+  content: string | null;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface NoteWithProject extends Note {
+  project: Project | null;
+}
+
+export interface NoteWithRelations extends Note {
+  project: Project | null;
+  tasks: Task[];  // Tasks linked via note_tasks junction table
+}
 ```
 
 ### Database Types (`src/types/database.ts`)
@@ -581,6 +675,21 @@ export const createTaskSchema = z.object({
   status: taskStatusSchema.default("todo"),
   priority: taskPrioritySchema.default("medium"),
   position: z.number().int().min(0).default(0),
+});
+```
+
+#### Note Schemas
+
+```typescript
+export const createNoteSchema = z.object({
+  project_id: z.string().uuid("Invalid project ID"),
+  title: safeRequiredString(200),
+  content: safeOptionalString(50000),  // Allow longer content for rich notes
+});
+
+export const updateNoteSchema = z.object({
+  title: safeRequiredString(200).optional(),
+  content: safeOptionalString(50000),
 });
 ```
 
@@ -765,6 +874,64 @@ interface UseTasksReturn {
   deleteTask: (id: string) => Promise<boolean>;
   refetch: () => Promise<void>;
 }
+```
+
+### useNotes (`src/hooks/use-notes.ts`)
+
+Three hooks for note management:
+
+```typescript
+// Fetch notes for a project (used in project page)
+function useProjectNotes(projectId: string | null): {
+  notes: Note[];
+  loading: boolean;
+  error: Error | null;
+  refetch: () => Promise<void>;
+}
+
+// Fetch single note with linked tasks (used in note detail page)
+function useNote(noteId: string | null): {
+  note: NoteWithRelations | null;
+  setNote: Dispatch<SetStateAction<NoteWithRelations | null>>;
+  loading: boolean;
+  error: Error | null;
+  refetch: () => Promise<void>;
+}
+
+// Note mutations
+function useNoteMutations(): {
+  createNote: (input: CreateNoteInput) => Promise<Note | null>;
+  updateNote: (noteId: string, input: UpdateNoteInput) => Promise<Note | null>;
+  deleteNote: (noteId: string) => Promise<boolean>;
+  createTaskFromNote: (noteId: string, projectId: string, taskData: { title: string; description?: string }) => Promise<Task | null>;
+  linkTaskToNote: (noteId: string, taskId: string) => Promise<boolean>;
+  unlinkTaskFromNote: (noteId: string, taskId: string) => Promise<boolean>;
+  loading: boolean;
+}
+```
+
+**Key Implementation Details:**
+
+```typescript
+// createTaskFromNote creates a task AND links it to the note
+const createTaskFromNote = async (noteId, projectId, taskData) => {
+  // 1. Create task with project_id
+  const task = await supabase.from("tasks").insert({
+    project_id: projectId,
+    title: taskData.title,
+    status: "todo",
+    priority: "medium",
+    // ...
+  });
+
+  // 2. Link task to note via junction table
+  await supabase.from("note_tasks").insert({
+    note_id: noteId,
+    task_id: task.id,
+  });
+
+  return task;
+};
 ```
 
 ### useKeyboardShortcuts (`src/hooks/use-keyboard-shortcuts.ts`)

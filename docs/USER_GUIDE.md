@@ -11,11 +11,12 @@ A comprehensive guide to using Ascend, a modern project and task management appl
 3. [Navigation](#navigation)
 4. [Dashboard](#dashboard)
 5. [Projects](#projects)
-6. [Tasks & Kanban Board](#tasks--kanban-board)
-7. [Keyboard Shortcuts](#keyboard-shortcuts)
-8. [Dark Mode](#dark-mode)
-9. [Mobile Usage](#mobile-usage)
-10. [Tips & Best Practices](#tips--best-practices)
+6. [Notes](#notes)
+7. [Tasks & Kanban Board](#tasks--kanban-board)
+8. [Keyboard Shortcuts](#keyboard-shortcuts)
+9. [Dark Mode](#dark-mode)
+10. [Mobile Usage](#mobile-usage)
+11. [Tips & Best Practices](#tips--best-practices)
 
 ---
 
@@ -34,7 +35,8 @@ Ascend is a Linear-inspired task management application designed for focused, ef
 |---------|-------------|
 | **Project** | A container for multiple tasks with its own description, color, status, and attached documents |
 | **Task** | A work item that belongs to a project and moves through Kanban columns |
-| **Document** | A link, document reference, or note attached to a project |
+| **Note** | Meeting notes or documentation linked to a project, with the ability to create tasks directly from notes |
+| **Document** | A link, document reference, or resource attached to a project |
 | **Kanban Board** | Visual board showing all tasks organized by their current status |
 
 ---
@@ -57,7 +59,9 @@ When you first open Ascend, you'll see an empty dashboard. Here's how to get sta
 | `/` | Dashboard | Overview of all projects and tasks |
 | `/tasks` | Kanban Board | Visual task management with drag-and-drop |
 | `/projects` | Projects List | Browse and manage all projects |
-| `/projects/[id]` | Project Detail | View/edit a specific project and its task |
+| `/projects/[id]` | Project Detail | View/edit a specific project and its tasks |
+| `/projects/[id]/notes/create` | Create Note | Create a new note for a project |
+| `/projects/[id]/notes/[noteId]` | Note Detail | View/edit a note and manage linked tasks |
 
 ---
 
@@ -209,6 +213,97 @@ The properties sidebar is **collapsible** on desktop and tablet:
 - **Team** - View and manage team members
 
 All property changes save immediately when selected.
+
+**Notes Section (Collapsible):**
+- Click the section header to expand/collapse
+- Shows note count in the header (e.g., "Notes (3)")
+- Each note card displays title and last updated date
+- Click any note to open the note detail page
+- "Add Note" button to create new notes
+
+---
+
+## Notes
+
+Notes allow you to capture meeting notes, discussions, and documentation within a project. You can create tasks directly from notes, which automatically links them to both the note and the project.
+
+### Creating a Note
+
+1. Go to a project detail page (`/projects/[id]`)
+2. Expand the **Notes** section
+3. Click **"Add Note"** button
+4. Fill in the form:
+   - **Title** (required) - Name of the note
+   - **Content** (optional) - Rich text content with formatting support
+5. Click **"Create Note"** to save
+
+### Note Detail Page (`/projects/[id]/notes/[noteId]`)
+
+The note detail page provides a focused environment for editing notes and managing related tasks.
+
+#### Header
+- **Back button** - Returns to the project page
+- **Breadcrumb** - Shows project name / Notes
+- **Delete button** - Removes the note (tasks remain, just unlinked)
+
+#### Inline Editable Title
+- Click the title to enter edit mode
+- Press `Enter` to save, `Escape` to cancel
+- Changes save immediately
+
+#### Rich Text Content Editor
+- Full markdown support with formatting toolbar:
+  - **Bold** - Click B button or Cmd/Ctrl+B
+  - **Italic** - Click I button or Cmd/Ctrl+I
+  - **Bullet List** - Click list button
+  - **Numbered List** - Click numbered list button
+  - **Indent/Outdent** - Use arrow buttons
+  - **Link** - Click link button or Cmd/Ctrl+K
+- **Auto-save** - Changes save automatically after 1.5 seconds of inactivity
+- Shows "Changes are saved automatically" indicator
+
+#### Tasks from This Note Section (Collapsible)
+
+This section shows all tasks that were created from or linked to this note.
+
+**Task List:**
+- Each task displays:
+  - **Status toggle** - Click the circle to mark complete/incomplete
+  - **Title** - Click to open full task details dialog
+  - **Description preview** - If available
+  - **Priority badge** - Color-coded priority level
+  - **Unlink button** - Removes the task from this note (task still exists)
+
+**Quick Add Task:**
+- Click "Add a task from this note..." to expand the input
+- Enter a task title and press Enter or click Send
+- New task is automatically:
+  - Created with "To Do" status and "Medium" priority
+  - Linked to the current note
+  - Added to the project's task list
+
+**Task Details Dialog:**
+- Clicking a task title opens the same task details dialog used on the project and tasks pages
+- Edit title, description, status, priority, assignee, due date
+- Changes reflect immediately in the note's task list
+
+### Notes and Tasks Relationship
+
+| Feature | Behavior |
+|---------|----------|
+| **Task Visibility** | Tasks linked to a note appear in both the note's task list AND the project's task list |
+| **Creating from Note** | Creates task with note's project, links to both |
+| **Unlinking Task** | Removes from note's list only; task remains in project |
+| **Deleting Note** | Tasks remain but are unlinked from the note |
+| **Archiving Task** | Task no longer appears in note's task list |
+
+### Tips for Using Notes
+
+1. **Meeting Notes** - Create a note for each meeting, then add action items as tasks
+2. **Discussion Summaries** - Capture key decisions and create follow-up tasks
+3. **Research Documentation** - Document findings and create tasks for next steps
+4. **Use Rich Formatting** - Bullet lists and numbered lists help organize content
+5. **Link Related Tasks** - Tasks created from notes maintain a clear audit trail
 
 ---
 
