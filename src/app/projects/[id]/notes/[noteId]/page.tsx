@@ -7,7 +7,6 @@ import {
   ArrowLeft,
   Trash2,
   Check,
-  Circle,
   ChevronDown,
   ChevronRight,
   Unlink,
@@ -44,7 +43,7 @@ export default function NoteDetailPage() {
   const noteId = params.noteId as string;
 
   const { project, loading: projectLoading } = useProject(projectId);
-  const { note, setNote, loading: noteLoading, refetch: refetchNote } = useNote(noteId);
+  const { note, setNote, loading: noteLoading } = useNote(noteId);
   const { profiles } = useProfiles();
   const {
     updateNote,
@@ -126,11 +125,13 @@ export default function NoteDetailPage() {
       const newStatus: TaskStatus = task.status === "done" ? "todo" : "done";
       const result = await updateTask(task.id, { status: newStatus });
       if (result) {
-        // Optimistically update local state
+        // Optimistically update local state, preserving current content/title
         setNote((prev) => {
           if (!prev) return prev;
           return {
             ...prev,
+            content: content,
+            title: title,
             tasks: prev.tasks.map((t) =>
               t.id === task.id ? { ...t, status: newStatus } : t
             ),
@@ -138,7 +139,7 @@ export default function NoteDetailPage() {
         });
       }
     },
-    [updateTask, setNote]
+    [updateTask, setNote, content, title]
   );
 
   // Handle create task from note
@@ -151,17 +152,19 @@ export default function NoteDetailPage() {
       });
 
       if (newTask) {
-        // Add the new task to local state
+        // Add the new task to local state, preserving current content/title
         setNote((prev) => {
           if (!prev) return prev;
           return {
             ...prev,
+            content: content, // Preserve current content state
+            title: title, // Preserve current title state
             tasks: [newTask, ...prev.tasks],
           };
         });
       }
     },
-    [note, noteId, projectId, createTaskFromNote, setNote]
+    [note, noteId, projectId, createTaskFromNote, setNote, content, title]
   );
 
   // Handle unlink task from note
@@ -169,17 +172,19 @@ export default function NoteDetailPage() {
     async (taskId: string) => {
       const success = await unlinkTaskFromNote(noteId, taskId);
       if (success) {
-        // Remove task from local state
+        // Remove task from local state, preserving current content/title
         setNote((prev) => {
           if (!prev) return prev;
           return {
             ...prev,
+            content: content,
+            title: title,
             tasks: prev.tasks.filter((t) => t.id !== taskId),
           };
         });
       }
     },
-    [noteId, unlinkTaskFromNote, setNote]
+    [noteId, unlinkTaskFromNote, setNote, content, title]
   );
 
   // Handle opening task details dialog
@@ -203,11 +208,13 @@ export default function NoteDetailPage() {
 
       const result = await updateTask(selectedTask.id, data);
       if (result) {
-        // Optimistically update the task in local state
+        // Optimistically update the task in local state, preserving current content/title
         setNote((prev) => {
           if (!prev) return prev;
           return {
             ...prev,
+            content: content,
+            title: title,
             tasks: prev.tasks.map((t) =>
               t.id === selectedTask.id ? { ...t, ...data } : t
             ),
@@ -219,7 +226,7 @@ export default function NoteDetailPage() {
         );
       }
     },
-    [selectedTask, updateTask, setNote]
+    [selectedTask, updateTask, setNote, content, title]
   );
 
   // Handle delete note
@@ -229,20 +236,6 @@ export default function NoteDetailPage() {
       router.push(`/projects/${projectId}`);
     }
   }, [noteId, projectId, deleteNote, router]);
-
-  // Handle content blur (save immediately)
-  const handleContentBlur = useCallback(async () => {
-    // Clear any pending auto-save
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current);
-      saveTimeoutRef.current = null;
-    }
-
-    // Save immediately on blur
-    if (note && content !== note.content) {
-      await updateNote(noteId, { content });
-    }
-  }, [note, content, noteId, updateNote]);
 
   if (projectLoading || noteLoading) {
     return (
@@ -306,7 +299,7 @@ export default function NoteDetailPage() {
                       setIsEditingTitle(false);
                     }
                   }}
-                  className="text-2xl font-bold h-auto py-1 px-2 -ml-2"
+                  className="!text-2xl font-bold h-auto py-1 px-2 -ml-2"
                   autoFocus
                   maxLength={200}
                 />
@@ -335,9 +328,6 @@ export default function NoteDetailPage() {
           <MarkdownEditor
             value={content}
             onChange={handleContentChange}
-            onKeyDown={(e) => {
-              // Don't interfere with normal editing
-            }}
             placeholder="Start typing your notes... (supports **bold**, *italic*, - bullets)"
             rows={16}
             maxLength={50000}

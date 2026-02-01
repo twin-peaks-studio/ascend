@@ -67,18 +67,6 @@ export function AppShell({
   // Global keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Show shortcuts dialog on "?"
-      if (e.key === "?" && !e.ctrlKey && !e.metaKey && !e.altKey) {
-        e.preventDefault();
-        setShowShortcuts(true);
-      }
-
-      // Also support Cmd/Ctrl + / for shortcuts
-      if (e.key === "/" && (e.ctrlKey || e.metaKey)) {
-        e.preventDefault();
-        setShowShortcuts(true);
-      }
-
       // Cmd/Ctrl + K to open search (if not already in input)
       if (e.key === "k" && (e.ctrlKey || e.metaKey)) {
         const activeEl = document.activeElement;
