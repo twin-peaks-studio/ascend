@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { AppShell, Header } from "@/components/layout";
 import type { ViewMode } from "@/components/layout";
 import { KanbanBoard } from "@/components/board";
 import { TaskDialog, TaskDetailsResponsive, QuickAddTask, TaskListView } from "@/components/task";
+import { ProjectFilter } from "@/components/filters";
 import { useTasksByStatus, useTaskMutations } from "@/hooks/use-tasks";
 import { useProjects } from "@/hooks/use-projects";
 import { useProfiles } from "@/hooks/use-profiles";
@@ -53,6 +54,15 @@ export default function TasksPage() {
     setViewMode(mode);
     localStorage.setItem("tasks-view-mode", mode);
   }, []);
+
+  // Filter state
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+
+  // Filter tasks by selected project
+  const filteredTasks = useMemo(() => {
+    if (!selectedProjectId) return tasks;
+    return tasks.filter((task) => task.project_id === selectedProjectId);
+  }, [tasks, selectedProjectId]);
 
   // Dialog states
   const [showTaskDialog, setShowTaskDialog] = useState(false);
@@ -256,6 +266,15 @@ export default function TasksPage() {
       />
 
       <div className="p-4 md:p-6">
+        {/* Filters */}
+        <div className="mb-4 flex items-center gap-2">
+          <ProjectFilter
+            projects={projects as Project[]}
+            selectedProjectId={selectedProjectId}
+            onProjectChange={setSelectedProjectId}
+          />
+        </div>
+
         {loading ? (
           viewMode === "board" ? (
             <div className="flex h-[calc(100vh-10rem)] flex-nowrap gap-4 overflow-x-auto pb-2 md:grid md:grid-cols-3 md:overflow-visible md:pb-0">
@@ -277,7 +296,7 @@ export default function TasksPage() {
           )
         ) : viewMode === "board" ? (
           <KanbanBoard
-            tasks={tasks}
+            tasks={filteredTasks}
             projects={projects as Project[]}
             onTasksChange={setTasks}
             onTaskMove={handleTaskMove}
@@ -290,7 +309,7 @@ export default function TasksPage() {
           />
         ) : (
           <TaskListView
-            tasks={tasks}
+            tasks={filteredTasks}
             onTaskClick={handleOpenDetails}
             onStatusToggle={handleStatusToggle}
             onAddTask={handleAddTask}
