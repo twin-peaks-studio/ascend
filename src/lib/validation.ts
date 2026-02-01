@@ -41,6 +41,17 @@ const safeOptionalString = (maxLength: number = 2000) =>
     .optional();
 
 /**
+ * Safe optional long-form text (for descriptions, notes, etc.) with no practical limit.
+ * Sanitized but allows very large content for living documents.
+ */
+const safeLongText = () =>
+  z
+    .string()
+    .transform((val) => sanitizeStringPreserveChars(val))
+    .nullable()
+    .optional();
+
+/**
  * Safe URL that gets validated and sanitized
  */
 const safeUrl = z
@@ -68,7 +79,7 @@ export const projectPrioritySchema = z.enum(["low", "medium", "high", "urgent"])
  */
 export const createProjectSchema = z.object({
   title: safeRequiredString(100),
-  description: safeOptionalString(2000),
+  description: safeLongText(),
   status: projectStatusSchema.default("active"),
   priority: projectPrioritySchema.default("medium"),
   color: projectColorSchema,
@@ -81,7 +92,7 @@ export const createProjectSchema = z.object({
  */
 export const updateProjectSchema = z.object({
   title: safeRequiredString(100).optional(),
-  description: safeOptionalString(2000),
+  description: safeLongText(),
   status: projectStatusSchema.optional(),
   priority: projectPrioritySchema.optional(),
   color: projectColorSchema.optional(),
