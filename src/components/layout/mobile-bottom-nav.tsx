@@ -7,7 +7,6 @@ import {
   LayoutDashboard,
   CheckSquare,
   FolderKanban,
-  Search,
   Plus,
   Settings2,
   LayoutGrid,
@@ -117,13 +116,6 @@ export function MobileBottomNav({ onAddTask, viewMode, onViewModeChange }: Mobil
               })}
             </div>
 
-            {/* Search Button - Separate Circle */}
-            <button
-              className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-card/95 text-muted-foreground shadow-lg ring-1 ring-border/50 backdrop-blur-md transition-colors hover:text-foreground dark:bg-card/90"
-              aria-label="Search"
-            >
-              <Search className="h-5 w-5" />
-            </button>
           </div>
         </div>
       </nav>

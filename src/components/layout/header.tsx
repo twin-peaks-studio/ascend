@@ -1,6 +1,6 @@
 "use client";
 
-import { Moon, Sun, Plus, LogOut, LayoutGrid, List } from "lucide-react";
+import { Moon, Sun, Plus, LogOut, LayoutGrid, List, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -119,19 +119,14 @@ export function Header({
             </Button>
           )}
 
-          {/* Theme toggle */}
+          {/* Search button */}
           <Button
             variant="ghost"
             size="icon"
-            onClick={toggleTheme}
             className="h-9 w-9"
           >
-            {mounted && isDark ? (
-              <Sun className="h-5 w-5" />
-            ) : (
-              <Moon className="h-5 w-5" />
-            )}
-            <span className="sr-only">Toggle theme</span>
+            <Search className="h-5 w-5" />
+            <span className="sr-only">Search</span>
           </Button>
 
           {/* User menu */}
@@ -159,6 +154,14 @@ export function Header({
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={toggleTheme} className="cursor-pointer">
+                  {mounted && isDark ? (
+                    <Sun className="mr-2 h-4 w-4" />
+                  ) : (
+                    <Moon className="mr-2 h-4 w-4" />
+                  )}
+                  <span>{mounted && isDark ? "Light mode" : "Dark mode"}</span>
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={signOut} className="cursor-pointer">
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Log out</span>
