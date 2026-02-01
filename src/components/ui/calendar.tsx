@@ -51,11 +51,24 @@ function Calendar({
     }
   }, []);
 
+  // Handle touch events to enable scrolling on mobile
+  const handleTouchStart = React.useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+    // Stop propagation to prevent parent popover from intercepting
+    e.stopPropagation();
+  }, []);
+
+  const handleTouchMove = React.useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+    // Stop propagation to allow scrolling within this container
+    e.stopPropagation();
+  }, []);
+
   return (
     <div
       ref={scrollRef}
       onWheel={handleWheel}
-      className="max-h-[280px] overflow-y-scroll overscroll-contain"
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      className="max-h-[200px] overflow-y-scroll overscroll-contain"
       style={{
         WebkitOverflowScrolling: 'touch',
         touchAction: 'pan-y',
@@ -69,26 +82,26 @@ function Calendar({
         startMonth={startMonth}
         endMonth={endMonth}
         hideNavigation
-        className={cn("p-2", className)}
+        className={cn("p-3", className)}
         classNames={{
           months: "flex flex-col",
           month: "",
-          month_caption: "flex justify-start pt-3 pb-1 items-center",
-          caption_label: "text-xs font-semibold",
+          month_caption: "flex justify-start pt-4 pb-1 items-center",
+          caption_label: "text-sm font-semibold",
           month_grid: "w-full border-collapse",
           weekdays: "flex",
           weekday:
-            "text-muted-foreground rounded-md w-6 font-normal text-[0.65rem]",
+            "text-muted-foreground rounded-md w-7 font-normal text-xs",
           week: "flex w-full",
           day: cn(
-            "relative p-0 text-center text-xs focus-within:relative focus-within:z-20 [&:has([aria-selected])]:bg-accent [&:has([aria-selected].day-outside)]:bg-accent/50 [&:has([aria-selected].day-range-end)]:rounded-r-md",
+            "relative p-0 text-center text-sm focus-within:relative focus-within:z-20 [&:has([aria-selected])]:bg-accent [&:has([aria-selected].day-outside)]:bg-accent/50 [&:has([aria-selected].day-range-end)]:rounded-r-md",
             props.mode === "range"
               ? "[&:has(>.day-range-end)]:rounded-r-md [&:has(>.day-range-start)]:rounded-l-md first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md"
               : "[&:has([aria-selected])]:rounded-md"
           ),
           day_button: cn(
             buttonVariants({ variant: "ghost" }),
-            "h-6 w-6 p-0 font-normal text-xs aria-selected:opacity-100"
+            "h-7 w-7 p-0 font-normal text-sm aria-selected:opacity-100 touch-pan-y"
           ),
           range_start: "day-range-start",
           range_end: "day-range-end",

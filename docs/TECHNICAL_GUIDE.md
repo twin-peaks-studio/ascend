@@ -16,14 +16,15 @@ A comprehensive technical guide for developers working on the Ascend application
 8. [Security Implementation](#security-implementation)
 9. [Custom Hooks](#custom-hooks)
 10. [Component Architecture](#component-architecture)
-11. [Drag and Drop](#drag-and-drop)
-12. [Styling System](#styling-system)
-13. [State Management](#state-management)
-14. [Error Handling](#error-handling)
-15. [Performance Considerations](#performance-considerations)
-16. [Testing Guidelines](#testing-guidelines)
-17. [Deployment](#deployment)
-18. [Contributing](#contributing)
+11. [Calendar Date Picker](#calendar-date-picker)
+12. [Drag and Drop](#drag-and-drop)
+13. [Styling System](#styling-system)
+14. [State Management](#state-management)
+15. [Error Handling](#error-handling)
+16. [Performance Considerations](#performance-considerations)
+17. [Testing Guidelines](#testing-guidelines)
+18. [Deployment](#deployment)
+19. [Contributing](#contributing)
 
 ---
 
@@ -1329,6 +1330,170 @@ import { MarkdownRenderer } from "@/components/shared";
 - **Links**: `[text](url)`
 - **Code**: `` `inline code` ``
 - **Code blocks**: Triple backticks
+
+---
+
+## Calendar Date Picker
+
+The calendar date picker (`src/components/ui/calendar.tsx`) is a **delicate component** that requires special attention when modifying. It uses `react-day-picker` with custom scrolling behavior to provide a smooth, mobile-friendly date selection experience.
+
+### Architecture Overview
+
+```
+┌─────────────────────────────────────────┐
+│  Scroll Container (max-h-[200px])       │
+│  - overflow-y-scroll                     │
+│  - touch-action: pan-y                   │
+│  - WebkitOverflowScrolling: touch        │
+│  ┌─────────────────────────────────────┐ │
+│  │  DayPicker (12 months)              │ │
+│  │  - 6 months before current          │ │
+│  │  - Current month (scroll target)    │ │
+│  │  - 5 months after current           │ │
+│  │  - hideNavigation (scroll instead)  │ │
+│  │  - showOutsideDays (continuous)     │ │
+│  └─────────────────────────────────────┘ │
+└─────────────────────────────────────────┘
+```
+
+### Key Design Decisions
+
+1. **Vertical Scrolling Instead of Navigation Arrows**
+   - Renders 12 months in a single scrollable column
+   - Auto-scrolls to current month on mount (50% scroll position)
+   - More intuitive for touch devices
+   - No need for "previous/next" buttons
+
+2. **Continuous Week Display**
+   - `showOutsideDays={true}` ensures weeks display continuously across month boundaries
+   - When a month ends mid-week, days from the next month fill in the remaining cells
+   - Critical for maintaining correct day-of-week alignment
+
+3. **Touch-Optimized Scrolling**
+   - `touch-action: pan-y` on container enables vertical touch scrolling
+   - `touch-pan-y` class on day buttons allows scroll gestures to pass through
+   - Touch event handlers stop propagation to prevent popover interference
+
+### Critical Implementation Details
+
+#### Scroll Container Setup
+```typescript
+<div
+  ref={scrollRef}
+  onWheel={handleWheel}
+  onTouchStart={handleTouchStart}
+  onTouchMove={handleTouchMove}
+  className="max-h-[200px] overflow-y-scroll overscroll-contain"
+  style={{
+    WebkitOverflowScrolling: 'touch',  // Smooth momentum scrolling on iOS
+    touchAction: 'pan-y',               // Enable vertical touch scrolling
+    scrollbarWidth: 'thin',             // Subtle scrollbar
+  }}
+>
+```
+
+#### Auto-Scroll to Current Month
+```typescript
+React.useEffect(() => {
+  if (scrollRef.current) {
+    const scrollHeight = scrollRef.current.scrollHeight;
+    const clientHeight = scrollRef.current.clientHeight;
+    // Current month is at ~50% since we have 6 months before and 5 after
+    scrollRef.current.scrollTop = (scrollHeight - clientHeight) / 2;
+  }
+}, []);
+```
+
+#### Touch Event Handlers
+```typescript
+// Prevent parent popover from intercepting touch events
+const handleTouchStart = React.useCallback((e: React.TouchEvent) => {
+  e.stopPropagation();
+}, []);
+
+const handleTouchMove = React.useCallback((e: React.TouchEvent) => {
+  e.stopPropagation();
+}, []);
+```
+
+#### Day Button Touch Action
+```typescript
+day_button: cn(
+  buttonVariants({ variant: "ghost" }),
+  "h-7 w-7 p-0 font-normal text-sm aria-selected:opacity-100 touch-pan-y"
+  //                                                         ^^^^^^^^^^^
+  // CRITICAL: Allows vertical scroll gestures to pass through buttons
+),
+```
+
+### Sizing Reference
+
+Current element sizes (for ~20% larger than default shadcn):
+
+| Element | Size | Tailwind Class |
+|---------|------|----------------|
+| Container height | 200px | `max-h-[200px]` |
+| Day buttons | 28x28px | `h-7 w-7` |
+| Day text | 14px | `text-sm` |
+| Weekday width | 28px | `w-7` |
+| Weekday text | 12px | `text-xs` |
+| Month caption | 14px | `text-sm` |
+| Padding | 12px | `p-3` |
+
+Visible rows: ~5-6 weeks (varies by month structure)
+
+### Common Pitfalls (DO NOT)
+
+1. **DO NOT remove `showOutsideDays`**
+   - Weeks will have gaps when months end mid-week
+   - Day-of-week alignment will be broken
+
+2. **DO NOT change to single-month with navigation arrows**
+   - Loses the smooth scrolling UX
+   - Requires additional state management for month navigation
+   - Less intuitive on mobile
+
+3. **DO NOT remove touch event handlers**
+   - Touch scrolling will stop working in popovers/dialogs
+   - Parent components may intercept touch events
+
+4. **DO NOT remove `touch-pan-y` from day buttons**
+   - Touch scrolling will only work between buttons, not on them
+   - Users will struggle to scroll on mobile
+
+5. **DO NOT set `touch-action: none` on any child element**
+   - Breaks touch scrolling entirely
+
+### Testing Checklist
+
+When modifying the calendar, verify:
+
+- [ ] Desktop: Mouse wheel scrolling works smoothly
+- [ ] Desktop: Clicking dates selects them correctly
+- [ ] Mobile: Vertical finger swipe scrolls the calendar
+- [ ] Mobile: Tapping dates selects them (not just scrolls)
+- [ ] Popover: Calendar scrolls independently of page
+- [ ] Month transition: Days display continuously across month boundaries
+- [ ] Initial load: Calendar auto-scrolls to show current month
+- [ ] Selected date: Previously selected date shows highlighted when re-opening
+
+### Usage Locations
+
+The Calendar component is used in:
+- Task creation dialog (due date field)
+- Task edit dialog (due date field)
+- Task details dialog (due date field)
+- Project creation dialog (due date field)
+- Project detail page (due date field)
+- Mobile task edit drawer (due date field)
+
+All locations use the `DatePicker` wrapper (`src/components/ui/date-picker.tsx`) which wraps Calendar in a Popover.
+
+### Related Files
+
+- `src/components/ui/calendar.tsx` - Core calendar component
+- `src/components/ui/date-picker.tsx` - Popover wrapper for calendar
+- `src/components/ui/popover.tsx` - Popover primitive (may affect touch behavior)
 
 ---
 
