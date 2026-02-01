@@ -8,11 +8,13 @@ import {
   CheckSquare,
   FolderKanban,
   Plus,
-  Settings2,
   LayoutGrid,
   List,
   Check,
   Search,
+  ChevronRight,
+  X,
+  Filter,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -58,6 +60,8 @@ interface MobileBottomNavProps {
   onProjectChange?: (projectId: string | null) => void;
 }
 
+type FilterView = "main" | "project";
+
 export function MobileBottomNav({
   onAddTask,
   viewMode,
@@ -68,6 +72,7 @@ export function MobileBottomNav({
 }: MobileBottomNavProps) {
   const pathname = usePathname();
   const [showSettings, setShowSettings] = useState(false);
+  const [filterView, setFilterView] = useState<FilterView>("main");
   const [projectSearch, setProjectSearch] = useState("");
 
   // Only show settings button on tasks page
@@ -88,6 +93,29 @@ export function MobileBottomNav({
     [projects, selectedProjectId]
   );
 
+  // Count active filters
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (selectedProjectId) count++;
+    // Add future filters here (date, tags, etc.)
+    return count;
+  }, [selectedProjectId]);
+
+  // Reset filter view when sheet closes
+  const handleSheetChange = (open: boolean) => {
+    setShowSettings(open);
+    if (!open) {
+      setFilterView("main");
+      setProjectSearch("");
+    }
+  };
+
+  // Clear all filters
+  const handleClearAllFilters = () => {
+    onProjectChange?.(null);
+    // Clear future filters here
+  };
+
   return (
     <>
       {/* Floating Settings Button - visible on tasks page for mobile/tablet */}
@@ -97,13 +125,12 @@ export function MobileBottomNav({
           className="fixed bottom-28 left-4 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-card text-muted-foreground shadow-lg ring-1 ring-border/50 transition-transform hover:scale-105 active:scale-95 lg:hidden"
           aria-label="View options"
         >
-          <Settings2 className="h-5 w-5" />
-          {/* Filter active indicator dot */}
-          {selectedProjectId && (
-            <span
-              className="absolute -top-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-card"
-              style={{ backgroundColor: selectedProject?.color || "hsl(var(--primary))" }}
-            />
+          <Filter className="h-5 w-5" />
+          {/* Filter count badge */}
+          {activeFilterCount > 0 && (
+            <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-semibold text-primary-foreground">
+              {activeFilterCount}
+            </span>
           )}
         </button>
       )}
@@ -157,39 +184,170 @@ export function MobileBottomNav({
       </nav>
 
       {/* View Options Sheet */}
-      <Sheet open={showSettings} onOpenChange={(open) => {
-        setShowSettings(open);
-        if (!open) setProjectSearch("");
-      }}>
-        <SheetContent side="bottom" className="rounded-t-xl max-h-[80vh] overflow-y-auto">
-          <SheetHeader className="pb-4">
-            <SheetTitle>View Options</SheetTitle>
-          </SheetHeader>
+      <Sheet open={showSettings} onOpenChange={handleSheetChange}>
+        <SheetContent side="bottom" className="rounded-t-xl max-h-[80vh] overflow-hidden flex flex-col">
+          {/* Main View */}
+          {filterView === "main" && (
+            <>
+              <SheetHeader className="pb-2 flex-shrink-0">
+                <SheetTitle>View Options</SheetTitle>
+              </SheetHeader>
 
-          {/* Project Filter Section */}
-          {projects.length > 0 && (
-            <div className="mb-6">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
-                Filter by Project
-              </p>
+              {/* Active Filters Summary */}
+              {activeFilterCount > 0 && (
+                <div className="flex flex-wrap items-center gap-2 pb-4 border-b mb-4">
+                  <span className="text-xs text-muted-foreground">Active:</span>
+                  {selectedProject && (
+                    <button
+                      onClick={() => onProjectChange?.(null)}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                    >
+                      <div
+                        className="h-2.5 w-2.5 rounded-sm"
+                        style={{ backgroundColor: selectedProject.color }}
+                      />
+                      <span className="max-w-[100px] truncate">{selectedProject.title}</span>
+                      <X className="h-3 w-3" />
+                    </button>
+                  )}
+                  {/* Future filter chips go here */}
+                  <button
+                    onClick={handleClearAllFilters}
+                    className="text-xs text-muted-foreground hover:text-foreground underline"
+                  >
+                    Clear all
+                  </button>
+                </div>
+              )}
 
-              {/* Project Search */}
-              <div className="flex items-center gap-2 mb-2 px-1">
+              <div className="overflow-y-auto flex-1">
+                {/* Filters Section */}
+                <div className="mb-6">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
+                    Filters
+                  </p>
+
+                  {/* Project Filter Row */}
+                  {projects.length > 0 && (
+                    <button
+                      onClick={() => setFilterView("project")}
+                      className="flex items-center gap-3 w-full p-3 rounded-lg transition-colors hover:bg-muted"
+                    >
+                      <FolderKanban className="h-5 w-5 text-muted-foreground" />
+                      <div className="flex-1 text-left">
+                        <p className="font-medium">Project</p>
+                        <p className="text-xs text-muted-foreground">
+                          {selectedProject ? selectedProject.title : "All projects"}
+                        </p>
+                      </div>
+                      <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                    </button>
+                  )}
+
+                  {/* Future filters will go here as similar rows */}
+                  {/* Example: Date filter */}
+                  {/* <button className="flex items-center gap-3 w-full p-3 rounded-lg hover:bg-muted">
+                    <Calendar className="h-5 w-5 text-muted-foreground" />
+                    <div className="flex-1 text-left">
+                      <p className="font-medium">Due Date</p>
+                      <p className="text-xs text-muted-foreground">Any time</p>
+                    </div>
+                    <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                  </button> */}
+                </div>
+
+                {/* Layout Section */}
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
+                    Layout
+                  </p>
+                  <button
+                    onClick={() => {
+                      onViewModeChange?.("board");
+                      setShowSettings(false);
+                    }}
+                    className={cn(
+                      "flex items-center gap-3 w-full p-3 rounded-lg transition-colors",
+                      viewMode === "board"
+                        ? "bg-primary/10 text-primary"
+                        : "hover:bg-muted"
+                    )}
+                  >
+                    <LayoutGrid className="h-5 w-5" />
+                    <div className="flex-1 text-left">
+                      <p className="font-medium">Board</p>
+                      <p className="text-xs text-muted-foreground">Kanban-style columns</p>
+                    </div>
+                    {viewMode === "board" && <Check className="h-5 w-5" />}
+                  </button>
+                  <button
+                    onClick={() => {
+                      onViewModeChange?.("list");
+                      setShowSettings(false);
+                    }}
+                    className={cn(
+                      "flex items-center gap-3 w-full p-3 rounded-lg transition-colors",
+                      viewMode === "list"
+                        ? "bg-primary/10 text-primary"
+                        : "hover:bg-muted"
+                    )}
+                  >
+                    <List className="h-5 w-5" />
+                    <div className="flex-1 text-left">
+                      <p className="font-medium">List</p>
+                      <p className="text-xs text-muted-foreground">Simple task list</p>
+                    </div>
+                    {viewMode === "list" && <Check className="h-5 w-5" />}
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Project Selection View */}
+          {filterView === "project" && (
+            <>
+              <SheetHeader className="pb-2 flex-shrink-0">
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      setFilterView("main");
+                      setProjectSearch("");
+                    }}
+                    className="p-1 -ml-1 rounded-md hover:bg-muted"
+                  >
+                    <ChevronRight className="h-5 w-5 rotate-180" />
+                  </button>
+                  <SheetTitle>Select Project</SheetTitle>
+                </div>
+              </SheetHeader>
+
+              {/* Search Input */}
+              <div className="flex items-center gap-2 px-1 py-2 border-b mb-2 flex-shrink-0">
                 <Search className="h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search projects..."
                   value={projectSearch}
                   onChange={(e) => setProjectSearch(e.target.value)}
-                  className="h-9 border-0 p-0 shadow-none focus-visible:ring-0"
+                  className="h-9 border-0 p-0 shadow-none focus-visible:ring-0 text-base"
                 />
+                {projectSearch && (
+                  <button
+                    onClick={() => setProjectSearch("")}
+                    className="p-1 rounded-md hover:bg-muted"
+                  >
+                    <X className="h-4 w-4 text-muted-foreground" />
+                  </button>
+                )}
               </div>
 
-              <div className="space-y-1 max-h-[200px] overflow-y-auto">
+              {/* Project List */}
+              <div className="overflow-y-auto flex-1 space-y-1">
                 {/* All Projects option */}
                 <button
                   onClick={() => {
                     onProjectChange?.(null);
-                    setShowSettings(false);
+                    setFilterView("main");
                     setProjectSearch("");
                   }}
                   className={cn(
@@ -209,7 +367,7 @@ export function MobileBottomNav({
                     key={project.id}
                     onClick={() => {
                       onProjectChange?.(project.id);
-                      setShowSettings(false);
+                      setFilterView("main");
                       setProjectSearch("");
                     }}
                     className={cn(
@@ -231,58 +389,13 @@ export function MobileBottomNav({
                 ))}
 
                 {filteredProjects.length === 0 && projectSearch && (
-                  <p className="text-center text-sm text-muted-foreground py-4">
+                  <p className="text-center text-sm text-muted-foreground py-8">
                     No projects found
                   </p>
                 )}
               </div>
-            </div>
+            </>
           )}
-
-          {/* Layout Section */}
-          <div className="space-y-2">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
-              Layout
-            </p>
-            <button
-              onClick={() => {
-                onViewModeChange?.("board");
-                setShowSettings(false);
-              }}
-              className={cn(
-                "flex items-center gap-3 w-full p-3 rounded-lg transition-colors",
-                viewMode === "board"
-                  ? "bg-primary/10 text-primary"
-                  : "hover:bg-muted"
-              )}
-            >
-              <LayoutGrid className="h-5 w-5" />
-              <div className="flex-1 text-left">
-                <p className="font-medium">Board</p>
-                <p className="text-xs text-muted-foreground">Kanban-style columns</p>
-              </div>
-              {viewMode === "board" && <Check className="h-5 w-5" />}
-            </button>
-            <button
-              onClick={() => {
-                onViewModeChange?.("list");
-                setShowSettings(false);
-              }}
-              className={cn(
-                "flex items-center gap-3 w-full p-3 rounded-lg transition-colors",
-                viewMode === "list"
-                  ? "bg-primary/10 text-primary"
-                  : "hover:bg-muted"
-              )}
-            >
-              <List className="h-5 w-5" />
-              <div className="flex-1 text-left">
-                <p className="font-medium">List</p>
-                <p className="text-xs text-muted-foreground">Simple task list</p>
-              </div>
-              {viewMode === "list" && <Check className="h-5 w-5" />}
-            </button>
-          </div>
         </SheetContent>
       </Sheet>
     </>
