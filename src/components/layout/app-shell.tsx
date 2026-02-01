@@ -6,13 +6,16 @@ import { useState, useCallback, useEffect } from "react";
 import { ShortcutsDialog } from "../shortcuts-dialog";
 import { useSidebar } from "@/hooks/use-sidebar";
 import { cn } from "@/lib/utils";
+import type { ViewMode } from "./header";
 
 interface AppShellProps {
   children: React.ReactNode;
   onAddTask?: () => void;
+  viewMode?: ViewMode;
+  onViewModeChange?: (mode: ViewMode) => void;
 }
 
-export function AppShell({ children, onAddTask }: AppShellProps) {
+export function AppShell({ children, onAddTask, viewMode, onViewModeChange }: AppShellProps) {
   const [showShortcuts, setShowShortcuts] = useState(false);
   const { isCollapsed } = useSidebar();
 
@@ -55,7 +58,11 @@ export function AppShell({ children, onAddTask }: AppShellProps) {
       </main>
 
       {/* Mobile/Tablet bottom navigation (visible below lg breakpoint) */}
-      <MobileBottomNav onAddTask={onAddTask} />
+      <MobileBottomNav
+        onAddTask={onAddTask}
+        viewMode={viewMode}
+        onViewModeChange={onViewModeChange}
+      />
 
       {/* Shortcuts dialog */}
       <ShortcutsDialog open={showShortcuts} onOpenChange={setShowShortcuts} />

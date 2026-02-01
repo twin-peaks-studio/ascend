@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -8,8 +9,19 @@ import {
   FolderKanban,
   Search,
   Plus,
+  Settings2,
+  LayoutGrid,
+  List,
+  Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import type { ViewMode } from "./header";
 
 interface NavItem {
   href: string;
@@ -37,13 +49,30 @@ const navItems: NavItem[] = [
 
 interface MobileBottomNavProps {
   onAddTask?: () => void;
+  viewMode?: ViewMode;
+  onViewModeChange?: (mode: ViewMode) => void;
 }
 
-export function MobileBottomNav({ onAddTask }: MobileBottomNavProps) {
+export function MobileBottomNav({ onAddTask, viewMode, onViewModeChange }: MobileBottomNavProps) {
   const pathname = usePathname();
+  const [showSettings, setShowSettings] = useState(false);
+
+  // Only show settings button on tasks page
+  const showSettingsButton = pathname === "/tasks";
 
   return (
     <>
+      {/* Floating Settings Button - visible on tasks page for mobile/tablet */}
+      {showSettingsButton && (
+        <button
+          onClick={() => setShowSettings(true)}
+          className="fixed bottom-28 left-4 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-card text-muted-foreground shadow-lg ring-1 ring-border/50 transition-transform hover:scale-105 active:scale-95 lg:hidden"
+          aria-label="View options"
+        >
+          <Settings2 className="h-5 w-5" />
+        </button>
+      )}
+
       {/* Floating Add Button - visible on mobile and tablet (below lg) */}
       <button
         onClick={onAddTask}
@@ -98,6 +127,58 @@ export function MobileBottomNav({ onAddTask }: MobileBottomNavProps) {
           </div>
         </div>
       </nav>
+
+      {/* View Options Sheet */}
+      <Sheet open={showSettings} onOpenChange={setShowSettings}>
+        <SheetContent side="bottom" className="rounded-t-xl">
+          <SheetHeader className="pb-4">
+            <SheetTitle>View Options</SheetTitle>
+          </SheetHeader>
+          <div className="space-y-2">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
+              Layout
+            </p>
+            <button
+              onClick={() => {
+                onViewModeChange?.("board");
+                setShowSettings(false);
+              }}
+              className={cn(
+                "flex items-center gap-3 w-full p-3 rounded-lg transition-colors",
+                viewMode === "board"
+                  ? "bg-primary/10 text-primary"
+                  : "hover:bg-muted"
+              )}
+            >
+              <LayoutGrid className="h-5 w-5" />
+              <div className="flex-1 text-left">
+                <p className="font-medium">Board</p>
+                <p className="text-xs text-muted-foreground">Kanban-style columns</p>
+              </div>
+              {viewMode === "board" && <Check className="h-5 w-5" />}
+            </button>
+            <button
+              onClick={() => {
+                onViewModeChange?.("list");
+                setShowSettings(false);
+              }}
+              className={cn(
+                "flex items-center gap-3 w-full p-3 rounded-lg transition-colors",
+                viewMode === "list"
+                  ? "bg-primary/10 text-primary"
+                  : "hover:bg-muted"
+              )}
+            >
+              <List className="h-5 w-5" />
+              <div className="flex-1 text-left">
+                <p className="font-medium">List</p>
+                <p className="text-xs text-muted-foreground">Simple task list</p>
+              </div>
+              {viewMode === "list" && <Check className="h-5 w-5" />}
+            </button>
+          </div>
+        </SheetContent>
+      </Sheet>
     </>
   );
 }

@@ -241,7 +241,11 @@ export default function TasksPage() {
   };
 
   return (
-    <AppShell onAddTask={handleQuickCreate}>
+    <AppShell
+      onAddTask={handleQuickCreate}
+      viewMode={viewMode}
+      onViewModeChange={handleViewModeChange}
+    >
       <Header
         title="Tasks"
         description={viewMode === "board" ? "Manage your tasks with the Kanban board" : "View all your tasks"}
