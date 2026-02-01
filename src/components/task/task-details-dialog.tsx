@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { format, isToday, isTomorrow, isPast } from "date-fns";
 import {
   Circle,
   CheckCircle2,
@@ -41,21 +40,10 @@ import { FileUpload } from "@/components/shared/file-upload";
 import { AttachmentsList } from "@/components/shared/attachments-list";
 import { useAttachments } from "@/hooks/use-attachments";
 import type { TaskWithProject, Profile, TaskStatus, TaskPriority, Project } from "@/types";
+import { PRIORITY_DISPLAY_SHORT, STATUS_CONFIG } from "@/types";
 import type { UpdateTaskInput } from "@/lib/validation";
-
-// Todoist-style priority mapping
-const PRIORITY_DISPLAY: Record<TaskPriority, { label: string; color: string }> = {
-  urgent: { label: "P1", color: "text-red-500" },
-  high: { label: "P2", color: "text-orange-500" },
-  medium: { label: "P3", color: "text-blue-500" },
-  low: { label: "P4", color: "text-muted-foreground" },
-};
-
-const STATUS_DISPLAY: Record<TaskStatus, string> = {
-  todo: "To Do",
-  "in-progress": "In Progress",
-  done: "Done",
-};
+import { getInitials } from "@/lib/profile-utils";
+import { formatDueDate, isOverdue } from "@/lib/date-utils";
 
 interface TaskDetailsDialogProps {
   task: TaskWithProject | null;
@@ -65,34 +53,6 @@ interface TaskDetailsDialogProps {
   profiles: Profile[];
   projects: Project[];
   loading?: boolean;
-}
-
-/**
- * Get initials from profile for avatar
- */
-function getInitials(displayName: string | null, email: string | null): string {
-  if (displayName) {
-    return displayName
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
-  }
-  if (email) {
-    return email[0].toUpperCase();
-  }
-  return "?";
-}
-
-/**
- * Format due date in Todoist style
- */
-function formatDueDate(dateString: string): string {
-  const date = new Date(dateString);
-  if (isToday(date)) return "Today";
-  if (isTomorrow(date)) return "Tomorrow";
-  return format(date, "MMM d");
 }
 
 /**
@@ -165,9 +125,9 @@ export function TaskDetailsDialog({
 
   if (!task) return null;
 
-  const priorityConfig = PRIORITY_DISPLAY[task.priority];
+  const priorityConfig = PRIORITY_DISPLAY_SHORT[task.priority];
   const isCompleted = task.status === "done";
-  const isOverdue = task.due_date && isPast(new Date(task.due_date)) && !isToday(new Date(task.due_date));
+  const isTaskOverdue = task.due_date && isOverdue(task.due_date);
 
   const handleTitleSave = async () => {
     if (title.trim() && title !== task.title) {
@@ -486,7 +446,7 @@ export function TaskDetailsDialog({
                   <button
                     className={cn(
                       "flex items-center gap-1.5 hover:bg-muted/50 -mx-1.5 px-1.5 py-0.5 rounded w-full text-left text-xs",
-                      isOverdue && "text-red-500"
+                      isTaskOverdue && "text-red-500"
                     )}
                     disabled={loading}
                   >
@@ -574,7 +534,7 @@ export function TaskDetailsDialog({
               >
                 <SelectTrigger className="border-0 p-0 h-auto shadow-none focus:ring-0 hover:bg-muted/50 -mx-1.5 px-1.5 rounded min-h-0 text-xs">
                   <SelectValue>
-                    <span>{STATUS_DISPLAY[task.status]}</span>
+                    <span>{STATUS_CONFIG[task.status].label}</span>
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>

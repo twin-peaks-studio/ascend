@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import type { Profile } from "@/types";
+import { getProfileInitials, getDisplayName } from "@/lib/profile-utils";
 
 interface AssigneeSelectorProps {
   value?: string | null;
@@ -20,31 +21,6 @@ interface AssigneeSelectorProps {
   placeholder?: string;
   disabled?: boolean;
   className?: string;
-}
-
-/**
- * Get initials from display name or email
- */
-function getInitials(profile: Profile): string {
-  if (profile.display_name) {
-    return profile.display_name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
-  }
-  if (profile.email) {
-    return profile.email[0].toUpperCase();
-  }
-  return "?";
-}
-
-/**
- * Get display name for profile
- */
-function getDisplayName(profile: Profile): string {
-  return profile.display_name || profile.email || "Unknown User";
 }
 
 // Sentinel value for "unassigned" since SelectItem cannot have empty string
@@ -96,7 +72,7 @@ export function AssigneeSelector({
                 <Avatar className="h-5 w-5">
                   <AvatarImage src={selectedProfile.avatar_url || undefined} />
                   <AvatarFallback className="text-xs">
-                    {getInitials(selectedProfile)}
+                    {getProfileInitials(selectedProfile)}
                   </AvatarFallback>
                 </Avatar>
                 <span className="truncate">{getDisplayName(selectedProfile)}</span>
@@ -122,7 +98,7 @@ export function AssigneeSelector({
                 <Avatar className="h-5 w-5">
                   <AvatarImage src={profile.avatar_url || undefined} />
                   <AvatarFallback className="text-xs">
-                    {getInitials(profile)}
+                    {getProfileInitials(profile)}
                   </AvatarFallback>
                 </Avatar>
                 <span>{getDisplayName(profile)}</span>
@@ -163,7 +139,7 @@ export function AssigneeAvatar({
   return (
     <Avatar className={cn("h-6 w-6", className)} title={getDisplayName(profile)}>
       <AvatarImage src={profile.avatar_url || undefined} />
-      <AvatarFallback className="text-xs">{getInitials(profile)}</AvatarFallback>
+      <AvatarFallback className="text-xs">{getProfileInitials(profile)}</AvatarFallback>
     </Avatar>
   );
 }

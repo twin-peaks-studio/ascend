@@ -3,7 +3,6 @@
 import { useRef, useEffect } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { format, isPast, isToday } from "date-fns";
 import { GripVertical, MoreHorizontal, Copy, Archive, Trash2, Pencil, Calendar } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
@@ -19,43 +18,8 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import type { TaskWithProject } from "@/types";
 import { PRIORITY_CONFIG } from "@/types";
-
-/**
- * Get initials from profile for avatar
- */
-function getInitials(displayName: string | null, email: string | null): string {
-  if (displayName) {
-    return displayName
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
-  }
-  if (email) {
-    return email[0].toUpperCase();
-  }
-  return "?";
-}
-
-/**
- * Format due date for display
- */
-function formatDueDate(dateString: string): string {
-  const date = new Date(dateString);
-  if (isToday(date)) {
-    return "Today";
-  }
-  return format(date, "MMM d");
-}
-
-/**
- * Check if due date is overdue
- */
-function isOverdue(dateString: string): boolean {
-  const date = new Date(dateString);
-  return isPast(date) && !isToday(date);
-}
+import { getInitials } from "@/lib/profile-utils";
+import { formatDueDate, isOverdue } from "@/lib/date-utils";
 
 interface TaskCardProps {
   task: TaskWithProject;

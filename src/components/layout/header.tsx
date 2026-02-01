@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useEffect, useState, useLayoutEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
+import { getInitials } from "@/lib/profile-utils";
 
 interface HeaderProps {
   title: string;
@@ -34,18 +35,6 @@ export function Header({
   const { user, profile, signOut } = useAuth();
   const [isDark, setIsDark] = useState(false);
   const [mounted, setMounted] = useState(false);
-
-  const getInitials = (name: string | null | undefined, email: string | null | undefined) => {
-    if (name) {
-      return name
-        .split(" ")
-        .map((n) => n[0])
-        .join("")
-        .toUpperCase()
-        .slice(0, 2);
-    }
-    return email?.slice(0, 2).toUpperCase() || "??";
-  };
 
   // Initialize theme from localStorage or system preference
   useIsomorphicLayoutEffect(() => {

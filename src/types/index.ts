@@ -121,6 +121,36 @@ export const PRIORITY_CONFIG = {
 } as const;
 
 /**
+ * Todoist-style priority display (P1-P4 format) for compact views
+ */
+export const PRIORITY_DISPLAY_SHORT = {
+  urgent: { label: "P1", color: "text-red-500" },
+  high: { label: "P2", color: "text-orange-500" },
+  medium: { label: "P3", color: "text-blue-500" },
+  low: { label: "P4", color: "text-muted-foreground" },
+} as const;
+
+/**
+ * Extended priority display with background colors for mobile/detailed views
+ */
+export const PRIORITY_DISPLAY_LONG = {
+  urgent: { label: "Priority 1", color: "text-red-500", bgColor: "bg-red-500/10" },
+  high: { label: "Priority 2", color: "text-orange-500", bgColor: "bg-orange-500/10" },
+  medium: { label: "Priority 3", color: "text-blue-500", bgColor: "bg-blue-500/10" },
+  low: { label: "Priority 4", color: "text-muted-foreground", bgColor: "bg-muted" },
+} as const;
+
+/**
+ * Priority options array for select/dropdown components
+ */
+export const PRIORITY_OPTIONS = [
+  { value: "urgent" as const, label: "Priority 1", color: "text-red-500" },
+  { value: "high" as const, label: "Priority 2", color: "text-orange-500" },
+  { value: "medium" as const, label: "Priority 3", color: "text-blue-500" },
+  { value: "low" as const, label: "Priority 4", color: "text-muted-foreground" },
+] as const;
+
+/**
  * Status configuration for UI display
  */
 export const STATUS_CONFIG = {

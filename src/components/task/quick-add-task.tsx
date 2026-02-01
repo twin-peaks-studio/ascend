@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useRef, useLayoutEffect } from "react";
-import { format, isToday, isTomorrow } from "date-fns";
 import {
   Calendar,
   Flag,
@@ -28,15 +27,10 @@ import {
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import type { Project, Profile, TaskPriority } from "@/types";
+import { PRIORITY_OPTIONS } from "@/types";
 import type { CreateTaskInput } from "@/lib/validation";
-
-// Priority display mapping matching Todoist style
-const PRIORITY_OPTIONS: { value: TaskPriority; label: string; color: string }[] = [
-  { value: "urgent", label: "Priority 1", color: "text-red-500" },
-  { value: "high", label: "Priority 2", color: "text-orange-500" },
-  { value: "medium", label: "Priority 3", color: "text-blue-500" },
-  { value: "low", label: "Priority 4", color: "text-muted-foreground" },
-];
+import { getInitials } from "@/lib/profile-utils";
+import { formatDueDate } from "@/lib/date-utils";
 
 interface QuickAddTaskProps {
   open: boolean;
@@ -45,33 +39,6 @@ interface QuickAddTaskProps {
   projects: Project[];
   profiles: Profile[];
   loading?: boolean;
-}
-
-/**
- * Get initials from profile for avatar
- */
-function getInitials(displayName: string | null, email: string | null): string {
-  if (displayName) {
-    return displayName
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
-  }
-  if (email) {
-    return email[0].toUpperCase();
-  }
-  return "?";
-}
-
-/**
- * Format due date in human-readable style
- */
-function formatDueDate(date: Date): string {
-  if (isToday(date)) return "Today";
-  if (isTomorrow(date)) return "Tomorrow";
-  return format(date, "MMM d");
 }
 
 /**

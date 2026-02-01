@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useRef, forwardRef } from "react";
-import { format, isToday, isTomorrow, isPast } from "date-fns";
 import {
   Circle,
   CheckCircle2,
@@ -42,15 +41,10 @@ import { FileUpload } from "@/components/shared/file-upload";
 import { AttachmentsList } from "@/components/shared/attachments-list";
 import { useAttachments } from "@/hooks/use-attachments";
 import type { TaskWithProject, Profile, TaskPriority } from "@/types";
+import { PRIORITY_DISPLAY_LONG } from "@/types";
 import type { UpdateTaskInput } from "@/lib/validation";
-
-// Priority display mapping
-const PRIORITY_DISPLAY: Record<TaskPriority, { label: string; color: string; bgColor: string }> = {
-  urgent: { label: "Priority 1", color: "text-red-500", bgColor: "bg-red-500/10" },
-  high: { label: "Priority 2", color: "text-orange-500", bgColor: "bg-orange-500/10" },
-  medium: { label: "Priority 3", color: "text-blue-500", bgColor: "bg-blue-500/10" },
-  low: { label: "Priority 4", color: "text-muted-foreground", bgColor: "bg-muted" },
-};
+import { getInitials } from "@/lib/profile-utils";
+import { formatDueDate, isOverdue } from "@/lib/date-utils";
 
 interface TaskEditMobileProps {
   task: TaskWithProject | null;
@@ -59,34 +53,6 @@ interface TaskEditMobileProps {
   onUpdate: (data: UpdateTaskInput) => Promise<void>;
   profiles: Profile[];
   loading?: boolean;
-}
-
-/**
- * Get initials from profile for avatar
- */
-function getInitials(displayName: string | null, email: string | null): string {
-  if (displayName) {
-    return displayName
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
-  }
-  if (email) {
-    return email[0].toUpperCase();
-  }
-  return "?";
-}
-
-/**
- * Format due date in human-readable style
- */
-function formatDueDate(dateString: string): string {
-  const date = new Date(dateString);
-  if (isToday(date)) return "Today";
-  if (isTomorrow(date)) return "Tomorrow";
-  return format(date, "MMM d");
 }
 
 /**
@@ -206,9 +172,9 @@ export function TaskEditMobile({
 
   if (!task) return null;
 
-  const priorityConfig = PRIORITY_DISPLAY[task.priority];
+  const priorityConfig = PRIORITY_DISPLAY_LONG[task.priority];
   const isCompleted = task.status === "done";
-  const isOverdue = task.due_date && isPast(new Date(task.due_date)) && !isToday(new Date(task.due_date));
+  const isTaskOverdue = task.due_date && isOverdue(task.due_date);
   const assignee = profiles.find((p) => p.id === task.assignee_id);
 
   // Determine which fields are empty (for chip display)
@@ -396,7 +362,7 @@ export function TaskEditMobile({
             <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
               <PopoverTrigger asChild>
                 <PropertyRow icon={Calendar}>
-                  <span className={cn("text-sm", isOverdue && !isCompleted && "text-red-500")}>
+                  <span className={cn("text-sm", isTaskOverdue && !isCompleted && "text-red-500")}>
                     {formatDueDate(task.due_date!)}
                   </span>
                 </PropertyRow>
