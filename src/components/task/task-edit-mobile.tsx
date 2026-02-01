@@ -410,7 +410,7 @@ export function TaskEditMobile({
                   </div>
                 </div>
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent position="popper" side="top" align="start">
                 <SelectItem value="__none__">
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <User className="h-4 w-4" />
@@ -452,7 +452,7 @@ export function TaskEditMobile({
                 </div>
               </div>
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent position="popper" side="top" align="start">
               <SelectItem value="urgent">
                 <div className="flex items-center gap-2 text-red-500">
                   <Flag className="h-4 w-4" />
@@ -529,7 +529,7 @@ export function TaskEditMobile({
               onOpenChange={setAssigneeSelectOpen}
             >
               <SelectTrigger className="hidden" />
-              <SelectContent>
+              <SelectContent position="popper" side="top" align="start">
                 {profiles.map((profile) => (
                   <SelectItem key={profile.id} value={profile.id}>
                     <div className="flex items-center gap-2">
