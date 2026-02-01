@@ -12,6 +12,15 @@ import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import type { Note, NoteWithRelations, Task } from "@/types";
 import type { NoteInsert, NoteUpdate, NoteTaskInsert } from "@/types/database";
+
+/**
+ * Type for the junction table query result when fetching tasks linked to a note.
+ * Supabase returns this shape when we select `task:tasks(*)` from note_tasks.
+ */
+interface NoteTaskJoinResult {
+  task_id: string;
+  task: Task | null;
+}
 import {
   createNoteSchema,
   updateNoteSchema,
@@ -116,9 +125,9 @@ export function useNote(noteId: string | null) {
       if (noteTasksError) throw noteTasksError;
 
       // Extract tasks from the junction table results, filtering out archived tasks
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const tasks = (noteTasksData || [])
-        .map((nt: any) => nt.task as Task | null)
+      const joinResults = (noteTasksData || []) as unknown as NoteTaskJoinResult[];
+      const tasks = joinResults
+        .map((nt) => nt.task)
         .filter((task): task is Task => task !== null && !task.is_archived);
 
       setNote({
