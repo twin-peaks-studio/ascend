@@ -26,8 +26,8 @@ interface AppShellProps {
   viewMode?: ViewMode;
   onViewModeChange?: (mode: ViewMode) => void;
   projects?: Project[];
-  selectedProjectId?: string | null;
-  onProjectChange?: (projectId: string | null) => void;
+  selectedProjectIds?: string[];
+  onProjectsChange?: (projectIds: string[]) => void;
 }
 
 export function AppShell({
@@ -36,8 +36,8 @@ export function AppShell({
   viewMode,
   onViewModeChange,
   projects,
-  selectedProjectId,
-  onProjectChange,
+  selectedProjectIds,
+  onProjectsChange,
 }: AppShellProps) {
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
@@ -102,8 +102,8 @@ export function AppShell({
           viewMode={viewMode}
           onViewModeChange={onViewModeChange}
           projects={projects}
-          selectedProjectId={selectedProjectId}
-          onProjectChange={onProjectChange}
+          selectedProjectIds={selectedProjectIds}
+          onProjectsChange={onProjectsChange}
         />
 
         {/* Shortcuts dialog */}

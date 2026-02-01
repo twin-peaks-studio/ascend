@@ -55,14 +55,14 @@ export default function TasksPage() {
     localStorage.setItem("tasks-view-mode", mode);
   }, []);
 
-  // Filter state
-  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  // Filter state - now supports multiple projects
+  const [selectedProjectIds, setSelectedProjectIds] = useState<string[]>([]);
 
-  // Filter tasks by selected project
+  // Filter tasks by selected projects
   const filteredTasks = useMemo(() => {
-    if (!selectedProjectId) return tasks;
-    return tasks.filter((task) => task.project_id === selectedProjectId);
-  }, [tasks, selectedProjectId]);
+    if (selectedProjectIds.length === 0) return tasks;
+    return tasks.filter((task) => task.project_id && selectedProjectIds.includes(task.project_id));
+  }, [tasks, selectedProjectIds]);
 
   // Dialog states
   const [showTaskDialog, setShowTaskDialog] = useState(false);
@@ -256,8 +256,8 @@ export default function TasksPage() {
       viewMode={viewMode}
       onViewModeChange={handleViewModeChange}
       projects={projects as Project[]}
-      selectedProjectId={selectedProjectId}
-      onProjectChange={setSelectedProjectId}
+      selectedProjectIds={selectedProjectIds}
+      onProjectsChange={setSelectedProjectIds}
     >
       <Header
         title="Tasks"
@@ -273,8 +273,8 @@ export default function TasksPage() {
         <div className="mb-4 hidden items-center gap-2 lg:flex">
           <ProjectFilter
             projects={projects as Project[]}
-            selectedProjectId={selectedProjectId}
-            onProjectChange={setSelectedProjectId}
+            selectedProjectIds={selectedProjectIds}
+            onProjectsChange={setSelectedProjectIds}
           />
         </div>
 

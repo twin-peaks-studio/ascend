@@ -56,8 +56,8 @@ interface MobileBottomNavProps {
   viewMode?: ViewMode;
   onViewModeChange?: (mode: ViewMode) => void;
   projects?: Project[];
-  selectedProjectId?: string | null;
-  onProjectChange?: (projectId: string | null) => void;
+  selectedProjectIds?: string[];
+  onProjectsChange?: (projectIds: string[]) => void;
 }
 
 type FilterView = "main" | "project";
@@ -67,8 +67,8 @@ export function MobileBottomNav({
   viewMode,
   onViewModeChange,
   projects = [],
-  selectedProjectId,
-  onProjectChange,
+  selectedProjectIds = [],
+  onProjectsChange,
 }: MobileBottomNavProps) {
   const pathname = usePathname();
   const [showSettings, setShowSettings] = useState(false);
@@ -78,28 +78,40 @@ export function MobileBottomNav({
   // Only show settings button on tasks page
   const showSettingsButton = pathname === "/tasks";
 
-  // Filter projects based on search
+  // Filter and sort projects - selected ones at the top
   const filteredProjects = useMemo(() => {
-    if (!projectSearch.trim()) return projects;
-    const searchLower = projectSearch.toLowerCase();
-    return projects.filter((project) =>
-      project.title.toLowerCase().includes(searchLower)
-    );
-  }, [projects, projectSearch]);
+    let filtered = projects;
 
-  // Get selected project
-  const selectedProject = useMemo(
-    () => projects.find((p) => p.id === selectedProjectId),
-    [projects, selectedProjectId]
+    // Apply search filter
+    if (projectSearch.trim()) {
+      const searchLower = projectSearch.toLowerCase();
+      filtered = filtered.filter((project) =>
+        project.title.toLowerCase().includes(searchLower)
+      );
+    }
+
+    // Sort: selected projects first, then alphabetically within each group
+    return [...filtered].sort((a, b) => {
+      const aSelected = selectedProjectIds.includes(a.id);
+      const bSelected = selectedProjectIds.includes(b.id);
+
+      if (aSelected && !bSelected) return -1;
+      if (!aSelected && bSelected) return 1;
+      return a.title.localeCompare(b.title);
+    });
+  }, [projects, projectSearch, selectedProjectIds]);
+
+  // Get selected projects for display
+  const selectedProjects = useMemo(
+    () => projects.filter((p) => selectedProjectIds.includes(p.id)),
+    [projects, selectedProjectIds]
   );
 
   // Count active filters
   const activeFilterCount = useMemo(() => {
-    let count = 0;
-    if (selectedProjectId) count++;
     // Add future filters here (date, tags, etc.)
-    return count;
-  }, [selectedProjectId]);
+    return selectedProjectIds.length;
+  }, [selectedProjectIds]);
 
   // Reset filter view when sheet closes
   const handleSheetChange = (open: boolean) => {
@@ -110,10 +122,20 @@ export function MobileBottomNav({
     }
   };
 
-  // Clear all filters
-  const handleClearAllFilters = () => {
-    onProjectChange?.(null);
-    // Clear future filters here
+  // Toggle a single project
+  const handleToggleProject = (projectId: string) => {
+    if (selectedProjectIds.includes(projectId)) {
+      onProjectsChange?.(selectedProjectIds.filter((id) => id !== projectId));
+    } else {
+      onProjectsChange?.([...selectedProjectIds, projectId]);
+    }
+  };
+
+  // Get project summary text
+  const getProjectSummaryText = () => {
+    if (selectedProjects.length === 0) return "All projects";
+    if (selectedProjects.length === 1) return selectedProjects[0].title;
+    return `${selectedProjects.length} projects`;
   };
 
   return (
@@ -189,36 +211,9 @@ export function MobileBottomNav({
           {/* Main View */}
           {filterView === "main" && (
             <>
-              <SheetHeader className="pb-2 flex-shrink-0">
+              <SheetHeader className="pb-4 flex-shrink-0">
                 <SheetTitle>View Options</SheetTitle>
               </SheetHeader>
-
-              {/* Active Filters Summary */}
-              {activeFilterCount > 0 && (
-                <div className="flex flex-wrap items-center gap-2 pb-4 border-b mb-4">
-                  <span className="text-xs text-muted-foreground">Active:</span>
-                  {selectedProject && (
-                    <button
-                      onClick={() => onProjectChange?.(null)}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
-                    >
-                      <div
-                        className="h-2.5 w-2.5 rounded-sm"
-                        style={{ backgroundColor: selectedProject.color }}
-                      />
-                      <span className="max-w-[100px] truncate">{selectedProject.title}</span>
-                      <X className="h-3 w-3" />
-                    </button>
-                  )}
-                  {/* Future filter chips go here */}
-                  <button
-                    onClick={handleClearAllFilters}
-                    className="text-xs text-muted-foreground hover:text-foreground underline"
-                  >
-                    Clear all
-                  </button>
-                </div>
-              )}
 
               <div className="overflow-y-auto flex-1">
                 {/* Filters Section */}
@@ -237,7 +232,7 @@ export function MobileBottomNav({
                       <div className="flex-1 text-left">
                         <p className="font-medium">Project</p>
                         <p className="text-xs text-muted-foreground">
-                          {selectedProject ? selectedProject.title : "All projects"}
+                          {getProjectSummaryText()}
                         </p>
                       </div>
                       <ChevronRight className="h-5 w-5 text-muted-foreground" />
@@ -245,15 +240,20 @@ export function MobileBottomNav({
                   )}
 
                   {/* Future filters will go here as similar rows */}
-                  {/* Example: Date filter */}
-                  {/* <button className="flex items-center gap-3 w-full p-3 rounded-lg hover:bg-muted">
-                    <Calendar className="h-5 w-5 text-muted-foreground" />
-                    <div className="flex-1 text-left">
-                      <p className="font-medium">Due Date</p>
-                      <p className="text-xs text-muted-foreground">Any time</p>
-                    </div>
-                    <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                  </button> */}
+
+                  {/* Clear all filters option - only visible when filters are active */}
+                  {activeFilterCount > 0 && (
+                    <button
+                      onClick={() => {
+                        onProjectsChange?.([]);
+                        // Clear future filters here
+                      }}
+                      className="flex items-center gap-3 w-full p-3 rounded-lg transition-colors text-destructive hover:bg-destructive/10"
+                    >
+                      <X className="h-5 w-5" />
+                      <span className="font-medium">Clear all filters</span>
+                    </button>
+                  )}
                 </div>
 
                 {/* Layout Section */}
@@ -318,7 +318,7 @@ export function MobileBottomNav({
                   >
                     <ChevronRight className="h-5 w-5 rotate-180" />
                   </button>
-                  <SheetTitle>Select Project</SheetTitle>
+                  <SheetTitle>Select Projects</SheetTitle>
                 </div>
               </SheetHeader>
 
@@ -346,47 +346,46 @@ export function MobileBottomNav({
                 {/* All Projects option */}
                 <button
                   onClick={() => {
-                    onProjectChange?.(null);
+                    onProjectsChange?.([]);
                     setFilterView("main");
                     setProjectSearch("");
                   }}
                   className={cn(
                     "flex items-center gap-3 w-full p-3 rounded-lg transition-colors",
-                    !selectedProjectId
+                    selectedProjectIds.length === 0
                       ? "bg-primary/10 text-primary"
                       : "hover:bg-muted"
                   )}
                 >
                   <FolderKanban className="h-5 w-5" />
                   <span className="flex-1 text-left font-medium">All Projects</span>
-                  {!selectedProjectId && <Check className="h-5 w-5" />}
+                  {selectedProjectIds.length === 0 && <Check className="h-5 w-5" />}
                 </button>
 
-                {filteredProjects.map((project) => (
-                  <button
-                    key={project.id}
-                    onClick={() => {
-                      onProjectChange?.(project.id);
-                      setFilterView("main");
-                      setProjectSearch("");
-                    }}
-                    className={cn(
-                      "flex items-center gap-3 w-full p-3 rounded-lg transition-colors",
-                      selectedProjectId === project.id
-                        ? "bg-primary/10 text-primary"
-                        : "hover:bg-muted"
-                    )}
-                  >
-                    <div
-                      className="h-5 w-5 rounded"
-                      style={{ backgroundColor: project.color }}
-                    />
-                    <span className="flex-1 text-left font-medium truncate">
-                      {project.title}
-                    </span>
-                    {selectedProjectId === project.id && <Check className="h-5 w-5" />}
-                  </button>
-                ))}
+                {filteredProjects.map((project) => {
+                  const isSelected = selectedProjectIds.includes(project.id);
+                  return (
+                    <button
+                      key={project.id}
+                      onClick={() => handleToggleProject(project.id)}
+                      className={cn(
+                        "flex items-center gap-3 w-full p-3 rounded-lg transition-colors",
+                        isSelected
+                          ? "bg-primary/10 text-primary"
+                          : "hover:bg-muted"
+                      )}
+                    >
+                      <div
+                        className="h-5 w-5 rounded"
+                        style={{ backgroundColor: project.color }}
+                      />
+                      <span className="flex-1 text-left font-medium truncate">
+                        {project.title}
+                      </span>
+                      {isSelected && <Check className="h-5 w-5" />}
+                    </button>
+                  );
+                })}
 
                 {filteredProjects.length === 0 && projectSearch && (
                   <p className="text-center text-sm text-muted-foreground py-8">
