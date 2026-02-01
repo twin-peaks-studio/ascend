@@ -6,4 +6,4 @@ export { TaskEditMobile } from "./task-edit-mobile";
 export { TaskDetailsResponsive } from "./task-details-responsive";
 export { AssigneeSelector, AssigneeAvatar } from "./assignee-selector";
 export { QuickAddTask } from "./quick-add-task";
-export { TaskListView } from "./task-list-view";
+export { TaskListView, TaskListItem, PRIORITY_CIRCLE_COLORS } from "./task-list-view";

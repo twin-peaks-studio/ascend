@@ -10,34 +10,38 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import type { TaskWithProject, TaskStatus } from "@/types";
-import { PRIORITY_CONFIG } from "@/types";
+import type { TaskWithProject, TaskStatus, Task, Profile } from "@/types";
 import { getInitials } from "@/lib/profile-utils";
 import { formatDueDate, isOverdue } from "@/lib/date-utils";
+
+// Priority colors for the circle indicator
+export const PRIORITY_CIRCLE_COLORS: Record<string, string> = {
+  urgent: "text-red-500",
+  high: "text-orange-500",
+  medium: "text-blue-500",
+  low: "text-muted-foreground",
+};
 
 interface TaskListViewProps {
   tasks: TaskWithProject[];
   onTaskClick?: (task: TaskWithProject) => void;
   onStatusToggle?: (task: TaskWithProject) => void;
   onAddTask?: (status: TaskStatus) => void;
+  /** Remove the max-width container wrapper */
+  compact?: boolean;
+  /** Hide the empty state message */
+  hideEmptyState?: boolean;
 }
 
-// Priority colors for the circle indicator
-const PRIORITY_CIRCLE_COLORS: Record<string, string> = {
-  urgent: "text-red-500 border-red-500",
-  high: "text-orange-500 border-orange-500",
-  medium: "text-blue-500 border-blue-500",
-  low: "text-muted-foreground border-muted-foreground",
-};
-
-interface TaskListItemProps {
-  task: TaskWithProject;
-  onTaskClick?: (task: TaskWithProject) => void;
-  onStatusToggle?: (task: TaskWithProject) => void;
+export interface TaskListItemProps {
+  task: TaskWithProject | Task;
+  onTaskClick?: (task: TaskWithProject | Task) => void;
+  onStatusToggle?: (task: TaskWithProject | Task) => void;
+  /** Assignee profile - required for Task type since it doesn't include assignee relation */
+  assignee?: Profile | null;
 }
 
-function TaskListItem({ task, onTaskClick, onStatusToggle }: TaskListItemProps) {
+export function TaskListItem({ task, onTaskClick, onStatusToggle, assignee }: TaskListItemProps) {
   const isCompleted = task.status === "done";
   const priorityColor = PRIORITY_CIRCLE_COLORS[task.priority] || PRIORITY_CIRCLE_COLORS.medium;
   const taskOverdue = task.due_date && isOverdue(task.due_date) && !isCompleted;
@@ -52,7 +56,11 @@ function TaskListItem({ task, onTaskClick, onStatusToggle }: TaskListItemProps) 
   }, [task, onTaskClick]);
 
   // Count attachments as "comments" indicator (similar to Todoist)
-  const attachmentCount = task.attachments?.length || 0;
+  // Use type narrowing to safely access attachments (only on TaskWithProject)
+  const attachmentCount = ('attachments' in task && task.attachments) ? task.attachments.length : 0;
+
+  // Get assignee - either from the task (TaskWithProject) or from the prop (Task)
+  const taskAssignee = ('assignee' in task && task.assignee) ? task.assignee : assignee;
 
   return (
     <div
@@ -118,11 +126,11 @@ function TaskListItem({ task, onTaskClick, onStatusToggle }: TaskListItemProps) 
       </div>
 
       {/* Assignee avatar */}
-      {task.assignee && (
+      {taskAssignee && (
         <Avatar className="h-6 w-6 shrink-0">
-          <AvatarImage src={task.assignee.avatar_url || undefined} />
+          <AvatarImage src={taskAssignee.avatar_url || undefined} />
           <AvatarFallback className="text-[10px]">
-            {getInitials(task.assignee.display_name, task.assignee.email)}
+            {getInitials(taskAssignee.display_name, taskAssignee.email)}
           </AvatarFallback>
         </Avatar>
       )}
@@ -159,8 +167,8 @@ export function TaskListView({
               <TaskListItem
                 key={task.id}
                 task={task}
-                onTaskClick={onTaskClick}
-                onStatusToggle={onStatusToggle}
+                onTaskClick={onTaskClick as (task: TaskWithProject | Task) => void}
+                onStatusToggle={onStatusToggle as (task: TaskWithProject | Task) => void}
               />
             ))}
           </div>
