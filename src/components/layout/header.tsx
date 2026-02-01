@@ -1,6 +1,6 @@
 "use client";
 
-import { Moon, Sun, Plus, LogOut, LayoutGrid, List, Search } from "lucide-react";
+import { Moon, Sun, Plus, LogOut, LayoutGrid, List, Search, MessageSquarePlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -15,7 +15,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useEffect, useState, useLayoutEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { getInitials } from "@/lib/profile-utils";
-import { useSearchDialog } from "./app-shell";
+import { useSearchDialog, useFeedbackDialog } from "./app-shell";
 
 export type ViewMode = "board" | "list";
 
@@ -42,6 +42,7 @@ export function Header({
 }: HeaderProps) {
   const { user, profile, signOut } = useAuth();
   const { openSearch } = useSearchDialog();
+  const { openFeedback } = useFeedbackDialog();
   const [isDark, setIsDark] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -164,6 +165,10 @@ export function Header({
                     <Moon className="mr-2 h-4 w-4" />
                   )}
                   <span>{mounted && isDark ? "Light mode" : "Dark mode"}</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={openFeedback} className="cursor-pointer">
+                  <MessageSquarePlus className="mr-2 h-4 w-4" />
+                  <span>Send Feedback</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={signOut} className="cursor-pointer">
                   <LogOut className="mr-2 h-4 w-4" />
