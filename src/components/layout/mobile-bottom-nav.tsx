@@ -94,21 +94,16 @@ export function MobileBottomNav({
       {showSettingsButton && (
         <button
           onClick={() => setShowSettings(true)}
-          className={cn(
-            "fixed bottom-28 left-4 z-50 flex h-12 w-12 items-center justify-center rounded-full shadow-lg transition-transform hover:scale-105 active:scale-95 lg:hidden",
-            selectedProjectId
-              ? "bg-primary text-primary-foreground"
-              : "bg-card text-muted-foreground ring-1 ring-border/50"
-          )}
+          className="fixed bottom-28 left-4 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-card text-muted-foreground shadow-lg ring-1 ring-border/50 transition-transform hover:scale-105 active:scale-95 lg:hidden"
           aria-label="View options"
         >
-          {selectedProject ? (
-            <div
-              className="h-5 w-5 rounded"
-              style={{ backgroundColor: selectedProject.color }}
+          <Settings2 className="h-5 w-5" />
+          {/* Filter active indicator dot */}
+          {selectedProjectId && (
+            <span
+              className="absolute -top-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-card"
+              style={{ backgroundColor: selectedProject?.color || "hsl(var(--primary))" }}
             />
-          ) : (
-            <Settings2 className="h-5 w-5" />
           )}
         </button>
       )}
