@@ -191,6 +191,35 @@ export const updateDocumentSchema = z.object({
 });
 
 // ============================================
+// Note Schemas
+// ============================================
+
+/**
+ * Schema for creating a new note
+ */
+export const createNoteSchema = z.object({
+  project_id: z.string().uuid("Invalid project ID"),
+  title: safeRequiredString(200),
+  content: safeOptionalString(50000), // Allow longer content for rich notes
+});
+
+/**
+ * Schema for updating an existing note
+ */
+export const updateNoteSchema = z.object({
+  title: safeRequiredString(200).optional(),
+  content: safeOptionalString(50000),
+});
+
+/**
+ * Schema for linking a task to a note
+ */
+export const createNoteTaskSchema = z.object({
+  note_id: z.string().uuid("Invalid note ID"),
+  task_id: z.string().uuid("Invalid task ID"),
+});
+
+// ============================================
 // Type Exports
 // ============================================
 
@@ -203,3 +232,7 @@ export type UpdateTaskPositionInput = z.infer<typeof updateTaskPositionSchema>;
 
 export type CreateDocumentInput = z.infer<typeof createDocumentSchema>;
 export type UpdateDocumentInput = z.infer<typeof updateDocumentSchema>;
+
+export type CreateNoteInput = z.infer<typeof createNoteSchema>;
+export type UpdateNoteInput = z.infer<typeof updateNoteSchema>;
+export type CreateNoteTaskInput = z.infer<typeof createNoteTaskSchema>;

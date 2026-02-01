@@ -60,7 +60,9 @@ import { useTaskMutations } from "@/hooks/use-tasks";
 import { useProfiles } from "@/hooks/use-profiles";
 import { useProjectDocuments, useDocumentMutations } from "@/hooks/use-documents";
 import { useProjectMembers } from "@/hooks/use-project-members";
+import { useProjectNotes } from "@/hooks/use-notes";
 import { InviteMemberDialog, PropertiesPanel } from "@/components/project";
+import { NoteListItem } from "@/components/note";
 import type { DocumentType, Project, ProjectStatus, TaskPriority, TaskWithProject, Task, TaskStatus } from "@/types";
 import type { CreateTaskInput, UpdateTaskInput, CreateDocumentInput } from "@/lib/validation";
 import { STATUS_CONFIG, PRIORITY_CONFIG } from "@/types";
@@ -79,6 +81,7 @@ export default function ProjectDetailPage() {
   const { createDocument, deleteDocument, loading: documentMutationLoading } =
     useDocumentMutations();
   const { members } = useProjectMembers(projectId);
+  const { notes } = useProjectNotes(projectId);
 
   // Inline editing state - use project values directly as initial values
   // Use projectId as key to reset state when navigating between projects
@@ -88,6 +91,7 @@ export default function ProjectDetailPage() {
   const [description, setDescription] = useState(project?.description ?? "");
   const [showResources, setShowResources] = useState(documents.length > 0);
   const [showTasks, setShowTasks] = useState(false);
+  const [showNotes, setShowNotes] = useState(false);
 
   // Track previous project ID to reset editing state when project changes
   const [prevProjectId, setPrevProjectId] = useState(projectId);
@@ -545,6 +549,68 @@ export default function ProjectDetailPage() {
                       <div className="text-center py-8 text-muted-foreground border rounded-lg border-dashed">
                         <p className="mb-1">No tasks yet</p>
                         <p className="text-xs">Add tasks to track work for this project</p>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+
+              {/* Notes Section - Collapsible */}
+              <div className="border-t border-border/40 pt-6 mb-6">
+                <div className="flex items-center justify-between mb-4">
+                  <button
+                    onClick={() => setShowNotes(!showNotes)}
+                    className="flex items-center gap-2 text-sm font-semibold text-muted-foreground uppercase tracking-wide hover:text-foreground transition-colors"
+                  >
+                    {showNotes ? (
+                      <ChevronDown className="h-4 w-4" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4" />
+                    )}
+                    Notes
+                    {notes.length > 0 && (
+                      <span className="text-xs font-normal">({notes.length})</span>
+                    )}
+                  </button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => router.push(`/projects/${projectId}/notes/create`)}
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add Note
+                  </Button>
+                </div>
+
+                {showNotes && (
+                  <>
+                    {notes.length > 0 ? (
+                      <div className="border rounded-lg divide-y">
+                        {notes.slice(0, 5).map((note) => (
+                          <NoteListItem
+                            key={note.id}
+                            note={note}
+                            onClick={() => router.push(`/projects/${projectId}/notes/${note.id}`)}
+                          />
+                        ))}
+                        {notes.length > 5 && (
+                          <div className="p-3 text-center">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => router.push(`/projects/${projectId}/notes`)}
+                            >
+                              View all {notes.length} notes
+                              <ChevronRight className="h-4 w-4 ml-1" />
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-muted-foreground border rounded-lg border-dashed">
+                        <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                        <p className="mb-1">No notes yet</p>
+                        <p className="text-xs">Take notes during meetings and create tasks from them</p>
                       </div>
                     )}
                   </>

@@ -287,6 +287,87 @@ export type Database = {
           }
         ];
       };
+      notes: {
+        Row: {
+          id: string;
+          project_id: string;
+          title: string;
+          content: string | null;
+          created_by: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          project_id: string;
+          title: string;
+          content?: string | null;
+          created_by: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          project_id?: string;
+          title?: string;
+          content?: string | null;
+          created_by?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "notes_project_id_fkey";
+            columns: ["project_id"];
+            isOneToOne: false;
+            referencedRelation: "projects";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "notes_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      note_tasks: {
+        Row: {
+          id: string;
+          note_id: string;
+          task_id: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          note_id: string;
+          task_id: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          note_id?: string;
+          task_id?: string;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "note_tasks_note_id_fkey";
+            columns: ["note_id"];
+            isOneToOne: false;
+            referencedRelation: "notes";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "note_tasks_task_id_fkey";
+            columns: ["task_id"];
+            isOneToOne: false;
+            referencedRelation: "tasks";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
@@ -327,3 +408,11 @@ export type AttachmentUpdate = UpdateTables<"attachments">;
 export type ProjectMember = Tables<"project_members">;
 export type ProjectMemberInsert = InsertTables<"project_members">;
 export type ProjectMemberUpdate = UpdateTables<"project_members">;
+
+export type Note = Tables<"notes">;
+export type NoteInsert = InsertTables<"notes">;
+export type NoteUpdate = UpdateTables<"notes">;
+
+export type NoteTask = Tables<"note_tasks">;
+export type NoteTaskInsert = InsertTables<"note_tasks">;
+export type NoteTaskUpdate = UpdateTables<"note_tasks">;

@@ -22,6 +22,12 @@ export type {
   Attachment,
   AttachmentInsert,
   AttachmentUpdate,
+  Note,
+  NoteInsert,
+  NoteUpdate,
+  NoteTask,
+  NoteTaskInsert,
+  NoteTaskUpdate,
 } from "./database";
 
 import type {
@@ -30,6 +36,7 @@ import type {
   ProjectDocument as DBProjectDocument,
   Profile as DBProfile,
   Attachment as DBAttachment,
+  Note as DBNote,
 } from "./database";
 
 /**
@@ -47,6 +54,21 @@ export interface TaskWithProject extends DBTask {
   project: DBProject | null;
   assignee?: DBProfile | null;
   attachments?: DBAttachment[];
+}
+
+/**
+ * Note with project relation loaded
+ */
+export interface NoteWithProject extends DBNote {
+  project: DBProject | null;
+}
+
+/**
+ * Note with all relations loaded (project and linked tasks)
+ */
+export interface NoteWithRelations extends DBNote {
+  project: DBProject | null;
+  tasks: DBTask[];
 }
 
 /**
