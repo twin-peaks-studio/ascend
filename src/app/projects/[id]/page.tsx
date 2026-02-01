@@ -62,7 +62,7 @@ import { useProjectDocuments, useDocumentMutations } from "@/hooks/use-documents
 import { useProjectMembers } from "@/hooks/use-project-members";
 import { InviteMemberDialog, PropertiesPanel } from "@/components/project";
 import { cn } from "@/lib/utils";
-import type { DocumentType, Project, ProjectStatus, TaskWithProject, Task } from "@/types";
+import type { DocumentType, Project, ProjectStatus, TaskPriority, TaskWithProject, Task } from "@/types";
 import type { CreateTaskInput, UpdateTaskInput, CreateDocumentInput } from "@/lib/validation";
 import { STATUS_CONFIG, PRIORITY_CONFIG } from "@/types";
 
