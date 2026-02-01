@@ -17,6 +17,9 @@ import {
   PanelRightClose,
   PanelRight,
   Settings2,
+  Circle,
+  CheckCircle2,
+  Calendar,
 } from "lucide-react";
 import { AppShell } from "@/components/layout";
 import { TaskDialog, TaskDetailsResponsive } from "@/components/task";
@@ -61,10 +64,21 @@ import { useProfiles } from "@/hooks/use-profiles";
 import { useProjectDocuments, useDocumentMutations } from "@/hooks/use-documents";
 import { useProjectMembers } from "@/hooks/use-project-members";
 import { InviteMemberDialog, PropertiesPanel } from "@/components/project";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
-import type { DocumentType, Project, ProjectStatus, TaskPriority, TaskWithProject, Task } from "@/types";
+import type { DocumentType, Project, ProjectStatus, TaskPriority, TaskWithProject, Task, TaskStatus } from "@/types";
 import type { CreateTaskInput, UpdateTaskInput, CreateDocumentInput } from "@/lib/validation";
 import { STATUS_CONFIG, PRIORITY_CONFIG } from "@/types";
+import { getInitials } from "@/lib/profile-utils";
+import { formatDueDate, isOverdue } from "@/lib/date-utils";
+
+// Priority colors for the circle indicator (Todoist-style)
+const PRIORITY_CIRCLE_COLORS: Record<string, string> = {
+  urgent: "text-red-500",
+  high: "text-orange-500",
+  medium: "text-blue-500",
+  low: "text-muted-foreground",
+};
 
 
 export default function ProjectDetailPage() {
@@ -255,6 +269,27 @@ export default function ProjectDetailPage() {
       }
     },
     [selectedTask, project, updateTask, setProject]
+  );
+
+  // Handle task status toggle (for list view)
+  const handleTaskStatusToggle = useCallback(
+    async (task: Task) => {
+      const newStatus: TaskStatus = task.status === "done" ? "todo" : "done";
+      const result = await updateTask(task.id, { status: newStatus });
+      if (result) {
+        // Optimistically update the project's tasks list
+        setProject((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            tasks: prev.tasks.map((t) =>
+              t.id === task.id ? { ...t, status: newStatus } : t
+            ),
+          };
+        });
+      }
+    },
+    [updateTask, setProject]
   );
 
   // Handle document creation
@@ -501,43 +536,74 @@ export default function ProjectDetailPage() {
                 {showTasks && (
                   <>
                     {project.tasks.length > 0 ? (
-                      <div className="space-y-2">
-                        {project.tasks.map((task) => (
-                          <button
-                            key={task.id}
-                            onClick={() => handleOpenTaskDetails(task)}
-                            className="w-full text-left p-3 rounded-lg border bg-muted/20 hover:bg-muted/30 transition-colors cursor-pointer"
-                          >
-                            <div className="flex items-start justify-between gap-4">
+                      <div className="border rounded-lg divide-y">
+                        {project.tasks.map((task) => {
+                          const isCompleted = task.status === "done";
+                          const priorityColor = PRIORITY_CIRCLE_COLORS[task.priority] || PRIORITY_CIRCLE_COLORS.medium;
+                          const taskOverdue = task.due_date && isOverdue(task.due_date) && !isCompleted;
+                          const assignee = profiles.find((p) => p.id === task.assignee_id);
+
+                          return (
+                            <div
+                              key={task.id}
+                              onClick={() => handleOpenTaskDetails(task)}
+                              className={cn(
+                                "flex items-start gap-3 py-3 px-3 cursor-pointer",
+                                "hover:bg-muted/30 transition-colors",
+                                isCompleted && "opacity-60"
+                              )}
+                            >
+                              {/* Priority circle / checkbox */}
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleTaskStatusToggle(task);
+                                }}
+                                className={cn("mt-0.5 shrink-0 transition-colors", priorityColor)}
+                              >
+                                {isCompleted ? (
+                                  <CheckCircle2 className="h-5 w-5" />
+                                ) : (
+                                  <Circle className="h-5 w-5" />
+                                )}
+                              </button>
+
+                              {/* Task content */}
                               <div className="flex-1 min-w-0">
-                                <h4 className="font-medium truncate text-sm">{task.title}</h4>
+                                <p className={cn(
+                                  "text-sm font-medium leading-tight",
+                                  isCompleted && "line-through text-muted-foreground"
+                                )}>
+                                  {task.title}
+                                </p>
                                 {task.description && (
-                                  <p className="text-xs text-muted-foreground mt-1 line-clamp-1">
+                                  <p className="text-sm text-muted-foreground mt-0.5 line-clamp-1">
                                     {task.description}
                                   </p>
                                 )}
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2 flex-wrap mt-2">
-                              <Badge
-                                variant="secondary"
-                                className={cn(
-                                  "text-xs",
-                                  STATUS_CONFIG[task.status].color,
-                                  STATUS_CONFIG[task.status].bgColor
+                                {task.due_date && (
+                                  <span className={cn(
+                                    "inline-flex items-center gap-1 text-xs mt-1.5",
+                                    taskOverdue ? "text-red-500" : "text-muted-foreground"
+                                  )}>
+                                    <Calendar className="h-3 w-3" />
+                                    {formatDueDate(task.due_date)}
+                                  </span>
                                 )}
-                              >
-                                {STATUS_CONFIG[task.status].label}
-                              </Badge>
-                              <Badge
-                                variant="outline"
-                                className={cn("text-xs", PRIORITY_CONFIG[task.priority].color)}
-                              >
-                                {PRIORITY_CONFIG[task.priority].label}
-                              </Badge>
+                              </div>
+
+                              {/* Assignee avatar */}
+                              {assignee && (
+                                <Avatar className="h-6 w-6 shrink-0">
+                                  <AvatarImage src={assignee.avatar_url || undefined} />
+                                  <AvatarFallback className="text-[10px]">
+                                    {getInitials(assignee.display_name, assignee.email)}
+                                  </AvatarFallback>
+                                </Avatar>
+                              )}
                             </div>
-                          </button>
-                        ))}
+                          );
+                        })}
                       </div>
                     ) : (
                       <div className="text-center py-8 text-muted-foreground border rounded-lg border-dashed">
