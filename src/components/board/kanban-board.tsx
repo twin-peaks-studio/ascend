@@ -6,7 +6,8 @@ import {
   DragOverlay,
   closestCorners,
   KeyboardSensor,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   type DragStartEvent,
@@ -55,10 +56,18 @@ export function KanbanBoard({
   const [activeTask, setActiveTask] = useState<TaskWithProject | null>(null);
 
   // Configure drag sensors
+  // MouseSensor for desktop - immediate drag with small distance threshold
+  // TouchSensor for mobile/tablet - requires long press (300ms) to prevent accidental drags
   const sensors = useSensors(
-    useSensor(PointerSensor, {
+    useSensor(MouseSensor, {
       activationConstraint: {
-        distance: 8, // Require 8px drag before activating
+        distance: 8, // Require 8px drag before activating on desktop
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 300, // Require 300ms press before drag activates on touch devices
+        tolerance: 5, // Allow 5px movement during the delay without canceling
       },
     }),
     useSensor(KeyboardSensor, {
