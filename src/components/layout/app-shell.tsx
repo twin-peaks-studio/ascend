@@ -8,6 +8,7 @@ import { SearchDialog } from "../search";
 import { useSidebar } from "@/hooks/use-sidebar";
 import { cn } from "@/lib/utils";
 import type { ViewMode } from "./header";
+import type { Project } from "@/types";
 
 // Context for search dialog trigger
 const SearchContext = createContext<{ openSearch: () => void } | null>(null);
@@ -24,9 +25,20 @@ interface AppShellProps {
   onAddTask?: () => void;
   viewMode?: ViewMode;
   onViewModeChange?: (mode: ViewMode) => void;
+  projects?: Project[];
+  selectedProjectId?: string | null;
+  onProjectChange?: (projectId: string | null) => void;
 }
 
-export function AppShell({ children, onAddTask, viewMode, onViewModeChange }: AppShellProps) {
+export function AppShell({
+  children,
+  onAddTask,
+  viewMode,
+  onViewModeChange,
+  projects,
+  selectedProjectId,
+  onProjectChange,
+}: AppShellProps) {
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const { isCollapsed } = useSidebar();
@@ -89,6 +101,9 @@ export function AppShell({ children, onAddTask, viewMode, onViewModeChange }: Ap
           onAddTask={onAddTask}
           viewMode={viewMode}
           onViewModeChange={onViewModeChange}
+          projects={projects}
+          selectedProjectId={selectedProjectId}
+          onProjectChange={onProjectChange}
         />
 
         {/* Shortcuts dialog */}

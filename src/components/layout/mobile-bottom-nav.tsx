@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -12,6 +12,7 @@ import {
   LayoutGrid,
   List,
   Check,
+  Search,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -20,7 +21,9 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { Input } from "@/components/ui/input";
 import type { ViewMode } from "./header";
+import type { Project } from "@/types";
 
 interface NavItem {
   href: string;
@@ -50,14 +53,40 @@ interface MobileBottomNavProps {
   onAddTask?: () => void;
   viewMode?: ViewMode;
   onViewModeChange?: (mode: ViewMode) => void;
+  projects?: Project[];
+  selectedProjectId?: string | null;
+  onProjectChange?: (projectId: string | null) => void;
 }
 
-export function MobileBottomNav({ onAddTask, viewMode, onViewModeChange }: MobileBottomNavProps) {
+export function MobileBottomNav({
+  onAddTask,
+  viewMode,
+  onViewModeChange,
+  projects = [],
+  selectedProjectId,
+  onProjectChange,
+}: MobileBottomNavProps) {
   const pathname = usePathname();
   const [showSettings, setShowSettings] = useState(false);
+  const [projectSearch, setProjectSearch] = useState("");
 
   // Only show settings button on tasks page
   const showSettingsButton = pathname === "/tasks";
+
+  // Filter projects based on search
+  const filteredProjects = useMemo(() => {
+    if (!projectSearch.trim()) return projects;
+    const searchLower = projectSearch.toLowerCase();
+    return projects.filter((project) =>
+      project.title.toLowerCase().includes(searchLower)
+    );
+  }, [projects, projectSearch]);
+
+  // Get selected project
+  const selectedProject = useMemo(
+    () => projects.find((p) => p.id === selectedProjectId),
+    [projects, selectedProjectId]
+  );
 
   return (
     <>
@@ -65,10 +94,22 @@ export function MobileBottomNav({ onAddTask, viewMode, onViewModeChange }: Mobil
       {showSettingsButton && (
         <button
           onClick={() => setShowSettings(true)}
-          className="fixed bottom-28 left-4 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-card text-muted-foreground shadow-lg ring-1 ring-border/50 transition-transform hover:scale-105 active:scale-95 lg:hidden"
+          className={cn(
+            "fixed bottom-28 left-4 z-50 flex h-12 w-12 items-center justify-center rounded-full shadow-lg transition-transform hover:scale-105 active:scale-95 lg:hidden",
+            selectedProjectId
+              ? "bg-primary text-primary-foreground"
+              : "bg-card text-muted-foreground ring-1 ring-border/50"
+          )}
           aria-label="View options"
         >
-          <Settings2 className="h-5 w-5" />
+          {selectedProject ? (
+            <div
+              className="h-5 w-5 rounded"
+              style={{ backgroundColor: selectedProject.color }}
+            />
+          ) : (
+            <Settings2 className="h-5 w-5" />
+          )}
         </button>
       )}
 
@@ -121,11 +162,89 @@ export function MobileBottomNav({ onAddTask, viewMode, onViewModeChange }: Mobil
       </nav>
 
       {/* View Options Sheet */}
-      <Sheet open={showSettings} onOpenChange={setShowSettings}>
-        <SheetContent side="bottom" className="rounded-t-xl">
+      <Sheet open={showSettings} onOpenChange={(open) => {
+        setShowSettings(open);
+        if (!open) setProjectSearch("");
+      }}>
+        <SheetContent side="bottom" className="rounded-t-xl max-h-[80vh] overflow-y-auto">
           <SheetHeader className="pb-4">
             <SheetTitle>View Options</SheetTitle>
           </SheetHeader>
+
+          {/* Project Filter Section */}
+          {projects.length > 0 && (
+            <div className="mb-6">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
+                Filter by Project
+              </p>
+
+              {/* Project Search */}
+              <div className="flex items-center gap-2 mb-2 px-1">
+                <Search className="h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search projects..."
+                  value={projectSearch}
+                  onChange={(e) => setProjectSearch(e.target.value)}
+                  className="h-9 border-0 p-0 shadow-none focus-visible:ring-0"
+                />
+              </div>
+
+              <div className="space-y-1 max-h-[200px] overflow-y-auto">
+                {/* All Projects option */}
+                <button
+                  onClick={() => {
+                    onProjectChange?.(null);
+                    setShowSettings(false);
+                    setProjectSearch("");
+                  }}
+                  className={cn(
+                    "flex items-center gap-3 w-full p-3 rounded-lg transition-colors",
+                    !selectedProjectId
+                      ? "bg-primary/10 text-primary"
+                      : "hover:bg-muted"
+                  )}
+                >
+                  <FolderKanban className="h-5 w-5" />
+                  <span className="flex-1 text-left font-medium">All Projects</span>
+                  {!selectedProjectId && <Check className="h-5 w-5" />}
+                </button>
+
+                {filteredProjects.map((project) => (
+                  <button
+                    key={project.id}
+                    onClick={() => {
+                      onProjectChange?.(project.id);
+                      setShowSettings(false);
+                      setProjectSearch("");
+                    }}
+                    className={cn(
+                      "flex items-center gap-3 w-full p-3 rounded-lg transition-colors",
+                      selectedProjectId === project.id
+                        ? "bg-primary/10 text-primary"
+                        : "hover:bg-muted"
+                    )}
+                  >
+                    <div
+                      className="h-5 w-5 rounded"
+                      style={{ backgroundColor: project.color }}
+                    />
+                    <span className="flex-1 text-left font-medium truncate">
+                      {project.title}
+                    </span>
+                    {selectedProjectId === project.id && <Check className="h-5 w-5" />}
+                  </button>
+                ))}
+
+                {filteredProjects.length === 0 && projectSearch && (
+                  <p className="text-center text-sm text-muted-foreground py-4">
+                    No projects found
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Layout Section */}
           <div className="space-y-2">
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
               Layout

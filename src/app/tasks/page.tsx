@@ -255,6 +255,9 @@ export default function TasksPage() {
       onAddTask={handleQuickCreate}
       viewMode={viewMode}
       onViewModeChange={handleViewModeChange}
+      projects={projects as Project[]}
+      selectedProjectId={selectedProjectId}
+      onProjectChange={setSelectedProjectId}
     >
       <Header
         title="Tasks"
@@ -266,8 +269,8 @@ export default function TasksPage() {
       />
 
       <div className="p-4 md:p-6">
-        {/* Filters */}
-        <div className="mb-4 flex items-center gap-2">
+        {/* Filters - hidden on mobile/tablet, shown on desktop */}
+        <div className="mb-4 hidden items-center gap-2 lg:flex">
           <ProjectFilter
             projects={projects as Project[]}
             selectedProjectId={selectedProjectId}
