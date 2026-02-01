@@ -15,6 +15,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useEffect, useState, useLayoutEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { getInitials } from "@/lib/profile-utils";
+import { useSearchDialog } from "./app-shell";
 
 export type ViewMode = "board" | "list";
 
@@ -40,6 +41,7 @@ export function Header({
   onViewModeChange,
 }: HeaderProps) {
   const { user, profile, signOut } = useAuth();
+  const { openSearch } = useSearchDialog();
   const [isDark, setIsDark] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -124,6 +126,7 @@ export function Header({
             variant="ghost"
             size="icon"
             className="h-9 w-9"
+            onClick={openSearch}
           >
             <Search className="h-5 w-5" />
             <span className="sr-only">Search</span>

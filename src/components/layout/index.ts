@@ -1,4 +1,4 @@
-export { AppShell } from "./app-shell";
+export { AppShell, useSearchDialog } from "./app-shell";
 export { Header } from "./header";
 export type { ViewMode } from "./header";
 export { Sidebar } from "./sidebar";
