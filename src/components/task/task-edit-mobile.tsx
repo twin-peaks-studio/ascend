@@ -185,23 +185,8 @@ export function TaskEditMobile({
   // Build list of empty property chips
   const emptyPropertyChips: { id: string; icon: React.ElementType; label: string; onClick: () => void; variant?: "default" | "highlight" }[] = [];
 
-  if (!hasDueDate) {
-    emptyPropertyChips.push({
-      id: "date",
-      icon: Calendar,
-      label: "Date",
-      onClick: () => setDatePickerOpen(true),
-    });
-  }
-
-  if (!hasAssignee) {
-    emptyPropertyChips.push({
-      id: "assignee",
-      icon: User,
-      label: "Assignee",
-      onClick: () => setAssigneeSelectOpen(true),
-    });
-  }
+  // Note: Date and Assignee chips are handled separately with their own Popover wrappers
+  // to ensure proper positioning of the dropdowns
 
   // Always show attachments chip if no attachments
   if (attachments.length === 0) {
@@ -481,7 +466,7 @@ export function TaskEditMobile({
           </Select>
 
           {/* Empty Properties Chips - Horizontal scroll */}
-          {(emptyPropertyChips.length > 0 || !hasDescription) && (
+          {(emptyPropertyChips.length > 0 || !hasDescription || !hasAssignee || !hasDueDate) && (
             <div className="py-3 -mx-4 px-4 overflow-x-auto">
               <div className="flex items-center gap-2">
                 {/* Description chip if empty */}
@@ -501,50 +486,62 @@ export function TaskEditMobile({
                     variant={chip.variant}
                   />
                 ))}
+                {/* Date chip with Popover - rendered separately for proper positioning */}
+                {!hasDueDate && (
+                  <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+                    <PopoverTrigger asChild>
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm whitespace-nowrap transition-colors shrink-0 bg-muted/50 text-muted-foreground hover:bg-muted"
+                      >
+                        <Calendar className="h-4 w-4" />
+                        <span>Date</span>
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" side="top" align="start">
+                      <CalendarComponent
+                        mode="single"
+                        selected={undefined}
+                        onSelect={handleDueDateChange}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                )}
+                {/* Assignee chip with Popover - rendered separately for proper positioning */}
+                {!hasAssignee && (
+                  <Popover open={assigneeSelectOpen} onOpenChange={setAssigneeSelectOpen}>
+                    <PopoverTrigger asChild>
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm whitespace-nowrap transition-colors shrink-0 bg-muted/50 text-muted-foreground hover:bg-muted"
+                      >
+                        <User className="h-4 w-4" />
+                        <span>Assignee</span>
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-56 p-1" side="top" align="start">
+                      {profiles.map((profile) => (
+                        <button
+                          key={profile.id}
+                          type="button"
+                          onClick={() => handleAssigneeChange(profile.id)}
+                          className="flex items-center gap-2 w-full px-2 py-1.5 text-sm rounded-sm hover:bg-accent hover:text-accent-foreground transition-colors"
+                        >
+                          <Avatar className="h-5 w-5">
+                            <AvatarImage src={profile.avatar_url || undefined} />
+                            <AvatarFallback className="text-[10px]">
+                              {getInitials(profile.display_name, profile.email)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span>{profile.display_name || profile.email}</span>
+                        </button>
+                      ))}
+                    </PopoverContent>
+                  </Popover>
+                )}
               </div>
             </div>
-          )}
-
-          {/* Date picker popover for chip (hidden trigger) */}
-          {!hasDueDate && (
-            <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
-              <PopoverTrigger className="hidden" />
-              <PopoverContent className="w-auto p-0" align="start">
-                <CalendarComponent
-                  mode="single"
-                  selected={undefined}
-                  onSelect={handleDueDateChange}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
-          )}
-
-          {/* Assignee select for chip (hidden trigger) */}
-          {!hasAssignee && (
-            <Select
-              value=""
-              onValueChange={handleAssigneeChange}
-              open={assigneeSelectOpen}
-              onOpenChange={setAssigneeSelectOpen}
-            >
-              <SelectTrigger className="hidden" />
-              <SelectContent position="popper" side="top" align="start">
-                {profiles.map((profile) => (
-                  <SelectItem key={profile.id} value={profile.id}>
-                    <div className="flex items-center gap-2">
-                      <Avatar className="h-5 w-5">
-                        <AvatarImage src={profile.avatar_url || undefined} />
-                        <AvatarFallback className="text-[10px]">
-                          {getInitials(profile.display_name, profile.email)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span>{profile.display_name || profile.email}</span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           )}
 
           {/* Attachments Section */}
