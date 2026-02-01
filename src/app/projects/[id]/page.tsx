@@ -507,21 +507,31 @@ export default function ProjectDetailPage() {
                       <span className="text-xs font-normal">({project.tasks.length})</span>
                     )}
                   </button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setShowTaskDialog(true)}
-                  >
-                    <Plus className="h-4 w-4 mr-1" />
-                    Add Task
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    {project.tasks.length > 0 && (
+                      <Button size="sm" variant="ghost" asChild>
+                        <Link href={`/projects/${projectId}/tasks`}>
+                          View All
+                          <ChevronRight className="h-4 w-4 ml-1" />
+                        </Link>
+                      </Button>
+                    )}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setShowTaskDialog(true)}
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      Add Task
+                    </Button>
+                  </div>
                 </div>
 
                 {showTasks && (
                   <>
                     {project.tasks.length > 0 ? (
                       <div className="border rounded-lg divide-y">
-                        {project.tasks.map((task) => (
+                        {project.tasks.slice(0, 10).map((task) => (
                           <TaskListItem
                             key={task.id}
                             task={task}
