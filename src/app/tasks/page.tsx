@@ -2,8 +2,9 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { AppShell, Header } from "@/components/layout";
+import type { ViewMode } from "@/components/layout";
 import { KanbanBoard } from "@/components/board";
-import { TaskDialog, TaskDetailsResponsive, QuickAddTask } from "@/components/task";
+import { TaskDialog, TaskDetailsResponsive, QuickAddTask, TaskListView } from "@/components/task";
 import { useTasksByStatus, useTaskMutations } from "@/hooks/use-tasks";
 import { useProjects } from "@/hooks/use-projects";
 import { useProfiles } from "@/hooks/use-profiles";
@@ -35,6 +36,23 @@ export default function TasksPage() {
     markAsDuplicate,
     loading: mutationLoading,
   } = useTaskMutations();
+
+  // View mode state (board or list) - persisted in localStorage
+  const [viewMode, setViewMode] = useState<ViewMode>("board");
+
+  // Load view mode preference from localStorage
+  useEffect(() => {
+    const stored = localStorage.getItem("tasks-view-mode");
+    if (stored === "board" || stored === "list") {
+      setViewMode(stored);
+    }
+  }, []);
+
+  // Handle view mode change
+  const handleViewModeChange = useCallback((mode: ViewMode) => {
+    setViewMode(mode);
+    localStorage.setItem("tasks-view-mode", mode);
+  }, []);
 
   // Dialog states
   const [showTaskDialog, setShowTaskDialog] = useState(false);
@@ -114,12 +132,33 @@ export default function TasksPage() {
     [markAsDuplicate, refetch]
   );
 
-  // Handle add task (from column header)
+  // Handle add task (from column header or list view)
   const handleAddTask = useCallback((status: TaskStatus) => {
     setDefaultStatus(status);
     setEditingTask(null);
-    setShowTaskDialog(true);
-  }, []);
+    if (isMobile) {
+      setShowQuickAdd(true);
+    } else {
+      setShowTaskDialog(true);
+    }
+  }, [isMobile]);
+
+  // Handle task status toggle (for list view)
+  const handleStatusToggle = useCallback(
+    async (task: TaskWithProject) => {
+      const newStatus: TaskStatus = task.status === "done" ? "todo" : "done";
+      const result = await updateTask(task.id, { status: newStatus });
+      if (result) {
+        // Update local state optimistically
+        setTasks((prev) =>
+          prev.map((t) =>
+            t.id === task.id ? { ...t, status: newStatus } : t
+          )
+        );
+      }
+    },
+    [updateTask, setTasks]
+  );
 
   // Handle edit task
   const handleEditTask = useCallback((task: TaskWithProject) => {
@@ -205,22 +244,34 @@ export default function TasksPage() {
     <AppShell onAddTask={handleQuickCreate}>
       <Header
         title="Tasks"
-        description="Manage your tasks with the Kanban board"
+        description={viewMode === "board" ? "Manage your tasks with the Kanban board" : "View all your tasks"}
         onQuickCreate={handleQuickCreate}
         quickCreateLabel="New Task"
+        viewMode={viewMode}
+        onViewModeChange={handleViewModeChange}
       />
 
       <div className="p-4 md:p-6">
         {loading ? (
-          <div className="flex h-[calc(100vh-10rem)] flex-nowrap gap-4 overflow-x-auto pb-2 md:grid md:grid-cols-3 md:overflow-visible md:pb-0">
-            {[1, 2, 3].map((i) => (
-              <div
-                key={i}
-                className="min-w-[280px] shrink-0 animate-pulse rounded-lg border bg-muted/30 md:min-w-0"
-              />
-            ))}
-          </div>
-        ) : (
+          viewMode === "board" ? (
+            <div className="flex h-[calc(100vh-10rem)] flex-nowrap gap-4 overflow-x-auto pb-2 md:grid md:grid-cols-3 md:overflow-visible md:pb-0">
+              {[1, 2, 3].map((i) => (
+                <div
+                  key={i}
+                  className="min-w-[280px] shrink-0 animate-pulse rounded-lg border bg-muted/30 md:min-w-0"
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="max-w-3xl mx-auto">
+              <div className="animate-pulse space-y-2">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <div key={i} className="h-16 rounded-lg bg-muted/30" />
+                ))}
+              </div>
+            </div>
+          )
+        ) : viewMode === "board" ? (
           <KanbanBoard
             tasks={tasks}
             projects={projects as Project[]}
@@ -232,6 +283,13 @@ export default function TasksPage() {
             onDeleteTask={(id) => setDeleteConfirm(id)}
             onArchiveTask={handleArchive}
             onMarkDuplicate={handleMarkDuplicate}
+          />
+        ) : (
+          <TaskListView
+            tasks={tasks}
+            onTaskClick={handleOpenDetails}
+            onStatusToggle={handleStatusToggle}
+            onAddTask={handleAddTask}
           />
         )}
       </div>

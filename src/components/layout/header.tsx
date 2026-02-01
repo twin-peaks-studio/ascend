@@ -1,6 +1,6 @@
 "use client";
 
-import { Moon, Sun, Plus, LogOut } from "lucide-react";
+import { Moon, Sun, Plus, LogOut, LayoutGrid, List } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -11,15 +11,20 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useEffect, useState, useLayoutEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { getInitials } from "@/lib/profile-utils";
+
+export type ViewMode = "board" | "list";
 
 interface HeaderProps {
   title: string;
   description?: string;
   onQuickCreate?: () => void;
   quickCreateLabel?: string;
+  viewMode?: ViewMode;
+  onViewModeChange?: (mode: ViewMode) => void;
 }
 
 // Use useLayoutEffect on client, useEffect on server (SSR safe)
@@ -31,6 +36,8 @@ export function Header({
   description,
   onQuickCreate,
   quickCreateLabel = "Create",
+  viewMode,
+  onViewModeChange,
 }: HeaderProps) {
   const { user, profile, signOut } = useAuth();
   const [isDark, setIsDark] = useState(false);
@@ -83,6 +90,23 @@ export function Header({
 
         {/* Right side - Actions */}
         <div className="flex items-center gap-2">
+          {/* View mode toggle */}
+          {viewMode && onViewModeChange && (
+            <ToggleGroup
+              type="single"
+              value={viewMode}
+              onValueChange={(value) => value && onViewModeChange(value as ViewMode)}
+              className="hidden sm:flex"
+            >
+              <ToggleGroupItem value="board" aria-label="Board view" className="h-9 w-9 p-0">
+                <LayoutGrid className="h-4 w-4" />
+              </ToggleGroupItem>
+              <ToggleGroupItem value="list" aria-label="List view" className="h-9 w-9 p-0">
+                <List className="h-4 w-4" />
+              </ToggleGroupItem>
+            </ToggleGroup>
+          )}
+
           {/* Quick create button (hidden on mobile; use bottom nav + instead) */}
           {onQuickCreate && (
             <Button
