@@ -15,8 +15,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ProjectDialog } from "@/components/project";
 import { QuickAddTask } from "@/components/task";
-import { AuthDialog } from "@/components/auth";
-import { useAuth } from "@/hooks/use-auth";
 import { useProjects, useProjectMutations } from "@/hooks/use-projects";
 import { useTasks, useTaskMutations } from "@/hooks/use-tasks";
 import { useProfiles } from "@/hooks/use-profiles";
@@ -49,7 +47,6 @@ function StatCard({ title, value, icon, href }: StatCardProps) {
 }
 
 export default function DashboardPage() {
-  const { user, initialized } = useAuth();
   const { projects, loading: projectsLoading, refetch: refetchProjects } = useProjects();
   const { tasks, loading: tasksLoading, refetch: refetchTasks } = useTasks();
   const { profiles } = useProfiles();
@@ -58,7 +55,6 @@ export default function DashboardPage() {
   const { createTask, loading: taskMutationLoading } = useTaskMutations();
   const [showProjectDialog, setShowProjectDialog] = useState(false);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
-  const [showAuthDialog, setShowAuthDialog] = useState(false);
 
   // Calculate stats
   const totalProjects = projects.filter((p) => p.status === "active").length;
@@ -95,13 +91,6 @@ export default function DashboardPage() {
       setShowProjectDialog(true);
     }
   }, [isMobile]);
-
-  // Show auth dialog on load if user is not logged in
-  useEffect(() => {
-    if (initialized && !user) {
-      setShowAuthDialog(true);
-    }
-  }, [initialized, user]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -291,12 +280,6 @@ export default function DashboardPage() {
         projects={projects}
         profiles={profiles}
         loading={taskMutationLoading}
-      />
-
-      {/* Auth dialog: login / create account (UI only) */}
-      <AuthDialog
-        open={showAuthDialog}
-        onOpenChange={setShowAuthDialog}
       />
     </AppShell>
   );

@@ -5,7 +5,9 @@ import { MobileBottomNav } from "./mobile-bottom-nav";
 import { useState, useCallback, useEffect, createContext, useContext } from "react";
 import { ShortcutsDialog } from "../shortcuts-dialog";
 import { SearchDialog } from "../search";
+import { AuthDialog } from "../auth";
 import { useSidebar } from "@/hooks/use-sidebar";
+import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 import type { ViewMode } from "./header";
 import type { Project } from "@/types";
@@ -41,7 +43,18 @@ export function AppShell({
 }: AppShellProps) {
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
+  const [showAuthDialog, setShowAuthDialog] = useState(false);
   const { isCollapsed } = useSidebar();
+  const { user, initialized } = useAuth();
+
+  // Show auth dialog when user is not logged in
+  useEffect(() => {
+    if (initialized && !user) {
+      setShowAuthDialog(true);
+    } else if (user) {
+      setShowAuthDialog(false);
+    }
+  }, [initialized, user]);
 
   const handleShowShortcuts = useCallback(() => {
     setShowShortcuts(true);
@@ -111,6 +124,13 @@ export function AppShell({
 
         {/* Search dialog */}
         <SearchDialog open={showSearch} onOpenChange={setShowSearch} />
+
+        {/* Auth dialog - shown when user is not logged in and cannot be closed */}
+        <AuthDialog
+          open={showAuthDialog}
+          onOpenChange={setShowAuthDialog}
+          preventClose={!user}
+        />
       </div>
     </SearchContext.Provider>
   );

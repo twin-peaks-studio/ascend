@@ -21,12 +21,14 @@ interface AuthDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess?: () => void;
+  preventClose?: boolean;
 }
 
 export function AuthDialog({
   open,
   onOpenChange,
   onSuccess,
+  preventClose = false,
 }: AuthDialogProps) {
   const { signIn, signUp, loading } = useAuth();
   const [activeTab, setActiveTab] = useState<"login" | "signup">("login");
@@ -124,12 +126,29 @@ export function AuthDialog({
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => {
+      // Prevent closing if preventClose is true
+      if (preventClose && !isOpen) {
+        return;
+      }
       if (!isOpen) {
         resetForms();
       }
       onOpenChange(isOpen);
     }}>
-      <DialogContent className="sm:max-w-md" showCloseButton>
+      <DialogContent
+        className="sm:max-w-md"
+        showCloseButton={!preventClose}
+        onInteractOutside={(e) => {
+          if (preventClose) {
+            e.preventDefault();
+          }
+        }}
+        onEscapeKeyDown={(e) => {
+          if (preventClose) {
+            e.preventDefault();
+          }
+        }}
+      >
         <DialogHeader>
           <DialogTitle>Welcome</DialogTitle>
           <DialogDescription>
@@ -148,8 +167,8 @@ export function AuthDialog({
           className="w-full"
         >
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="login">Log in</TabsTrigger>
-            <TabsTrigger value="signup">Create account</TabsTrigger>
+            <TabsTrigger value="login" className="data-[state=active]:ring-2 data-[state=active]:ring-ring data-[state=active]:ring-offset-1">Log in</TabsTrigger>
+            <TabsTrigger value="signup" className="data-[state=active]:ring-2 data-[state=active]:ring-ring data-[state=active]:ring-offset-1">Create account</TabsTrigger>
           </TabsList>
 
           <TabsContent value="login" className="space-y-4 pt-4">
