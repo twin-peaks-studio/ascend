@@ -6,6 +6,7 @@ import { useState, useCallback, useEffect, createContext, useContext } from "rea
 import { ShortcutsDialog } from "../shortcuts-dialog";
 import { SearchDialog } from "../search";
 import { AuthDialog } from "../auth";
+import { FeedbackDialog } from "../feedback-dialog";
 import { useSidebar } from "@/hooks/use-sidebar";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
@@ -18,6 +19,16 @@ export const useSearchDialog = () => {
   const context = useContext(SearchContext);
   if (!context) {
     throw new Error("useSearchDialog must be used within AppShell");
+  }
+  return context;
+};
+
+// Context for feedback dialog trigger
+const FeedbackContext = createContext<{ openFeedback: () => void } | null>(null);
+export const useFeedbackDialog = () => {
+  const context = useContext(FeedbackContext);
+  if (!context) {
+    throw new Error("useFeedbackDialog must be used within AppShell");
   }
   return context;
 };
@@ -43,6 +54,7 @@ export function AppShell({
 }: AppShellProps) {
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
+  const [showFeedback, setShowFeedback] = useState(false);
   const [showAuthDialog, setShowAuthDialog] = useState(false);
   const { isCollapsed } = useSidebar();
   const { user, initialized } = useAuth();
@@ -62,6 +74,10 @@ export function AppShell({
 
   const handleOpenSearch = useCallback(() => {
     setShowSearch(true);
+  }, []);
+
+  const handleOpenFeedback = useCallback(() => {
+    setShowFeedback(true);
   }, []);
 
   // Global keyboard shortcuts
@@ -84,8 +100,9 @@ export function AppShell({
 
   return (
     <SearchContext.Provider value={{ openSearch: handleOpenSearch }}>
+      <FeedbackContext.Provider value={{ openFeedback: handleOpenFeedback }}>
       <div className="min-h-screen bg-background">
-        <Sidebar onShowShortcuts={handleShowShortcuts} />
+        <Sidebar onShowShortcuts={handleShowShortcuts} onShowFeedback={handleOpenFeedback} />
 
         {/* Main content area - offset by sidebar width on desktop (lg), no offset on tablet and below */}
         <main
@@ -119,7 +136,11 @@ export function AppShell({
           onOpenChange={setShowAuthDialog}
           preventClose={!user}
         />
+
+        {/* Feedback dialog */}
+        <FeedbackDialog open={showFeedback} onOpenChange={setShowFeedback} />
       </div>
+      </FeedbackContext.Provider>
     </SearchContext.Provider>
   );
 }
