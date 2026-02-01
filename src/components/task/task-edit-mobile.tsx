@@ -250,7 +250,7 @@ export function TaskEditMobile({
   };
 
   return (
-    <Drawer open={open} onOpenChange={onOpenChange}>
+    <Drawer open={open} onOpenChange={onOpenChange} repositionInputs={false}>
       <DrawerContent className="max-h-[90vh]">
         <DrawerHeader className="sr-only">
           <DrawerTitle>Edit Task</DrawerTitle>
