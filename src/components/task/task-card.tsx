@@ -90,7 +90,7 @@ export function TaskCard({
       {...listeners}
       onClick={handleClick}
       className={cn(
-        "group relative cursor-grab active:cursor-grabbing touch-none",
+        "group relative cursor-grab active:cursor-grabbing touch-pan-x",
         "transition-all duration-200 py-0 gap-0",
         isCurrentlyDragging && "opacity-50 shadow-lg scale-105 rotate-2",
         "hover:shadow-md"
