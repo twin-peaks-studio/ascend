@@ -38,7 +38,7 @@ export default function TasksPage() {
   } = useTaskMutations();
 
   // View mode state (board or list) - persisted in localStorage
-  const [viewMode, setViewMode] = useState<ViewMode>("board");
+  const [viewMode, setViewMode] = useState<ViewMode>("list");
 
   // Load view mode preference from localStorage
   useEffect(() => {
