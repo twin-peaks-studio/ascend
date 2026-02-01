@@ -38,14 +38,15 @@ function removeDangerousPatterns(str: string): string {
 /**
  * Normalizes whitespace in a string.
  * - Trims leading/trailing whitespace
- * - Collapses multiple spaces into one
+ * - Collapses multiple consecutive spaces into one (preserves newlines)
  * - Removes null bytes and other control characters
  */
 function normalizeWhitespace(str: string): string {
   return str
     .replace(/\0/g, "") // Remove null bytes
     .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "") // Remove control chars (except \t, \n, \r)
-    .replace(/\s+/g, " ") // Collapse whitespace
+    .replace(/[^\S\n]+/g, " ") // Collapse spaces/tabs but preserve newlines
+    .replace(/\n{3,}/g, "\n\n") // Collapse 3+ newlines into 2
     .trim();
 }
 
