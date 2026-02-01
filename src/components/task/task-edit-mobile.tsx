@@ -580,6 +580,20 @@ export function TaskEditMobile({
               )}
             </div>
           )}
+
+          {/* Created by info */}
+          {task.created_at && (
+            <div className="pt-4 mt-4 border-t border-border/40 text-[10px] text-muted-foreground text-right">
+              Created by {(() => {
+                const creator = profiles.find((p) => p.id === task.created_by);
+                return creator?.email || "Unknown";
+              })()} on {new Date(task.created_at).toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+              })}
+            </div>
+          )}
         </div>
       </DrawerContent>
     </Drawer>

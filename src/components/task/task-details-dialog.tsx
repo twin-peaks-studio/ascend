@@ -340,7 +340,7 @@ export function TaskDetailsDialog({
           </div>
 
           {/* Sidebar - Right Panel */}
-          <div className="p-4 bg-muted/20 overflow-y-auto">
+          <div className="p-4 bg-muted/20 overflow-y-auto flex flex-col">
             {/* Project */}
             <SidebarRow label="Project">
               <Select
@@ -526,7 +526,7 @@ export function TaskDetailsDialog({
             </SidebarRow>
 
             {/* Status */}
-            <SidebarRow label="Status" className="border-b-0">
+            <SidebarRow label="Status">
               <Select
                 value={task.status}
                 onValueChange={handleStatusChange}
@@ -544,6 +544,23 @@ export function TaskDetailsDialog({
                 </SelectContent>
               </Select>
             </SidebarRow>
+
+            {/* Spacer to push created by to bottom */}
+            <div className="flex-1" />
+
+            {/* Created by info */}
+            {task.created_at && (
+              <div className="pt-4 mt-auto text-[10px] text-muted-foreground text-right">
+                Created by {(() => {
+                  const creator = profiles.find((p) => p.id === task.created_by);
+                  return creator?.email || "Unknown";
+                })()} on {new Date(task.created_at).toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })}
+              </div>
+            )}
           </div>
         </div>
       </DialogContent>
