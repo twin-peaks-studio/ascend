@@ -137,16 +137,35 @@ export function useTasks() {
 
   // Refetch when app becomes visible again (handles mobile backgrounding)
   useEffect(() => {
-    const handleVisibilityChange = () => {
+    let retryTimeout: NodeJS.Timeout | null = null;
+
+    const handleVisibilityChange = async () => {
       if (document.visibilityState === "visible" && user) {
+        // Wait a moment for network to restore after backgrounding
+        await new Promise((resolve) => setTimeout(resolve, 300));
+
+        // Reset fetching flag to allow refetch
+        isFetching.current = false;
+
         // Background refresh - don't show loading state
-        fetchTasks(true);
+        await fetchTasks(true);
+
+        // If we got an error (likely timeout), retry once after a delay
+        if (error) {
+          retryTimeout = setTimeout(() => {
+            isFetching.current = false;
+            fetchTasks(true);
+          }, 1000);
+        }
       }
     };
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
-    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
-  }, [fetchTasks, user]);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      if (retryTimeout) clearTimeout(retryTimeout);
+    };
+  }, [fetchTasks, user, error]);
 
   return {
     tasks,

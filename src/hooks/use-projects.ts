@@ -128,16 +128,35 @@ export function useProjects() {
 
   // Refetch when app becomes visible again (handles mobile backgrounding)
   useEffect(() => {
-    const handleVisibilityChange = () => {
+    let retryTimeout: NodeJS.Timeout | null = null;
+
+    const handleVisibilityChange = async () => {
       if (document.visibilityState === "visible" && user) {
+        // Wait a moment for network to restore after backgrounding
+        await new Promise((resolve) => setTimeout(resolve, 300));
+
+        // Reset fetching flag to allow refetch
+        isFetching.current = false;
+
         // Background refresh - don't show loading state
-        fetchProjects(true);
+        await fetchProjects(true);
+
+        // If we got an error (likely timeout), retry once after a delay
+        if (error) {
+          retryTimeout = setTimeout(() => {
+            isFetching.current = false;
+            fetchProjects(true);
+          }, 1000);
+        }
       }
     };
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
-    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
-  }, [fetchProjects, user]);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      if (retryTimeout) clearTimeout(retryTimeout);
+    };
+  }, [fetchProjects, user, error]);
 
   return {
     projects,
@@ -221,15 +240,35 @@ export function useProject(projectId: string | null) {
 
   // Refetch when app becomes visible again
   useEffect(() => {
-    const handleVisibilityChange = () => {
+    let retryTimeout: NodeJS.Timeout | null = null;
+
+    const handleVisibilityChange = async () => {
       if (document.visibilityState === "visible" && projectId) {
-        fetchProject(true);
+        // Wait a moment for network to restore after backgrounding
+        await new Promise((resolve) => setTimeout(resolve, 300));
+
+        // Reset fetching flag to allow refetch
+        isFetching.current = false;
+
+        // Background refresh
+        await fetchProject(true);
+
+        // If we got an error, retry once after a delay
+        if (error) {
+          retryTimeout = setTimeout(() => {
+            isFetching.current = false;
+            fetchProject(true);
+          }, 1000);
+        }
       }
     };
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
-    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
-  }, [fetchProject, projectId]);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      if (retryTimeout) clearTimeout(retryTimeout);
+    };
+  }, [fetchProject, projectId, error]);
 
   return {
     project,
