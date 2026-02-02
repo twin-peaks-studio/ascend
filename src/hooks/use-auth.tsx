@@ -13,11 +13,15 @@ import {
   useCallback,
   useEffect,
   useState,
+  useRef,
   type ReactNode,
 } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { User, Session, AuthError } from "@supabase/supabase-js";
 import type { Profile } from "@/types/database";
+
+// Timeout for auth operations to prevent hanging
+const AUTH_TIMEOUT_MS = 10000;
 
 interface AuthState {
   user: User | null;
@@ -46,6 +50,16 @@ interface AuthContextValue extends AuthState {
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
+
+/**
+ * Wraps a promise with a timeout to prevent hanging
+ */
+function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms)),
+  ]);
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AuthState>({
@@ -77,13 +91,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [supabase]
   );
 
+  // Track if we're currently refreshing to prevent duplicate calls
+  const isRefreshing = useRef(false);
+
   // Initialize auth state
   useEffect(() => {
     const initAuth = async () => {
       try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
+        // Use timeout to prevent hanging on stale connections
+        const result = await withTimeout(
+          supabase.auth.getSession(),
+          AUTH_TIMEOUT_MS,
+          { data: { session: null }, error: null }
+        );
+
+        const session = result.data.session;
 
         if (session?.user) {
           const profile = await fetchProfile(session.user.id);
@@ -137,8 +159,54 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     });
 
+    // Silently refresh session when page becomes visible again
+    // This handles mobile browser backgrounding and desktop tab switching
+    const handleVisibilityChange = async () => {
+      if (document.visibilityState === "visible" && !isRefreshing.current) {
+        isRefreshing.current = true;
+        try {
+          // Silent refresh - don't set loading state to avoid UI flicker
+          const result = await withTimeout(
+            supabase.auth.getSession(),
+            AUTH_TIMEOUT_MS,
+            { data: { session: null }, error: null }
+          );
+
+          const session = result.data.session;
+
+          // Only update state if there's an actual change
+          setState((prev) => {
+            // If we had a user but now don't, or session changed significantly
+            if (prev.user && !session?.user) {
+              // User was logged out while away
+              return {
+                user: null,
+                profile: null,
+                session: null,
+                loading: false,
+                initialized: true,
+              };
+            }
+            if (session?.user && session.access_token !== prev.session?.access_token) {
+              // Session was refreshed, update it
+              return { ...prev, session };
+            }
+            // No meaningful change
+            return prev;
+          });
+        } catch (error) {
+          console.error("Error refreshing session on visibility change:", error);
+        } finally {
+          isRefreshing.current = false;
+        }
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
     return () => {
       subscription.unsubscribe();
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [supabase, fetchProfile]);
 
