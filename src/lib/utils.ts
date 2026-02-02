@@ -6,9 +6,9 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
- * Default timeout for data fetching operations (15 seconds)
+ * Default timeout for data fetching operations (5 seconds)
  */
-export const DATA_FETCH_TIMEOUT_MS = 15000;
+export const DATA_FETCH_TIMEOUT_MS = 5000;
 
 /**
  * Wraps a promise (or thenable like Supabase queries) with a timeout.
