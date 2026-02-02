@@ -8,7 +8,7 @@
  * Tasks are filtered by user access through their projects.
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import type { Task, TaskWithProject, TaskStatus } from "@/types";
@@ -20,6 +20,7 @@ import {
   type UpdateTaskInput,
 } from "@/lib/validation";
 import { toast } from "sonner";
+import { withTimeout } from "@/lib/utils";
 
 /**
  * Hook to fetch all tasks (non-archived)
@@ -30,25 +31,35 @@ export function useTasks() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const { user } = useAuth();
+  const isFetching = useRef(false);
 
   const supabase = createClient();
 
-  const fetchTasks = useCallback(async () => {
+  const fetchTasks = useCallback(async (isBackgroundRefresh = false) => {
     if (!user) {
       setTasks([]);
       setLoading(false);
       return;
     }
 
+    // Prevent duplicate fetches
+    if (isFetching.current) return;
+    isFetching.current = true;
+
     try {
-      setLoading(true);
+      // Only show loading state for initial/explicit fetches, not background refreshes
+      if (!isBackgroundRefresh) {
+        setLoading(true);
+      }
       setError(null);
 
-      // First get project IDs where user is creator or member
-      const { data: memberProjects, error: memberError } = await supabase
-        .from("project_members")
-        .select("project_id")
-        .eq("user_id", user.id);
+      // First get project IDs where user is creator or member (with timeout)
+      const { data: memberProjects, error: memberError } = await withTimeout(
+        supabase
+          .from("project_members")
+          .select("project_id")
+          .eq("user_id", user.id)
+      );
 
       if (memberError) {
         console.error("Error fetching member projects:", memberError);
@@ -56,11 +67,13 @@ export function useTasks() {
 
       const memberProjectIds = memberProjects?.map((m) => m.project_id) || [];
 
-      // Get projects created by user
-      const { data: ownedProjects, error: ownedError } = await supabase
-        .from("projects")
-        .select("id")
-        .eq("created_by", user.id);
+      // Get projects created by user (with timeout)
+      const { data: ownedProjects, error: ownedError } = await withTimeout(
+        supabase
+          .from("projects")
+          .select("id")
+          .eq("created_by", user.id)
+      );
 
       if (ownedError) {
         console.error("Error fetching owned projects:", ownedError);
@@ -91,7 +104,10 @@ export function useTasks() {
         query = query.or(`project_id.in.(${accessibleProjectIds.join(",")}),created_by.eq.${user.id}`);
       }
 
-      const { data, error: fetchError } = await query.order("position", { ascending: true });
+      // Wrap the main query with timeout
+      const { data, error: fetchError } = await withTimeout(
+        query.order("position", { ascending: true })
+      );
 
       if (fetchError) {
         console.error("Supabase error details:", fetchError);
@@ -101,15 +117,36 @@ export function useTasks() {
       setTasks(data as TaskWithProject[] || []);
     } catch (err) {
       console.error("Error fetching tasks:", err);
-      setError(err instanceof Error ? err : new Error("Failed to fetch tasks"));
+      const errorMessage = err instanceof Error ? err.message : "Failed to fetch tasks";
+      setError(err instanceof Error ? err : new Error(errorMessage));
+
+      // Show toast for timeout errors so user knows to refresh
+      if (errorMessage.includes("timed out")) {
+        toast.error("Connection timed out. Please refresh the page.");
+      }
     } finally {
       setLoading(false);
+      isFetching.current = false;
     }
   }, [supabase, user]);
 
+  // Initial fetch
   useEffect(() => {
     fetchTasks();
   }, [fetchTasks]);
+
+  // Refetch when app becomes visible again (handles mobile backgrounding)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible" && user) {
+        // Background refresh - don't show loading state
+        fetchTasks(true);
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, [fetchTasks, user]);
 
   return {
     tasks,

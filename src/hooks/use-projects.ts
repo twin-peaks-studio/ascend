@@ -8,7 +8,7 @@
  * Projects are filtered by user access (owner or member).
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import type { Project, ProjectWithRelations } from "@/types";
@@ -20,6 +20,7 @@ import {
   type UpdateProjectInput,
 } from "@/lib/validation";
 import { toast } from "sonner";
+import { withTimeout } from "@/lib/utils";
 
 /**
  * Hook to fetch all projects with their tasks
@@ -30,25 +31,35 @@ export function useProjects() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const { user } = useAuth();
+  const isFetching = useRef(false);
 
   const supabase = createClient();
 
-  const fetchProjects = useCallback(async () => {
+  const fetchProjects = useCallback(async (isBackgroundRefresh = false) => {
     if (!user) {
       setProjects([]);
       setLoading(false);
       return;
     }
 
+    // Prevent duplicate fetches
+    if (isFetching.current) return;
+    isFetching.current = true;
+
     try {
-      setLoading(true);
+      // Only show loading state for initial/explicit fetches, not background refreshes
+      if (!isBackgroundRefresh) {
+        setLoading(true);
+      }
       setError(null);
 
-      // First get project IDs where user is a member
-      const { data: memberProjects, error: memberError } = await supabase
-        .from("project_members")
-        .select("project_id")
-        .eq("user_id", user.id);
+      // First get project IDs where user is a member (with timeout)
+      const { data: memberProjects, error: memberError } = await withTimeout(
+        supabase
+          .from("project_members")
+          .select("project_id")
+          .eq("user_id", user.id)
+      );
 
       if (memberError) {
         console.error("Error fetching member projects:", memberError);
@@ -74,7 +85,10 @@ export function useProjects() {
         query = query.eq("created_by", user.id);
       }
 
-      const { data, error: fetchError } = await query.order("created_at", { ascending: false });
+      // Wrap the main query with timeout
+      const { data, error: fetchError } = await withTimeout(
+        query.order("created_at", { ascending: false })
+      );
 
       if (fetchError) {
         console.error("Supabase error details:", fetchError);
@@ -94,15 +108,36 @@ export function useProjects() {
       setProjects(transformedData);
     } catch (err) {
       console.error("Error fetching projects:", err);
-      setError(err instanceof Error ? err : new Error("Failed to fetch projects"));
+      const errorMessage = err instanceof Error ? err.message : "Failed to fetch projects";
+      setError(err instanceof Error ? err : new Error(errorMessage));
+
+      // Show toast for timeout errors so user knows to refresh
+      if (errorMessage.includes("timed out")) {
+        toast.error("Connection timed out. Please refresh the page.");
+      }
     } finally {
       setLoading(false);
+      isFetching.current = false;
     }
   }, [supabase, user]);
 
+  // Initial fetch
   useEffect(() => {
     fetchProjects();
   }, [fetchProjects]);
+
+  // Refetch when app becomes visible again (handles mobile backgrounding)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible" && user) {
+        // Background refresh - don't show loading state
+        fetchProjects(true);
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, [fetchProjects, user]);
 
   return {
     projects,
@@ -119,31 +154,40 @@ export function useProject(projectId: string | null) {
   const [project, setProject] = useState<ProjectWithRelations | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const isFetching = useRef(false);
 
   const supabase = createClient();
 
-  const fetchProject = useCallback(async () => {
+  const fetchProject = useCallback(async (isBackgroundRefresh = false) => {
     if (!projectId) {
       setProject(null);
       setLoading(false);
       return;
     }
 
+    // Prevent duplicate fetches
+    if (isFetching.current) return;
+    isFetching.current = true;
+
     try {
-      setLoading(true);
+      if (!isBackgroundRefresh) {
+        setLoading(true);
+      }
       setError(null);
 
-      const { data, error: fetchError } = await supabase
-        .from("projects")
-        .select(
+      const { data, error: fetchError } = await withTimeout(
+        supabase
+          .from("projects")
+          .select(
+            `
+            *,
+            tasks:tasks(*),
+            documents:project_documents(*)
           `
-          *,
-          tasks:tasks(*),
-          documents:project_documents(*)
-        `
-        )
-        .eq("id", projectId)
-        .single();
+          )
+          .eq("id", projectId)
+          .single()
+      );
 
       if (fetchError) throw fetchError;
 
@@ -158,15 +202,34 @@ export function useProject(projectId: string | null) {
       setProject(transformedData);
     } catch (err) {
       console.error("Error fetching project:", err);
-      setError(err instanceof Error ? err : new Error("Failed to fetch project"));
+      const errorMessage = err instanceof Error ? err.message : "Failed to fetch project";
+      setError(err instanceof Error ? err : new Error(errorMessage));
+
+      if (errorMessage.includes("timed out")) {
+        toast.error("Connection timed out. Please refresh the page.");
+      }
     } finally {
       setLoading(false);
+      isFetching.current = false;
     }
   }, [projectId, supabase]);
 
+  // Initial fetch
   useEffect(() => {
     fetchProject();
   }, [fetchProject]);
+
+  // Refetch when app becomes visible again
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible" && projectId) {
+        fetchProject(true);
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, [fetchProject, projectId]);
 
   return {
     project,
