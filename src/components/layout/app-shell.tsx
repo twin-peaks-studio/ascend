@@ -9,6 +9,7 @@ import { AuthDialog } from "../auth";
 import { FeedbackDialog } from "../feedback-dialog";
 import { useSidebar } from "@/hooks/use-sidebar";
 import { useAuth } from "@/hooks/use-auth";
+import { useRecoveryState } from "@/hooks/use-recovery";
 import { cn } from "@/lib/utils";
 import type { ViewMode } from "./header";
 import type { Project } from "@/types";
@@ -57,16 +58,29 @@ export function AppShell({
   const [showFeedback, setShowFeedback] = useState(false);
   const [showAuthDialog, setShowAuthDialog] = useState(false);
   const { isCollapsed } = useSidebar();
-  const { user, initialized } = useAuth();
+  const { user, initialized, confidence } = useAuth();
+  const { status: recoveryStatus } = useRecoveryState();
 
-  // Show auth dialog when user is not logged in
+  // Show auth dialog ONLY when we're confident the user is logged out
+  // Don't show during recovery or when auth state is uncertain (cached/unknown)
   useEffect(() => {
-    if (initialized && !user) {
+    // Only show login modal when:
+    // 1. Auth is initialized
+    // 2. No user exists
+    // 3. Confidence is "confirmed" (not just a timeout/cached state)
+    // 4. Not currently recovering from backgrounding
+    const shouldShowAuth =
+      initialized &&
+      !user &&
+      confidence === "confirmed" &&
+      recoveryStatus !== "recovering";
+
+    if (shouldShowAuth) {
       setShowAuthDialog(true);
     } else if (user) {
       setShowAuthDialog(false);
     }
-  }, [initialized, user]);
+  }, [initialized, user, confidence, recoveryStatus]);
 
   const handleShowShortcuts = useCallback(() => {
     setShowShortcuts(true);
