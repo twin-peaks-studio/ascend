@@ -3,6 +3,7 @@
 import { Moon, Sun, Plus, LogOut, LayoutGrid, List, Search, MessageSquarePlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { GlobalTimerIndicator } from "@/components/time";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -121,6 +122,9 @@ export function Header({
               <span className="hidden sm:inline">{quickCreateLabel}</span>
             </Button>
           )}
+
+          {/* Global timer indicator */}
+          <GlobalTimerIndicator className="hidden sm:flex" />
 
           {/* Search button */}
           <Button

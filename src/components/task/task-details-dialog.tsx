@@ -12,6 +12,7 @@ import {
   ChevronDown,
   ChevronRight,
   Trash2,
+  Clock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -39,7 +40,9 @@ import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import { FileUpload } from "@/components/shared/file-upload";
 import { AttachmentsList } from "@/components/shared/attachments-list";
+import { TimerButton, TimeEntryList } from "@/components/time";
 import { useAttachments } from "@/hooks/use-attachments";
+import { useTimeTracking } from "@/hooks/use-time-tracking";
 import { useProjectAssignees } from "@/hooks/use-project-assignees";
 import type { TaskWithProject, Profile, TaskStatus, TaskPriority, Project } from "@/types";
 import { PRIORITY_DISPLAY_SHORT, STATUS_CONFIG } from "@/types";
@@ -94,6 +97,7 @@ export function TaskDetailsDialog({
   const [title, setTitle] = useState(task?.title ?? "");
   const [description, setDescription] = useState(task?.description ?? "");
   const [showAttachments, setShowAttachments] = useState(false);
+  const [showTimeEntries, setShowTimeEntries] = useState(false);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
 
   // Track task ID to reset state when task changes (render-time state sync)
@@ -105,6 +109,7 @@ export function TaskDetailsDialog({
     setIsEditingTitle(false);
     setIsEditingDescription(false);
     setShowAttachments(false);
+    setShowTimeEntries(false);
   }
 
   // Attachments
@@ -115,6 +120,13 @@ export function TaskDetailsDialog({
     deleteAttachment,
     downloadFile,
   } = useAttachments("task", task?.id || null);
+
+  // Time tracking
+  const {
+    entries: timeEntries,
+    formattedTotalTime,
+    totalTime,
+  } = useTimeTracking("task", task?.id || "");
 
   // Auto-expand attachments section when attachments exist (render-time check)
   const [hasCheckedAttachments, setHasCheckedAttachments] = useState(false);
@@ -355,6 +367,42 @@ export function TaskDetailsDialog({
                 </div>
               )}
             </div>
+
+            {/* Time Tracking - Collapsible */}
+            <div className="border-t border-border/40 pt-4">
+              <button
+                onClick={() => setShowTimeEntries(!showTimeEntries)}
+                className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors w-full"
+              >
+                {showTimeEntries ? (
+                  <ChevronDown className="h-4 w-4" />
+                ) : (
+                  <ChevronRight className="h-4 w-4" />
+                )}
+                <Clock className="h-4 w-4" />
+                <span>Time Tracked</span>
+                {totalTime > 0 && (
+                  <span className="ml-auto font-mono tabular-nums text-foreground text-xs">
+                    {formattedTotalTime}
+                  </span>
+                )}
+                {timeEntries.filter(e => e.end_time).length > 0 && (
+                  <span className="text-xs">
+                    ({timeEntries.filter(e => e.end_time).length})
+                  </span>
+                )}
+              </button>
+
+              {showTimeEntries && task && (
+                <div className="mt-4">
+                  <TimeEntryList
+                    entityType="task"
+                    entityId={task.id}
+                    hideHeader
+                  />
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Sidebar - Right Panel */}
@@ -561,6 +609,18 @@ export function TaskDetailsDialog({
                   <SelectItem value="done" className="text-xs">Done</SelectItem>
                 </SelectContent>
               </Select>
+            </SidebarRow>
+
+            {/* Timer */}
+            <SidebarRow label="Timer">
+              <TimerButton
+                entityType="task"
+                entityId={task.id}
+                entityName={task.title}
+                size="sm"
+                showLabel={true}
+                className="w-full justify-center"
+              />
             </SidebarRow>
 
             {/* Spacer to push delete and created by to bottom */}

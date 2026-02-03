@@ -14,6 +14,7 @@ import {
   MoreHorizontal,
   AlignLeft,
   Trash2,
+  Clock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -46,8 +47,10 @@ import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import { FileUpload } from "@/components/shared/file-upload";
 import { AttachmentsList } from "@/components/shared/attachments-list";
+import { TimerButton, TimeEntryList } from "@/components/time";
 import { useAttachments } from "@/hooks/use-attachments";
 import { useProjectAssignees } from "@/hooks/use-project-assignees";
+import { useTimeTracking } from "@/hooks/use-time-tracking";
 import type { TaskWithProject, Profile, TaskPriority } from "@/types";
 import { PRIORITY_DISPLAY_LONG } from "@/types";
 import type { UpdateTaskInput } from "@/lib/validation";
@@ -139,6 +142,7 @@ export function TaskEditMobile({
   const [title, setTitle] = useState(task?.title ?? "");
   const [description, setDescription] = useState(task?.description ?? "");
   const [showAttachments, setShowAttachments] = useState(false);
+  const [showTimeEntries, setShowTimeEntries] = useState(false);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [assigneeSelectOpen, setAssigneeSelectOpen] = useState(false);
   const [prioritySelectOpen, setPrioritySelectOpen] = useState(false);
@@ -156,6 +160,7 @@ export function TaskEditMobile({
     setIsEditingTitle(false);
     setIsEditingDescription(false);
     setShowAttachments(false);
+    setShowTimeEntries(false);
     setDatePickerOpen(false);
     setAssigneeSelectOpen(false);
     setPrioritySelectOpen(false);
@@ -182,6 +187,13 @@ export function TaskEditMobile({
 
   // Get assignable profiles based on task's project
   const { assignableProfiles, canAssign } = useProjectAssignees(task?.project_id || null, profiles);
+
+  // Time tracking
+  const {
+    entries: timeEntries,
+    formattedTotalTime,
+    totalTime,
+  } = useTimeTracking("task", task?.id || "");
 
   if (!task) return null;
 
@@ -497,6 +509,25 @@ export function TaskEditMobile({
             </SelectContent>
           </Select>
 
+          {/* Timer */}
+          <div className="flex items-center gap-3 w-full py-3 border-b border-border/40">
+            <Clock className="h-5 w-5 text-muted-foreground shrink-0" />
+            <div className="flex-1 min-w-0 flex items-center justify-between gap-2">
+              {totalTime > 0 && (
+                <span className="text-sm font-mono tabular-nums text-muted-foreground">
+                  {formattedTotalTime} tracked
+                </span>
+              )}
+              <TimerButton
+                entityType="task"
+                entityId={task.id}
+                entityName={task.title}
+                size="sm"
+                showLabel={true}
+              />
+            </div>
+          </div>
+
           {/* Empty Properties Chips - Horizontal scroll */}
           {(emptyPropertyChips.length > 0 || !hasDescription || !hasAssignee || !hasDueDate) && (
             <div className="py-3 -mx-4 px-4 overflow-x-auto">
@@ -609,6 +640,43 @@ export function TaskEditMobile({
                     onDelete={deleteAttachment}
                   />
                 </div>
+              )}
+            </div>
+          )}
+
+          {/* Time Entries Section */}
+          {(showTimeEntries || timeEntries.filter(e => e.end_time).length > 0) && (
+            <div className="py-3 border-t border-border/40">
+              <button
+                type="button"
+                onClick={() => setShowTimeEntries(!showTimeEntries)}
+                className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors w-full mb-3"
+              >
+                {showTimeEntries ? (
+                  <ChevronDown className="h-4 w-4" />
+                ) : (
+                  <ChevronRight className="h-4 w-4" />
+                )}
+                <Clock className="h-4 w-4" />
+                <span>Time Entries</span>
+                {totalTime > 0 && (
+                  <span className="ml-auto font-mono tabular-nums text-foreground text-xs">
+                    {formattedTotalTime}
+                  </span>
+                )}
+                {timeEntries.filter(e => e.end_time).length > 0 && (
+                  <span className="text-xs">
+                    ({timeEntries.filter(e => e.end_time).length})
+                  </span>
+                )}
+              </button>
+
+              {showTimeEntries && (
+                <TimeEntryList
+                  entityType="task"
+                  entityId={task.id}
+                  hideHeader
+                />
               )}
             </div>
           )}

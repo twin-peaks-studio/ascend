@@ -368,6 +368,56 @@ export type Database = {
           }
         ];
       };
+      time_entries: {
+        Row: {
+          id: string;
+          entity_type: "task" | "note" | "project";
+          entity_id: string;
+          user_id: string;
+          start_time: string;
+          end_time: string | null;
+          duration: number | null;
+          timezone: string;
+          description: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          entity_type: "task" | "note" | "project";
+          entity_id: string;
+          user_id: string;
+          start_time: string;
+          end_time?: string | null;
+          duration?: number | null;
+          timezone: string;
+          description?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          entity_type?: "task" | "note" | "project";
+          entity_id?: string;
+          user_id?: string;
+          start_time?: string;
+          end_time?: string | null;
+          duration?: number | null;
+          timezone?: string;
+          description?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "time_entries_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
@@ -416,3 +466,10 @@ export type NoteUpdate = UpdateTables<"notes">;
 export type NoteTask = Tables<"note_tasks">;
 export type NoteTaskInsert = InsertTables<"note_tasks">;
 export type NoteTaskUpdate = UpdateTables<"note_tasks">;
+
+export type TimeEntry = Tables<"time_entries">;
+export type TimeEntryInsert = InsertTables<"time_entries">;
+export type TimeEntryUpdate = UpdateTables<"time_entries">;
+
+// Entity type for polymorphic relationships (time entries, etc.)
+export type TimeTrackingEntityType = "task" | "note" | "project";
