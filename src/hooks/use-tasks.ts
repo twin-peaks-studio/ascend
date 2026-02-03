@@ -4,24 +4,15 @@
  * Task Data Hooks
  *
  * Custom hooks for fetching and mutating task data.
- * Includes optimistic updates for drag-and-drop operations.
+ * Uses React Query for request deduplication, caching, and automatic refetching.
  * Tasks are filtered by user access through their projects.
- *
- * Integrates with App Recovery system for:
- * - Timeout protection on all queries
- * - Automatic refetch after backgrounding
- * - Mutation queueing during degraded state
  */
 
-import { useCallback, useEffect, useState, useRef } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useCallback, useState } from "react";
 import { getClient } from "@/lib/supabase/client-manager";
-import { withTimeout, TIMEOUTS, isTimeoutError } from "@/lib/utils/with-timeout";
+import { withTimeout, TIMEOUTS } from "@/lib/utils/with-timeout";
 import { useAuth } from "@/hooks/use-auth";
-import { useRecoveryState, useRecoveryRefresh } from "@/hooks/use-recovery";
-import {
-  mutationQueue,
-  shouldQueueMutation,
-} from "@/lib/app-recovery/mutation-queue";
 import type { Task, TaskWithProject, TaskStatus } from "@/types";
 import type { TaskInsert, TaskUpdate } from "@/types/database";
 import {
@@ -32,139 +23,119 @@ import {
 } from "@/lib/validation";
 import { toast } from "sonner";
 
+// Query keys for cache management
+export const taskKeys = {
+  all: ["tasks"] as const,
+  lists: () => [...taskKeys.all, "list"] as const,
+  list: (userId: string) => [...taskKeys.lists(), userId] as const,
+};
+
+/**
+ * Fetch all tasks for a user
+ */
+async function fetchTasksForUser(userId: string): Promise<TaskWithProject[]> {
+  const supabase = getClient();
+
+  // First get project IDs where user is creator or member
+  const memberResult = await withTimeout(
+    supabase.from("project_members").select("project_id").eq("user_id", userId),
+    TIMEOUTS.DATA_QUERY,
+    "Fetching member projects timed out"
+  );
+
+  if (memberResult.error) {
+    console.error("Error fetching member projects:", memberResult.error);
+  }
+
+  const memberProjectIds = memberResult.data?.map((m: { project_id: string }) => m.project_id) || [];
+
+  // Get projects created by user
+  const ownedResult = await withTimeout(
+    supabase.from("projects").select("id").eq("created_by", userId),
+    TIMEOUTS.DATA_QUERY,
+    "Fetching owned projects timed out"
+  );
+
+  if (ownedResult.error) {
+    console.error("Error fetching owned projects:", ownedResult.error);
+  }
+
+  const ownedProjectIds = ownedResult.data?.map((p: { id: string }) => p.id) || [];
+
+  // Combine all project IDs user has access to
+  const accessibleProjectIds = [
+    ...new Set([...memberProjectIds, ...ownedProjectIds]),
+  ];
+
+  // Build the query
+  let query = supabase
+    .from("tasks")
+    .select(
+      `
+      *,
+      project:projects(*),
+      assignee:profiles(*)
+    `
+    )
+    .eq("is_archived", false);
+
+  if (accessibleProjectIds.length === 0) {
+    // No accessible projects - just fetch tasks created by user
+    query = query.eq("created_by", userId);
+  } else {
+    // Fetch tasks from accessible projects OR created by user
+    query = query.or(
+      `project_id.in.(${accessibleProjectIds.join(",")}),created_by.eq.${userId}`
+    );
+  }
+
+  const tasksResult = await withTimeout(
+    query.order("position", { ascending: true }),
+    TIMEOUTS.DATA_QUERY,
+    "Fetching tasks timed out"
+  );
+
+  if (tasksResult.error) {
+    console.error("Supabase error details:", tasksResult.error);
+    throw tasksResult.error;
+  }
+
+  return (tasksResult.data as TaskWithProject[]) || [];
+}
+
 /**
  * Hook to fetch all tasks (non-archived)
- * Only fetches tasks that belong to projects the user has access to
+ * Uses React Query for deduplication - multiple components calling this = 1 request
  */
 export function useTasks() {
-  const [tasks, setTasks] = useState<TaskWithProject[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
   const { user } = useAuth();
-  const { status: recoveryStatus, isRecovering } = useRecoveryState();
+  const queryClient = useQueryClient();
 
-  // Track if this is the initial load (for showing skeletons)
-  const isInitialLoad = useRef(true);
-
-  const fetchTasks = useCallback(async () => {
-    if (!user) {
-      setTasks([]);
-      setLoading(false);
-      isInitialLoad.current = false;
-      return;
-    }
-
-    // Don't clear data during recovery - keep cached visible
-    if (isRecovering) {
-      console.log("[useTasks] Skipping fetch during recovery, keeping cached data");
-      return;
-    }
-
-    try {
-      // Only show loading on initial load, not on refetch
-      if (isInitialLoad.current) {
-        setLoading(true);
-      }
-      setError(null);
-
-      const supabase = getClient();
-
-      // First get project IDs where user is creator or member
-      const memberResult = await withTimeout(
-        supabase.from("project_members").select("project_id").eq("user_id", user.id).then(res => res),
-        TIMEOUTS.DATA_QUERY,
-        "Fetching member projects timed out"
-      );
-
-      if (memberResult.error) {
-        console.error("Error fetching member projects:", memberResult.error);
-      }
-
-      const memberProjectIds = memberResult.data?.map((m: { project_id: string }) => m.project_id) || [];
-
-      // Get projects created by user
-      const ownedResult = await withTimeout(
-        supabase.from("projects").select("id").eq("created_by", user.id).then(res => res),
-        TIMEOUTS.DATA_QUERY,
-        "Fetching owned projects timed out"
-      );
-
-      if (ownedResult.error) {
-        console.error("Error fetching owned projects:", ownedResult.error);
-      }
-
-      const ownedProjectIds = ownedResult.data?.map((p: { id: string }) => p.id) || [];
-
-      // Combine all project IDs user has access to
-      const accessibleProjectIds = [
-        ...new Set([...memberProjectIds, ...ownedProjectIds]),
-      ];
-
-      // Build the query
-      let query = supabase
-        .from("tasks")
-        .select(
-          `
-          *,
-          project:projects(*),
-          assignee:profiles(*)
-        `
-        )
-        .eq("is_archived", false);
-
-      if (accessibleProjectIds.length === 0) {
-        // No accessible projects - just fetch tasks created by user
-        query = query.eq("created_by", user.id);
-      } else {
-        // Fetch tasks from accessible projects OR created by user
-        query = query.or(
-          `project_id.in.(${accessibleProjectIds.join(",")}),created_by.eq.${user.id}`
-        );
-      }
-
-      const tasksResult = await withTimeout(
-        query.order("position", { ascending: true }).then(res => res),
-        TIMEOUTS.DATA_QUERY,
-        "Fetching tasks timed out"
-      );
-
-      if (tasksResult.error) {
-        console.error("Supabase error details:", tasksResult.error);
-        throw tasksResult.error;
-      }
-
-      setTasks((tasksResult.data as TaskWithProject[]) || []);
-      isInitialLoad.current = false;
-    } catch (err) {
-      if (isTimeoutError(err)) {
-        console.warn("[useTasks] Fetch timed out, keeping cached data");
-        // On timeout, keep cached data visible
-        if (tasks.length > 0) {
-          // We have cached data, just log and continue
-          return;
-        }
-      }
-      console.error("Error fetching tasks:", err);
-      setError(err instanceof Error ? err : new Error("Failed to fetch tasks"));
-    } finally {
-      setLoading(false);
-    }
-  }, [user, isRecovering, tasks.length]);
-
-  // Initial fetch
-  useEffect(() => {
-    fetchTasks();
-  }, [fetchTasks]);
-
-  // Subscribe to recovery refresh signals
-  useRecoveryRefresh(fetchTasks);
+  const {
+    data: tasks = [],
+    isLoading,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: taskKeys.list(user?.id ?? ""),
+    queryFn: () => fetchTasksForUser(user!.id),
+    enabled: !!user, // Only run when user is logged in
+    staleTime: 30 * 1000, // Consider fresh for 30s
+    refetchOnWindowFocus: true, // Refetch when returning from background
+  });
 
   return {
     tasks,
-    loading: loading && isInitialLoad.current, // Only show loading on initial
-    error,
-    refetch: fetchTasks,
-    setTasks, // Expose for optimistic updates
+    loading: isLoading,
+    error: error as Error | null,
+    refetch,
+    // For optimistic updates - set tasks directly in cache
+    setTasks: (updater: TaskWithProject[] | ((prev: TaskWithProject[]) => TaskWithProject[])) => {
+      queryClient.setQueryData(
+        taskKeys.list(user?.id ?? ""),
+        typeof updater === "function" ? updater(tasks) : updater
+      );
+    },
   };
 }
 
@@ -192,12 +163,12 @@ export function useTasksByStatus() {
 
 /**
  * Hook for task mutations (create, update, delete)
- * Includes mutation queueing for degraded/recovering states
+ * Automatically invalidates relevant queries after mutations
  */
 export function useTaskMutations() {
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
-  const { status: recoveryStatus } = useRecoveryState();
+  const queryClient = useQueryClient();
 
   const createTask = useCallback(
     async (input: CreateTaskInput): Promise<Task | null> => {
@@ -206,10 +177,10 @@ export function useTaskMutations() {
         return null;
       }
 
-      const supabase = getClient();
+      try {
+        setLoading(true);
+        const supabase = getClient();
 
-      // The actual create operation
-      const doCreate = async (): Promise<Task> => {
         // Validate input
         const validated = createTaskSchema.parse(input);
 
@@ -245,26 +216,12 @@ export function useTaskMutations() {
         );
 
         if (insertResult.error) throw insertResult.error;
-        return insertResult.data as Task;
-      };
 
-      // Queue if in degraded/recovering state
-      if (shouldQueueMutation(recoveryStatus)) {
-        mutationQueue.enqueue(doCreate, {
-          description: "Create task",
-          onSuccess: () => toast.success("Task created successfully"),
-          onError: () => toast.error("Failed to create task"),
-        });
-        toast.info("Task will be created when connection restores");
-        return null;
-      }
+        // Invalidate tasks list to refetch
+        queryClient.invalidateQueries({ queryKey: taskKeys.lists() });
 
-      // Execute immediately
-      try {
-        setLoading(true);
-        const result = await doCreate();
         toast.success("Task created successfully");
-        return result;
+        return insertResult.data as Task;
       } catch (err: unknown) {
         const supabaseError = err as {
           message?: string;
@@ -285,15 +242,15 @@ export function useTaskMutations() {
         setLoading(false);
       }
     },
-    [user, recoveryStatus]
+    [user, queryClient]
   );
 
   const updateTask = useCallback(
     async (taskId: string, input: UpdateTaskInput): Promise<Task | null> => {
-      const supabase = getClient();
+      try {
+        setLoading(true);
+        const supabase = getClient();
 
-      // The actual update operation
-      const doUpdate = async (): Promise<Task> => {
         // Validate input
         const validated = updateTaskSchema.parse(input);
 
@@ -308,24 +265,11 @@ export function useTaskMutations() {
         );
 
         if (updateResult.error) throw updateResult.error;
+
+        // Invalidate tasks list
+        queryClient.invalidateQueries({ queryKey: taskKeys.lists() });
+
         return updateResult.data as Task;
-      };
-
-      // Queue if in degraded/recovering state
-      if (shouldQueueMutation(recoveryStatus)) {
-        mutationQueue.enqueue(doUpdate, {
-          description: "Update task",
-          onError: () => toast.error("Failed to update task"),
-        });
-        toast.info("Change queued, will save when connection restores");
-        return null;
-      }
-
-      // Execute immediately
-      try {
-        setLoading(true);
-        const result = await doUpdate();
-        return result;
       } catch (err: unknown) {
         const supabaseError = err as {
           message?: string;
@@ -346,7 +290,7 @@ export function useTaskMutations() {
         setLoading(false);
       }
     },
-    [recoveryStatus]
+    [queryClient]
   );
 
   /**
@@ -355,9 +299,9 @@ export function useTaskMutations() {
    */
   const updateTaskPosition = useCallback(
     async (taskId: string, newStatus: TaskStatus, newPosition: number): Promise<boolean> => {
-      const supabase = getClient();
+      try {
+        const supabase = getClient();
 
-      const doUpdate = async (): Promise<boolean> => {
         const updateResult = await withTimeout(
           supabase
             .from("tasks")
@@ -373,26 +317,13 @@ export function useTaskMutations() {
 
         if (updateResult.error) throw updateResult.error;
         return true;
-      };
-
-      // Queue if in degraded/recovering state
-      if (shouldQueueMutation(recoveryStatus)) {
-        mutationQueue.enqueue(doUpdate, {
-          description: "Move task",
-          onError: () => toast.error("Failed to move task"),
-        });
-        return true; // Return true since optimistic update already applied
-      }
-
-      try {
-        return await doUpdate();
       } catch (err) {
         console.error("Error updating task position:", err);
         toast.error("Failed to move task");
         return false;
       }
     },
-    [recoveryStatus]
+    []
   );
 
   /**
@@ -402,9 +333,9 @@ export function useTaskMutations() {
     async (
       tasksToUpdate: Array<{ id: string; position: number; status: TaskStatus }>
     ): Promise<boolean> => {
-      const supabase = getClient();
+      try {
+        const supabase = getClient();
 
-      const doReorder = async (): Promise<boolean> => {
         // Update each task's position
         const updates = tasksToUpdate.map((task) =>
           supabase
@@ -419,56 +350,31 @@ export function useTaskMutations() {
 
         await Promise.all(updates);
         return true;
-      };
-
-      // Queue if in degraded/recovering state
-      if (shouldQueueMutation(recoveryStatus)) {
-        mutationQueue.enqueue(doReorder, {
-          description: "Reorder tasks",
-          onError: () => toast.error("Failed to reorder tasks"),
-        });
-        return true; // Return true since optimistic update already applied
-      }
-
-      try {
-        return await doReorder();
       } catch (err) {
         console.error("Error reordering tasks:", err);
         toast.error("Failed to reorder tasks");
         return false;
       }
     },
-    [recoveryStatus]
+    []
   );
 
   const deleteTask = useCallback(
     async (taskId: string): Promise<boolean> => {
-      const supabase = getClient();
+      try {
+        setLoading(true);
+        const supabase = getClient();
 
-      const doDelete = async (): Promise<boolean> => {
         const deleteResult = await withTimeout(
           supabase.from("tasks").delete().eq("id", taskId).then(res => res),
           TIMEOUTS.MUTATION
         );
 
         if (deleteResult.error) throw deleteResult.error;
-        return true;
-      };
 
-      // Queue if in degraded/recovering state
-      if (shouldQueueMutation(recoveryStatus)) {
-        mutationQueue.enqueue(doDelete, {
-          description: "Delete task",
-          onSuccess: () => toast.success("Task deleted successfully"),
-          onError: () => toast.error("Failed to delete task"),
-        });
-        toast.info("Task will be deleted when connection restores");
-        return true;
-      }
+        // Invalidate tasks list
+        queryClient.invalidateQueries({ queryKey: taskKeys.lists() });
 
-      try {
-        setLoading(true);
-        await doDelete();
         toast.success("Task deleted successfully");
         return true;
       } catch (err) {
@@ -479,14 +385,15 @@ export function useTaskMutations() {
         setLoading(false);
       }
     },
-    [recoveryStatus]
+    [queryClient]
   );
 
   const archiveTask = useCallback(
     async (taskId: string): Promise<boolean> => {
-      const supabase = getClient();
+      try {
+        setLoading(true);
+        const supabase = getClient();
 
-      const doArchive = async (): Promise<boolean> => {
         const archiveResult = await withTimeout(
           supabase
             .from("tasks")
@@ -500,23 +407,10 @@ export function useTaskMutations() {
         );
 
         if (archiveResult.error) throw archiveResult.error;
-        return true;
-      };
 
-      // Queue if in degraded/recovering state
-      if (shouldQueueMutation(recoveryStatus)) {
-        mutationQueue.enqueue(doArchive, {
-          description: "Archive task",
-          onSuccess: () => toast.success("Task archived successfully"),
-          onError: () => toast.error("Failed to archive task"),
-        });
-        toast.info("Task will be archived when connection restores");
-        return true;
-      }
+        // Invalidate tasks list
+        queryClient.invalidateQueries({ queryKey: taskKeys.lists() });
 
-      try {
-        setLoading(true);
-        await doArchive();
         toast.success("Task archived successfully");
         return true;
       } catch (err) {
@@ -527,14 +421,15 @@ export function useTaskMutations() {
         setLoading(false);
       }
     },
-    [recoveryStatus]
+    [queryClient]
   );
 
   const markAsDuplicate = useCallback(
     async (taskId: string, isDuplicate: boolean): Promise<boolean> => {
-      const supabase = getClient();
+      try {
+        setLoading(true);
+        const supabase = getClient();
 
-      const doMark = async (): Promise<boolean> => {
         const markResult = await withTimeout(
           supabase
             .from("tasks")
@@ -548,26 +443,10 @@ export function useTaskMutations() {
         );
 
         if (markResult.error) throw markResult.error;
-        return true;
-      };
 
-      // Queue if in degraded/recovering state
-      if (shouldQueueMutation(recoveryStatus)) {
-        mutationQueue.enqueue(doMark, {
-          description: isDuplicate ? "Mark as duplicate" : "Remove duplicate flag",
-          onSuccess: () =>
-            toast.success(
-              isDuplicate ? "Task marked as duplicate" : "Duplicate flag removed"
-            ),
-          onError: () => toast.error("Failed to update task"),
-        });
-        toast.info("Change queued, will save when connection restores");
-        return true;
-      }
+        // Invalidate tasks list
+        queryClient.invalidateQueries({ queryKey: taskKeys.lists() });
 
-      try {
-        setLoading(true);
-        await doMark();
         toast.success(
           isDuplicate ? "Task marked as duplicate" : "Duplicate flag removed"
         );
@@ -580,7 +459,7 @@ export function useTaskMutations() {
         setLoading(false);
       }
     },
-    [recoveryStatus]
+    [queryClient]
   );
 
   return {

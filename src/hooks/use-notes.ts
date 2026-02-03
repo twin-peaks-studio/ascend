@@ -4,14 +4,18 @@
  * Notes Data Hooks
  *
  * Custom hooks for fetching and mutating notes data.
+ * Uses React Query for request deduplication and caching.
  * Notes are scoped to projects and can have linked tasks.
  */
 
-import { useCallback, useEffect, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useCallback, useState } from "react";
+import { getClient } from "@/lib/supabase/client-manager";
+import { withTimeout, TIMEOUTS } from "@/lib/utils/with-timeout";
 import { useAuth } from "@/hooks/use-auth";
 import type { Note, NoteWithRelations, Task } from "@/types";
 import type { NoteInsert, NoteUpdate, NoteTaskInsert } from "@/types/database";
+import { taskKeys } from "@/hooks/use-tasks";
 
 /**
  * Type for the junction table query result when fetching tasks linked to a note.
@@ -21,6 +25,7 @@ interface NoteTaskJoinResult {
   task_id: string;
   task: Task | null;
 }
+
 import {
   createNoteSchema,
   updateNoteSchema,
@@ -29,54 +34,115 @@ import {
 } from "@/lib/validation";
 import { toast } from "sonner";
 
+// Query keys for cache management
+export const noteKeys = {
+  all: ["notes"] as const,
+  lists: () => [...noteKeys.all, "list"] as const,
+  list: (projectId: string) => [...noteKeys.lists(), projectId] as const,
+  details: () => [...noteKeys.all, "detail"] as const,
+  detail: (noteId: string) => [...noteKeys.details(), noteId] as const,
+};
+
+/**
+ * Fetch notes for a project
+ */
+async function fetchProjectNotes(projectId: string): Promise<Note[]> {
+  const supabase = getClient();
+
+  const result = await withTimeout(
+    supabase
+      .from("notes")
+      .select("*")
+      .eq("project_id", projectId)
+      .order("updated_at", { ascending: false }),
+    TIMEOUTS.DATA_QUERY,
+    "Fetching notes timed out"
+  );
+
+  if (result.error) throw result.error;
+  return (result.data as Note[]) || [];
+}
+
+/**
+ * Fetch a single note with linked tasks
+ */
+async function fetchNoteWithRelations(noteId: string): Promise<NoteWithRelations> {
+  const supabase = getClient();
+
+  // Fetch note with project
+  const noteResult = await withTimeout(
+    supabase
+      .from("notes")
+      .select(`
+        *,
+        project:projects(*)
+      `)
+      .eq("id", noteId)
+      .single(),
+    TIMEOUTS.DATA_QUERY,
+    "Fetching note timed out"
+  );
+
+  if (noteResult.error) throw noteResult.error;
+
+  // Fetch linked tasks via note_tasks junction table
+  const noteTasksResult = await withTimeout(
+    supabase
+      .from("note_tasks")
+      .select(`
+        task_id,
+        task:tasks(*, project:projects(*))
+      `)
+      .eq("note_id", noteId),
+    TIMEOUTS.DATA_QUERY,
+    "Fetching note tasks timed out"
+  );
+
+  if (noteTasksResult.error) throw noteTasksResult.error;
+
+  // Extract tasks from the junction table results, filtering out archived tasks
+  const joinResults = (noteTasksResult.data || []) as unknown as NoteTaskJoinResult[];
+  const tasks = joinResults
+    .map((nt) => nt.task)
+    .filter((task): task is Task => task !== null && !task.is_archived);
+
+  return {
+    ...noteResult.data,
+    tasks,
+  } as NoteWithRelations;
+}
+
 /**
  * Hook to fetch notes for a specific project
+ * Uses React Query for deduplication
  */
 export function useProjectNotes(projectId: string | null) {
-  const [notes, setNotes] = useState<Note[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
+  const queryClient = useQueryClient();
 
-  const supabase = createClient();
-
-  const fetchNotes = useCallback(async () => {
-    if (!projectId) {
-      setNotes([]);
-      setLoading(false);
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setError(null);
-
-      const { data, error: fetchError } = await supabase
-        .from("notes")
-        .select("*")
-        .eq("project_id", projectId)
-        .order("updated_at", { ascending: false });
-
-      if (fetchError) throw fetchError;
-
-      setNotes((data as Note[]) || []);
-    } catch (err) {
-      console.error("Error fetching notes:", err);
-      setError(err instanceof Error ? err : new Error("Failed to fetch notes"));
-    } finally {
-      setLoading(false);
-    }
-  }, [projectId, supabase]);
-
-  useEffect(() => {
-    fetchNotes();
-  }, [fetchNotes]);
+  const {
+    data: notes = [],
+    isLoading,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: noteKeys.list(projectId ?? ""),
+    queryFn: () => fetchProjectNotes(projectId!),
+    enabled: !!projectId,
+    staleTime: 60 * 1000, // Cache for 1 minute
+    refetchOnWindowFocus: true,
+  });
 
   return {
     notes,
-    setNotes,
-    loading,
-    error,
-    refetch: fetchNotes,
+    setNotes: (updater: Note[] | ((prev: Note[]) => Note[])) => {
+      queryClient.setQueryData(
+        noteKeys.list(projectId ?? ""),
+        typeof updater === "function" ? updater(notes) : updater
+      );
+    },
+    loading: isLoading,
+    error: error as Error | null,
+    refetch,
   };
 }
 
@@ -84,74 +150,32 @@ export function useProjectNotes(projectId: string | null) {
  * Hook to fetch a single note with its linked tasks
  */
 export function useNote(noteId: string | null) {
-  const [note, setNote] = useState<NoteWithRelations | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
+  const queryClient = useQueryClient();
 
-  const supabase = createClient();
-
-  const fetchNote = useCallback(async () => {
-    if (!noteId) {
-      setNote(null);
-      setLoading(false);
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setError(null);
-
-      // Fetch note with project
-      const { data: noteData, error: noteError } = await supabase
-        .from("notes")
-        .select(`
-          *,
-          project:projects(*)
-        `)
-        .eq("id", noteId)
-        .single();
-
-      if (noteError) throw noteError;
-
-      // Fetch linked tasks via note_tasks junction table
-      const { data: noteTasksData, error: noteTasksError } = await supabase
-        .from("note_tasks")
-        .select(`
-          task_id,
-          task:tasks(*, project:projects(*))
-        `)
-        .eq("note_id", noteId);
-
-      if (noteTasksError) throw noteTasksError;
-
-      // Extract tasks from the junction table results, filtering out archived tasks
-      const joinResults = (noteTasksData || []) as unknown as NoteTaskJoinResult[];
-      const tasks = joinResults
-        .map((nt) => nt.task)
-        .filter((task): task is Task => task !== null && !task.is_archived);
-
-      setNote({
-        ...noteData,
-        tasks,
-      } as NoteWithRelations);
-    } catch (err) {
-      console.error("Error fetching note:", err);
-      setError(err instanceof Error ? err : new Error("Failed to fetch note"));
-    } finally {
-      setLoading(false);
-    }
-  }, [noteId, supabase]);
-
-  useEffect(() => {
-    fetchNote();
-  }, [fetchNote]);
+  const {
+    data: note = null,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: noteKeys.detail(noteId ?? ""),
+    queryFn: () => fetchNoteWithRelations(noteId!),
+    enabled: !!noteId,
+    staleTime: 30 * 1000, // Cache for 30 seconds
+    refetchOnWindowFocus: true,
+  });
 
   return {
     note,
-    setNote,
-    loading,
-    error,
-    refetch: fetchNote,
+    setNote: (updater: NoteWithRelations | null | ((prev: NoteWithRelations | null) => NoteWithRelations | null)) => {
+      queryClient.setQueryData(
+        noteKeys.detail(noteId ?? ""),
+        typeof updater === "function" ? updater(note) : updater
+      );
+    },
+    loading: isLoading,
+    error: error as Error | null,
+    refetch,
   };
 }
 
@@ -161,7 +185,7 @@ export function useNote(noteId: string | null) {
 export function useNoteMutations() {
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
-  const supabase = createClient();
+  const queryClient = useQueryClient();
 
   const createNote = useCallback(
     async (input: CreateNoteInput): Promise<Note | null> => {
@@ -172,6 +196,7 @@ export function useNoteMutations() {
 
       try {
         setLoading(true);
+        const supabase = getClient();
 
         const validated = createNoteSchema.parse(input);
 
@@ -190,6 +215,9 @@ export function useNoteMutations() {
 
         if (error) throw error;
 
+        // Invalidate notes cache for this project
+        queryClient.invalidateQueries({ queryKey: noteKeys.list(validated.project_id) });
+
         toast.success("Note created successfully");
         return data as Note;
       } catch (err) {
@@ -200,13 +228,14 @@ export function useNoteMutations() {
         setLoading(false);
       }
     },
-    [supabase, user]
+    [user, queryClient]
   );
 
   const updateNote = useCallback(
-    async (noteId: string, input: UpdateNoteInput): Promise<Note | null> => {
+    async (noteId: string, input: UpdateNoteInput, projectId?: string): Promise<Note | null> => {
       try {
         setLoading(true);
+        const supabase = getClient();
 
         const validated = updateNoteSchema.parse(input);
 
@@ -224,6 +253,13 @@ export function useNoteMutations() {
 
         if (error) throw error;
 
+        // Invalidate note detail cache
+        queryClient.invalidateQueries({ queryKey: noteKeys.detail(noteId) });
+        // Invalidate project notes list if projectId provided
+        if (projectId) {
+          queryClient.invalidateQueries({ queryKey: noteKeys.list(projectId) });
+        }
+
         return data as Note;
       } catch (err) {
         console.error("Error updating note:", err);
@@ -233,13 +269,14 @@ export function useNoteMutations() {
         setLoading(false);
       }
     },
-    [supabase]
+    [queryClient]
   );
 
   const deleteNote = useCallback(
-    async (noteId: string): Promise<boolean> => {
+    async (noteId: string, projectId?: string): Promise<boolean> => {
       try {
         setLoading(true);
+        const supabase = getClient();
 
         const { error } = await supabase
           .from("notes")
@@ -247,6 +284,12 @@ export function useNoteMutations() {
           .eq("id", noteId);
 
         if (error) throw error;
+
+        // Invalidate caches
+        queryClient.invalidateQueries({ queryKey: noteKeys.detail(noteId) });
+        if (projectId) {
+          queryClient.invalidateQueries({ queryKey: noteKeys.list(projectId) });
+        }
 
         toast.success("Note deleted successfully");
         return true;
@@ -258,7 +301,7 @@ export function useNoteMutations() {
         setLoading(false);
       }
     },
-    [supabase]
+    [queryClient]
   );
 
   /**
@@ -278,9 +321,10 @@ export function useNoteMutations() {
 
       try {
         setLoading(true);
+        const supabase = getClient();
 
         // Create the task
-        const { data: taskData2, error: taskError } = await supabase
+        const { data: taskResult, error: taskError } = await supabase
           .from("tasks")
           .insert({
             project_id: projectId,
@@ -296,7 +340,7 @@ export function useNoteMutations() {
 
         if (taskError) throw taskError;
 
-        const task = taskData2 as Task;
+        const task = taskResult as Task;
 
         // Link task to note
         const noteTaskInsertData: NoteTaskInsert = {
@@ -310,8 +354,12 @@ export function useNoteMutations() {
 
         if (linkError) throw linkError;
 
+        // Invalidate caches
+        queryClient.invalidateQueries({ queryKey: noteKeys.detail(noteId) });
+        queryClient.invalidateQueries({ queryKey: taskKeys.lists() });
+
         toast.success("Task created");
-        return task as Task;
+        return task;
       } catch (err) {
         console.error("Error creating task from note:", err);
         toast.error("Failed to create task");
@@ -320,7 +368,7 @@ export function useNoteMutations() {
         setLoading(false);
       }
     },
-    [supabase, user]
+    [user, queryClient]
   );
 
   /**
@@ -330,6 +378,7 @@ export function useNoteMutations() {
     async (noteId: string, taskId: string): Promise<boolean> => {
       try {
         setLoading(true);
+        const supabase = getClient();
 
         const { error } = await supabase.from("note_tasks").insert({
           note_id: noteId,
@@ -337,6 +386,9 @@ export function useNoteMutations() {
         });
 
         if (error) throw error;
+
+        // Invalidate note detail cache
+        queryClient.invalidateQueries({ queryKey: noteKeys.detail(noteId) });
 
         toast.success("Task linked to note");
         return true;
@@ -348,7 +400,7 @@ export function useNoteMutations() {
         setLoading(false);
       }
     },
-    [supabase]
+    [queryClient]
   );
 
   /**
@@ -358,6 +410,7 @@ export function useNoteMutations() {
     async (noteId: string, taskId: string): Promise<boolean> => {
       try {
         setLoading(true);
+        const supabase = getClient();
 
         const { error } = await supabase
           .from("note_tasks")
@@ -366,6 +419,9 @@ export function useNoteMutations() {
           .eq("task_id", taskId);
 
         if (error) throw error;
+
+        // Invalidate note detail cache
+        queryClient.invalidateQueries({ queryKey: noteKeys.detail(noteId) });
 
         toast.success("Task unlinked from note");
         return true;
@@ -377,7 +433,7 @@ export function useNoteMutations() {
         setLoading(false);
       }
     },
-    [supabase]
+    [queryClient]
   );
 
   return {

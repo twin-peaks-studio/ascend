@@ -4,11 +4,13 @@
  * Project Members Hook
  *
  * Handles fetching and managing project members and invitations.
- * Allows users to invite other existing users to join their projects.
+ * Uses React Query for request deduplication and caching.
  */
 
-import { useCallback, useEffect, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useCallback, useState } from "react";
+import { getClient } from "@/lib/supabase/client-manager";
+import { withTimeout, TIMEOUTS } from "@/lib/utils/with-timeout";
 import { useAuth } from "@/hooks/use-auth";
 import type { ProjectMember, Profile } from "@/types/database";
 import { toast } from "sonner";
@@ -18,92 +20,95 @@ export interface ProjectMemberWithProfile extends ProjectMember {
   inviter: Profile | null;
 }
 
+// Query keys for cache management
+export const projectMemberKeys = {
+  all: ["projectMembers"] as const,
+  lists: () => [...projectMemberKeys.all, "list"] as const,
+  list: (projectId: string) => [...projectMemberKeys.lists(), projectId] as const,
+};
+
+/**
+ * Fetch project members with their profiles
+ */
+async function fetchProjectMembers(projectId: string): Promise<ProjectMemberWithProfile[]> {
+  const supabase = getClient();
+
+  // Fetch members first
+  const membersResult = await withTimeout(
+    supabase
+      .from("project_members")
+      .select("*")
+      .eq("project_id", projectId)
+      .order("invited_at", { ascending: true }),
+    TIMEOUTS.DATA_QUERY,
+    "Fetching project members timed out"
+  );
+
+  if (membersResult.error) throw membersResult.error;
+
+  const membersData = membersResult.data as ProjectMember[] | null;
+
+  if (!membersData || membersData.length === 0) {
+    return [];
+  }
+
+  // Get unique user IDs (members + inviters)
+  const userIds = [
+    ...new Set([
+      ...membersData.map((m) => m.user_id),
+      ...membersData.map((m) => m.invited_by),
+    ]),
+  ];
+
+  // Fetch all profiles in one query
+  const profilesResult = await withTimeout(
+    supabase
+      .from("profiles")
+      .select("*")
+      .in("id", userIds),
+    TIMEOUTS.DATA_QUERY,
+    "Fetching member profiles timed out"
+  );
+
+  if (profilesResult.error) throw profilesResult.error;
+
+  const profilesData = profilesResult.data as Profile[] | null;
+
+  // Create a map for quick profile lookup
+  const profileMap = new Map<string, Profile>();
+  profilesData?.forEach((p) => profileMap.set(p.id, p));
+
+  // Combine members with their profiles
+  return membersData.map((member) => ({
+    ...member,
+    profile: profileMap.get(member.user_id) || null,
+    inviter: profileMap.get(member.invited_by) || null,
+  }));
+}
+
 /**
  * Hook to fetch project members
+ * Uses React Query for deduplication - multiple components = 1 request
  */
 export function useProjectMembers(projectId: string | null) {
-  const [members, setMembers] = useState<ProjectMemberWithProfile[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
-
-  const supabase = createClient();
-
-  const fetchMembers = useCallback(async () => {
-    if (!projectId) {
-      setMembers([]);
-      setLoading(false);
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setError(null);
-
-      // Fetch members first
-      const { data: membersData, error: membersError } = await supabase
-        .from("project_members")
-        .select("*")
-        .eq("project_id", projectId)
-        .order("invited_at", { ascending: true });
-
-      if (membersError) throw membersError;
-
-      const typedMembersData = membersData as ProjectMember[] | null;
-
-      if (!typedMembersData || typedMembersData.length === 0) {
-        setMembers([]);
-        return;
-      }
-
-      // Get unique user IDs (members + inviters)
-      const userIds = [
-        ...new Set([
-          ...typedMembersData.map((m) => m.user_id),
-          ...typedMembersData.map((m) => m.invited_by),
-        ]),
-      ];
-
-      // Fetch all profiles in one query
-      const { data: profilesData, error: profilesError } = await supabase
-        .from("profiles")
-        .select("*")
-        .in("id", userIds);
-
-      if (profilesError) throw profilesError;
-
-      const typedProfilesData = profilesData as Profile[] | null;
-
-      // Create a map for quick profile lookup
-      const profileMap = new Map<string, Profile>();
-      typedProfilesData?.forEach((p) => profileMap.set(p.id, p));
-
-      // Combine members with their profiles
-      const membersWithProfiles: ProjectMemberWithProfile[] = typedMembersData.map((member) => ({
-        ...member,
-        profile: profileMap.get(member.user_id) || null,
-        inviter: profileMap.get(member.invited_by) || null,
-      }));
-
-      setMembers(membersWithProfiles);
-    } catch (err) {
-      console.error("Error fetching project members:", err);
-      setError(
-        err instanceof Error ? err : new Error("Failed to fetch project members")
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [supabase, projectId]);
-
-  useEffect(() => {
-    fetchMembers();
-  }, [fetchMembers]);
+  const {
+    data: members = [],
+    isLoading,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: projectMemberKeys.list(projectId ?? ""),
+    queryFn: () => fetchProjectMembers(projectId!),
+    enabled: !!projectId,
+    staleTime: 60 * 1000, // Members don't change often - cache for 1 minute
+    refetchOnWindowFocus: true,
+  });
 
   return {
     members,
-    loading,
-    error,
-    refetch: fetchMembers,
+    loading: isLoading,
+    error: error as Error | null,
+    refetch,
   };
 }
 
@@ -113,7 +118,7 @@ export function useProjectMembers(projectId: string | null) {
 export function useProjectMemberMutations() {
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
-  const supabase = createClient();
+  const queryClient = useQueryClient();
 
   /**
    * Invite a user to a project by email
@@ -130,6 +135,7 @@ export function useProjectMemberMutations() {
 
       try {
         setLoading(true);
+        const supabase = getClient();
 
         // Normalize email
         const normalizedEmail = email.toLowerCase().trim();
@@ -201,6 +207,9 @@ export function useProjectMemberMutations() {
 
         if (insertError) throw insertError;
 
+        // Invalidate project members cache
+        queryClient.invalidateQueries({ queryKey: projectMemberKeys.list(projectId) });
+
         toast.success(`${profile.display_name || profile.email} has been added to the project`);
         return { success: true };
       } catch (err) {
@@ -213,7 +222,7 @@ export function useProjectMemberMutations() {
         setLoading(false);
       }
     },
-    [supabase, user]
+    [user, queryClient]
   );
 
   /**
@@ -230,6 +239,7 @@ export function useProjectMemberMutations() {
 
       try {
         setLoading(true);
+        const supabase = getClient();
 
         // Get the member being removed
         const { data: memberToRemove } = await supabase
@@ -286,6 +296,9 @@ export function useProjectMemberMutations() {
 
         if (deleteError) throw deleteError;
 
+        // Invalidate project members cache
+        queryClient.invalidateQueries({ queryKey: projectMemberKeys.list(projectId) });
+
         toast.success("Member removed from project");
         return { success: true };
       } catch (err) {
@@ -298,7 +311,7 @@ export function useProjectMemberMutations() {
         setLoading(false);
       }
     },
-    [supabase, user]
+    [user, queryClient]
   );
 
   return {

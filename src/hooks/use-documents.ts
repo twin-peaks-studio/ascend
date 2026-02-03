@@ -4,10 +4,13 @@
  * Project Document Hooks
  *
  * Custom hooks for managing project documents (links, notes, documents).
+ * Uses React Query for request deduplication and caching.
  */
 
-import { useCallback, useEffect, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useCallback, useState } from "react";
+import { getClient } from "@/lib/supabase/client-manager";
+import { withTimeout, TIMEOUTS } from "@/lib/utils/with-timeout";
 import type { ProjectDocument } from "@/types";
 import type { ProjectDocumentInsert } from "@/types/database";
 import {
@@ -16,55 +19,56 @@ import {
 } from "@/lib/validation";
 import { toast } from "sonner";
 
+// Query keys for cache management
+export const documentKeys = {
+  all: ["documents"] as const,
+  lists: () => [...documentKeys.all, "list"] as const,
+  list: (projectId: string) => [...documentKeys.lists(), projectId] as const,
+};
+
+/**
+ * Fetch documents for a project
+ */
+async function fetchProjectDocuments(projectId: string): Promise<ProjectDocument[]> {
+  const supabase = getClient();
+
+  const result = await withTimeout(
+    supabase
+      .from("project_documents")
+      .select("*")
+      .eq("project_id", projectId)
+      .order("created_at", { ascending: false }),
+    TIMEOUTS.DATA_QUERY,
+    "Fetching documents timed out"
+  );
+
+  if (result.error) throw result.error;
+  return (result.data as ProjectDocument[]) || [];
+}
+
 /**
  * Hook to fetch documents for a specific project
+ * Uses React Query for deduplication
  */
 export function useProjectDocuments(projectId: string | null) {
-  const [documents, setDocuments] = useState<ProjectDocument[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
-
-  const supabase = createClient();
-
-  const fetchDocuments = useCallback(async () => {
-    if (!projectId) {
-      setDocuments([]);
-      setLoading(false);
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setError(null);
-
-      const { data, error: fetchError } = await supabase
-        .from("project_documents")
-        .select("*")
-        .eq("project_id", projectId)
-        .order("created_at", { ascending: false });
-
-      if (fetchError) throw fetchError;
-
-      setDocuments((data as ProjectDocument[]) || []);
-    } catch (err) {
-      console.error("Error fetching documents:", err);
-      setError(
-        err instanceof Error ? err : new Error("Failed to fetch documents")
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [projectId, supabase]);
-
-  useEffect(() => {
-    fetchDocuments();
-  }, [fetchDocuments]);
+  const {
+    data: documents = [],
+    isLoading,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: documentKeys.list(projectId ?? ""),
+    queryFn: () => fetchProjectDocuments(projectId!),
+    enabled: !!projectId,
+    staleTime: 60 * 1000, // Cache for 1 minute
+    refetchOnWindowFocus: true,
+  });
 
   return {
     documents,
-    loading,
-    error,
-    refetch: fetchDocuments,
+    loading: isLoading,
+    error: error as Error | null,
+    refetch,
   };
 }
 
@@ -73,12 +77,13 @@ export function useProjectDocuments(projectId: string | null) {
  */
 export function useDocumentMutations() {
   const [loading, setLoading] = useState(false);
-  const supabase = createClient();
+  const queryClient = useQueryClient();
 
   const createDocument = useCallback(
     async (input: CreateDocumentInput): Promise<ProjectDocument | null> => {
       try {
         setLoading(true);
+        const supabase = getClient();
 
         // Validate input
         const validated = createDocumentSchema.parse(input);
@@ -99,6 +104,9 @@ export function useDocumentMutations() {
 
         if (error) throw error;
 
+        // Invalidate documents cache for this project
+        queryClient.invalidateQueries({ queryKey: documentKeys.list(validated.project_id) });
+
         const typeLabel =
           validated.type === "link"
             ? "Link"
@@ -115,13 +123,14 @@ export function useDocumentMutations() {
         setLoading(false);
       }
     },
-    [supabase]
+    [queryClient]
   );
 
   const deleteDocument = useCallback(
-    async (documentId: string): Promise<boolean> => {
+    async (documentId: string, projectId: string): Promise<boolean> => {
       try {
         setLoading(true);
+        const supabase = getClient();
 
         const { error } = await supabase
           .from("project_documents")
@@ -129,6 +138,9 @@ export function useDocumentMutations() {
           .eq("id", documentId);
 
         if (error) throw error;
+
+        // Invalidate documents cache
+        queryClient.invalidateQueries({ queryKey: documentKeys.list(projectId) });
 
         toast.success("Document removed successfully");
         return true;
@@ -140,7 +152,7 @@ export function useDocumentMutations() {
         setLoading(false);
       }
     },
-    [supabase]
+    [queryClient]
   );
 
   return {

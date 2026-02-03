@@ -23,7 +23,6 @@ import {
 } from "react";
 import { getClient } from "@/lib/supabase/client-manager";
 import { withTimeout, TIMEOUTS, isTimeoutError } from "@/lib/utils/with-timeout";
-import { mutationQueue } from "@/lib/app-recovery/mutation-queue";
 import type { User, Session, AuthError } from "@supabase/supabase-js";
 import type { Profile } from "@/types/database";
 import type { AuthConfidence } from "@/providers/app-recovery-provider";
@@ -281,9 +280,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           confidence: "confirmed",
         });
       } else if (event === "SIGNED_OUT") {
-        // Clear mutation queue on logout
-        mutationQueue.clear();
-
         setState({
           user: null,
           profile: null,
@@ -419,9 +415,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Sign out
   const signOut = useCallback(async () => {
     const supabase = getClient();
-
-    // Clear mutation queue
-    mutationQueue.clear();
 
     await supabase.auth.signOut();
     setState({

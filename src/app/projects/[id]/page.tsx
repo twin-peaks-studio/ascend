@@ -309,11 +309,11 @@ export default function ProjectDetailPage() {
 
   // Handle document delete
   const handleDeleteDocument = useCallback(async () => {
-    if (!deleteDocumentId) return;
-    await deleteDocument(deleteDocumentId);
+    if (!deleteDocumentId || !projectId) return;
+    await deleteDocument(deleteDocumentId, projectId);
     refetchDocuments();
     setDeleteDocumentId(null);
-  }, [deleteDocumentId, deleteDocument, refetchDocuments]);
+  }, [deleteDocumentId, projectId, deleteDocument, refetchDocuments]);
 
   // Handle keyboard shortcuts for editing
   const handleKeyDown = (

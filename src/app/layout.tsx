@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import { Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
+import { QueryProvider } from "@/providers/query-provider";
 import { AppRecoveryProvider } from "@/providers/app-recovery-provider";
 import { AuthProvider } from "@/hooks/use-auth";
 import { SidebarProvider } from "@/hooks/use-sidebar";
@@ -32,13 +33,15 @@ export default function RootLayout({
       <body
         className={`${inter.variable} ${geistMono.variable} font-sans antialiased`}
       >
-        <AppRecoveryProvider>
-          <AuthProvider>
-            <SidebarProvider>
-              {children}
-            </SidebarProvider>
-          </AuthProvider>
-        </AppRecoveryProvider>
+        <QueryProvider>
+          <AppRecoveryProvider>
+            <AuthProvider>
+              <SidebarProvider>
+                {children}
+              </SidebarProvider>
+            </AuthProvider>
+          </AppRecoveryProvider>
+        </QueryProvider>
         <Toaster position="bottom-right" />
       </body>
     </html>

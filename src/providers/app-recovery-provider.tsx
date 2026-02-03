@@ -3,16 +3,13 @@
 /**
  * App Recovery Provider
  *
- * Centralized manager for handling app recovery after mobile backgrounding.
- * This provider owns the SINGLE visibility change listener and coordinates
- * the recovery sequence:
+ * Manages auth state refresh and prevents false login modals after mobile backgrounding.
  *
- * 1. Connection health check
- * 2. Auth session refresh
- * 3. Data refresh signal
- *
- * This solves the race condition issues from previous attempts where
- * auth and data handlers ran independently.
+ * Note: Data fetching/refetching is handled by React Query's refetchOnWindowFocus.
+ * This provider only handles:
+ * 1. Auth state synchronization after backgrounding
+ * 2. isRefreshing state to prevent UI flicker (e.g., login modals)
+ * 3. AuthConfidence tracking for the auth system
  */
 
 import {
@@ -24,17 +21,11 @@ import {
   useCallback,
   type ReactNode,
 } from "react";
-import {
-  checkHealthWithReset,
-  getClient,
-  resetClient,
-} from "@/lib/supabase/client-manager";
-import { withTimeout, TIMEOUTS, isTimeoutError } from "@/lib/utils/with-timeout";
 
 /**
- * Recovery status states
+ * Recovery status - simplified to just two states
  */
-export type RecoveryStatus = "idle" | "recovering" | "healthy" | "degraded";
+export type RecoveryStatus = "idle" | "healthy";
 
 /**
  * Auth confidence level - helps determine if we should show login modal
@@ -47,25 +38,25 @@ export type AuthConfidence = "confirmed" | "cached" | "unknown";
 interface RecoveryState {
   /** Current recovery status */
   status: RecoveryStatus;
-  /** When the last recovery completed */
-  lastRecoveryAt: number | null;
-  /** Whether the connection is healthy */
-  connectionHealthy: boolean;
-  /** Auth confidence level after recovery */
+  /** When the last refresh was triggered */
+  lastRefreshAt: number | null;
+  /** Auth confidence level */
   authConfidence: AuthConfidence;
+  /** Whether currently refreshing data */
+  isRefreshing: boolean;
 }
 
 /**
  * Recovery context value
  */
 interface RecoveryContextValue extends RecoveryState {
-  /** Manually trigger recovery (e.g., after mutation failure) */
-  requestRecovery: () => void;
+  /** Manually trigger a data refresh */
+  requestRefresh: () => void;
   /** Subscribe to data refresh signals */
   subscribeToRefresh: (callback: () => void) => () => void;
   /** Notify that auth has been refreshed (called by AuthProvider) */
   notifyAuthRefreshed: (confidence: AuthConfidence) => void;
-  /** Request auth refresh (called during recovery) */
+  /** Request auth refresh */
   requestAuthRefresh: () => Promise<void>;
   /** Register auth refresh handler */
   registerAuthRefreshHandler: (handler: () => Promise<AuthConfidence>) => void;
@@ -73,23 +64,30 @@ interface RecoveryContextValue extends RecoveryState {
 
 const RecoveryContext = createContext<RecoveryContextValue | null>(null);
 
+/**
+ * Configuration
+ */
+const CONFIG = {
+  /** Minimum time backgrounded before triggering refresh (2 seconds) */
+  MIN_BACKGROUND_FOR_REFRESH: 2_000,
+  /** Debounce time for visibility changes */
+  DEBOUNCE_MS: 50,
+};
+
 interface AppRecoveryProviderProps {
   children: ReactNode;
 }
 
 export function AppRecoveryProvider({ children }: AppRecoveryProviderProps) {
   const [state, setState] = useState<RecoveryState>({
-    status: "idle",
-    lastRecoveryAt: null,
-    connectionHealthy: true,
+    status: "healthy",
+    lastRefreshAt: null,
     authConfidence: "unknown",
+    isRefreshing: false,
   });
 
   // Track when page was hidden
   const hiddenAtRef = useRef<number | null>(null);
-
-  // Prevent concurrent recovery runs
-  const isRecoveringRef = useRef(false);
 
   // Subscribers for data refresh signals
   const refreshSubscribers = useRef<Set<() => void>>(new Set());
@@ -108,7 +106,7 @@ export function AppRecoveryProvider({ children }: AppRecoveryProviderProps) {
   );
 
   /**
-   * Request auth refresh during recovery
+   * Request auth refresh
    */
   const requestAuthRefresh = useCallback(async (): Promise<void> => {
     if (authRefreshHandler.current) {
@@ -143,6 +141,7 @@ export function AppRecoveryProvider({ children }: AppRecoveryProviderProps) {
    * Emit data refresh signal to all subscribers
    */
   const emitRefreshSignal = useCallback(() => {
+    console.log(`[AppRecovery] Emitting refresh signal to ${refreshSubscribers.current.size} subscribers`);
     refreshSubscribers.current.forEach((callback) => {
       try {
         callback();
@@ -153,71 +152,44 @@ export function AppRecoveryProvider({ children }: AppRecoveryProviderProps) {
   }, []);
 
   /**
-   * Main recovery sequence
+   * Trigger a refresh after backgrounding
    */
-  const runRecovery = useCallback(async () => {
-    if (isRecoveringRef.current) {
-      return;
-    }
-
-    isRecoveringRef.current = true;
-    setState((prev) => ({ ...prev, status: "recovering" }));
-
-    console.log("[AppRecovery] Starting recovery sequence...");
+  const triggerRefresh = useCallback(async () => {
+    console.log("[AppRecovery] Triggering refresh after backgrounding");
+    setState((prev) => ({ ...prev, isRefreshing: true }));
 
     try {
-      // Step 1: Check connection health (with automatic reset on failure)
-      const connectionHealthy = await checkHealthWithReset();
-
-      setState((prev) => ({ ...prev, connectionHealthy }));
-
-      if (!connectionHealthy) {
-        console.warn("[AppRecovery] Connection unhealthy after reset");
-        setState((prev) => ({
-          ...prev,
-          status: "degraded",
-          lastRecoveryAt: Date.now(),
-        }));
-        return;
-      }
-
-      // Step 2: Refresh auth session
-      console.log("[AppRecovery] Refreshing auth session...");
+      // Refresh auth first (Supabase may have refreshed token, we just sync state)
       await requestAuthRefresh();
 
-      // Step 3: Signal data hooks to refresh
-      console.log("[AppRecovery] Signaling data refresh...");
+      // Signal data hooks to refetch
       emitRefreshSignal();
 
-      // Recovery complete
       setState((prev) => ({
         ...prev,
         status: "healthy",
-        lastRecoveryAt: Date.now(),
+        lastRefreshAt: Date.now(),
+        isRefreshing: false,
       }));
-
-      console.log("[AppRecovery] Recovery complete");
     } catch (error) {
-      console.error("[AppRecovery] Recovery failed:", error);
-      setState((prev) => ({
-        ...prev,
-        status: "degraded",
-        lastRecoveryAt: Date.now(),
-      }));
-    } finally {
-      isRecoveringRef.current = false;
+      console.error("[AppRecovery] Refresh failed:", error);
+      setState((prev) => ({ ...prev, isRefreshing: false }));
     }
   }, [requestAuthRefresh, emitRefreshSignal]);
 
   /**
-   * Manual recovery request
+   * Manual refresh request
    */
-  const requestRecovery = useCallback(() => {
-    runRecovery();
-  }, [runRecovery]);
+  const requestRefresh = useCallback(() => {
+    triggerRefresh();
+  }, [triggerRefresh]);
 
   /**
    * Visibility change handler
+   *
+   * Note: React Query's refetchOnWindowFocus handles data refetching automatically.
+   * This handler only manages auth refresh and isRefreshing state for UI purposes
+   * (preventing false login modals during refresh).
    */
   useEffect(() => {
     let debounceTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -233,21 +205,18 @@ export function AppRecoveryProvider({ children }: AppRecoveryProviderProps) {
 
         if (hiddenAt) {
           const backgroundDuration = Date.now() - hiddenAt;
+          console.log(`[AppRecovery] Returned after ${backgroundDuration}ms`);
 
-          // Only trigger recovery if backgrounded for minimum duration
-          if (backgroundDuration >= TIMEOUTS.MIN_BACKGROUND) {
-            console.log(
-              `[AppRecovery] Page was backgrounded for ${backgroundDuration}ms, triggering recovery`
-            );
-
-            // Debounce to avoid rapid fire on quick tab switches
+          // Only trigger auth refresh for longer backgrounds
+          // React Query handles data refetching via refetchOnWindowFocus
+          if (backgroundDuration >= CONFIG.MIN_BACKGROUND_FOR_REFRESH) {
             if (debounceTimeout) {
               clearTimeout(debounceTimeout);
             }
 
             debounceTimeout = setTimeout(() => {
-              runRecovery();
-            }, TIMEOUTS.DEBOUNCE);
+              triggerRefresh();
+            }, CONFIG.DEBOUNCE_MS);
           }
         }
       }
@@ -261,27 +230,18 @@ export function AppRecoveryProvider({ children }: AppRecoveryProviderProps) {
         clearTimeout(debounceTimeout);
       }
     };
-  }, [runRecovery]);
+  }, [triggerRefresh]);
 
-  /**
-   * Initial recovery on mount (in case app was closed and reopened)
-   */
+  // Set initial state to healthy
   useEffect(() => {
-    // Run a health check on mount to establish initial state
-    checkHealthWithReset().then((healthy) => {
-      setState((prev) => ({
-        ...prev,
-        connectionHealthy: healthy,
-        status: healthy ? "healthy" : "degraded",
-      }));
-    });
+    setState((prev) => ({ ...prev, status: "healthy" }));
   }, []);
 
   return (
     <RecoveryContext.Provider
       value={{
         ...state,
-        requestRecovery,
+        requestRefresh,
         subscribeToRefresh,
         notifyAuthRefreshed,
         requestAuthRefresh,

@@ -11,15 +11,15 @@
  */
 export const TIMEOUTS = {
   /** Quick connectivity test */
-  HEALTH_CHECK: 3000,
+  HEALTH_CHECK: 2000,
   /** Auth session operations */
-  AUTH_SESSION: 5000,
+  AUTH_SESSION: 3000,
   /** Auth refresh operations (slightly longer) */
-  AUTH_REFRESH: 8000,
-  /** Data fetch queries */
-  DATA_QUERY: 10000,
+  AUTH_REFRESH: 5000,
+  /** Data fetch queries - keep short to fail fast after backgrounding */
+  DATA_QUERY: 3000,
   /** Mutation operations (more critical, allow more time) */
-  MUTATION: 15000,
+  MUTATION: 10000,
   /** Minimum background duration to trigger recovery */
   MIN_BACKGROUND: 500,
   /** Debounce visibility changes */
@@ -140,6 +140,14 @@ export async function withTimeoutAndAbort<T>(
  */
 export function isTimeoutError(error: unknown): error is TimeoutError {
   return error instanceof TimeoutError;
+}
+
+/**
+ * Type guard to check if an error is an AbortError
+ * (request was canceled, e.g., after mobile backgrounding)
+ */
+export function isAbortError(error: unknown): boolean {
+  return error instanceof DOMException && error.name === "AbortError";
 }
 
 /**
