@@ -312,7 +312,12 @@ export function useNoteMutations() {
     async (
       noteId: string,
       projectId: string,
-      taskData: { title: string; description?: string | null }
+      taskData: {
+        title: string;
+        description?: string | null;
+        priority?: "low" | "medium" | "high" | "urgent";
+        source_type?: "manual" | "ai_extraction";
+      }
     ): Promise<Task | null> => {
       if (!user) {
         toast.error("You must be logged in to create a task");
@@ -331,10 +336,11 @@ export function useNoteMutations() {
             title: taskData.title,
             description: taskData.description ?? null,
             status: "todo",
-            priority: "medium",
+            priority: taskData.priority ?? "medium",
             position: 0,
             created_by: user.id,
             assignee_id: user.id,
+            source_type: taskData.source_type ?? "manual",
           })
           .select()
           .single();

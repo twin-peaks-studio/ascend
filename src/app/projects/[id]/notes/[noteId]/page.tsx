@@ -10,6 +10,7 @@ import {
   ChevronDown,
   ChevronRight,
   Unlink,
+  Sparkles,
 } from "lucide-react";
 import { AppShell } from "@/components/layout";
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,8 @@ import { useProfiles } from "@/hooks/use-profiles";
 import { useNote, useNoteMutations } from "@/hooks/use-notes";
 import { useTaskMutations } from "@/hooks/use-tasks";
 import { QuickAddNoteTask } from "@/components/note";
+import { TaskExtractionDialog } from "@/components/ai";
+import { useTaskExtraction } from "@/hooks/use-task-extraction";
 import { cn } from "@/lib/utils";
 import type { Task, TaskStatus, TaskWithProject } from "@/types";
 import type { UpdateTaskInput } from "@/lib/validation";
@@ -45,6 +48,9 @@ export default function NoteDetailPage() {
   } = useNoteMutations();
   const { updateTask, deleteTask } = useTaskMutations();
 
+  // Task extraction hook
+  const taskExtraction = useTaskExtraction();
+
   // Local editing state
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -56,6 +62,9 @@ export default function NoteDetailPage() {
   const [showTaskDetails, setShowTaskDetails] = useState(false);
   const [selectedTask, setSelectedTask] = useState<TaskWithProject | null>(null);
   const [deleteTaskConfirm, setDeleteTaskConfirm] = useState<string | null>(null);
+
+  // Task extraction dialog state
+  const [showExtractionDialog, setShowExtractionDialog] = useState(false);
 
   // Auto-save debounce timer
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -253,6 +262,12 @@ export default function NoteDetailPage() {
     }
   }, [noteId, projectId, deleteNote, router]);
 
+  // Handle AI task extraction
+  const handleExtractTasks = useCallback(() => {
+    setShowExtractionDialog(true);
+    taskExtraction.extractFromNote(noteId, content, projectId, project?.title);
+  }, [noteId, content, projectId, project?.title, taskExtraction]);
+
   if (projectLoading || noteLoading) {
     return (
       <AppShell>
@@ -355,20 +370,32 @@ export default function NoteDetailPage() {
 
         {/* Tasks Section */}
         <div className="border-t border-border/40 pt-6">
-          <button
-            onClick={() => setShowTasks(!showTasks)}
-            className="flex items-center gap-2 text-sm font-semibold text-muted-foreground uppercase tracking-wide hover:text-foreground transition-colors w-full mb-4"
-          >
-            {showTasks ? (
-              <ChevronDown className="h-4 w-4" />
-            ) : (
-              <ChevronRight className="h-4 w-4" />
-            )}
-            Tasks from this Note
-            {note.tasks.length > 0 && (
-              <span className="text-xs font-normal">({note.tasks.length})</span>
-            )}
-          </button>
+          <div className="flex items-center justify-between mb-4">
+            <button
+              onClick={() => setShowTasks(!showTasks)}
+              className="flex items-center gap-2 text-sm font-semibold text-muted-foreground uppercase tracking-wide hover:text-foreground transition-colors"
+            >
+              {showTasks ? (
+                <ChevronDown className="h-4 w-4" />
+              ) : (
+                <ChevronRight className="h-4 w-4" />
+              )}
+              Tasks from this Note
+              {note.tasks.length > 0 && (
+                <span className="text-xs font-normal">({note.tasks.length})</span>
+              )}
+            </button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExtractTasks}
+              disabled={!content.trim() || taskExtraction.status === "extracting"}
+              className="gap-1.5"
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              Extract Tasks with AI
+            </Button>
+          </div>
 
           {showTasks && (
             <div className="space-y-3">
@@ -512,6 +539,14 @@ export default function NoteDetailPage() {
         onConfirm={handleDeleteTaskConfirm}
         title="Delete Task"
         description="Are you sure you want to delete this task? This action cannot be undone."
+      />
+
+      {/* AI Task Extraction Dialog */}
+      <TaskExtractionDialog
+        open={showExtractionDialog}
+        onOpenChange={setShowExtractionDialog}
+        extraction={taskExtraction}
+        onRetry={handleExtractTasks}
       />
     </AppShell>
   );

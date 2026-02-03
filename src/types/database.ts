@@ -84,6 +84,7 @@ export type Database = {
           is_duplicate: boolean;
           is_archived: boolean;
           position: number;
+          source_type: "manual" | "ai_extraction";
           created_by: string;
           created_at: string;
           updated_at: string;
@@ -100,6 +101,7 @@ export type Database = {
           is_duplicate?: boolean;
           is_archived?: boolean;
           position?: number;
+          source_type?: "manual" | "ai_extraction";
           created_by: string;
           created_at?: string;
           updated_at?: string;
@@ -116,6 +118,7 @@ export type Database = {
           is_duplicate?: boolean;
           is_archived?: boolean;
           position?: number;
+          source_type?: "manual" | "ai_extraction";
           created_by?: string;
           created_at?: string;
           updated_at?: string;
