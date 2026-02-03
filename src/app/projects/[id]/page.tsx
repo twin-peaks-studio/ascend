@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -75,6 +75,14 @@ export default function ProjectDetailPage() {
     useDocumentMutations();
   const { members } = useProjectMembers(projectId);
   const { notes } = useProjectNotes(projectId);
+
+  // Filter to only show active tasks (not done and not archived)
+  const activeTasks = useMemo(() => {
+    if (!project?.tasks) return [];
+    return project.tasks.filter(
+      (task) => task.status !== "done" && !task.is_archived
+    );
+  }, [project?.tasks]);
 
   // Inline editing state - use project values directly as initial values
   // Use projectId as key to reset state when navigating between projects
@@ -505,7 +513,7 @@ export default function ProjectDetailPage() {
                 )}
               </div>
 
-              {/* Tasks Section - Collapsible */}
+              {/* Tasks Section - Collapsible (shows only active tasks) */}
               <div className="border-t border-border/40 pt-6 mb-6">
                 <div className="flex items-center justify-between mb-4">
                   <button
@@ -517,13 +525,13 @@ export default function ProjectDetailPage() {
                     ) : (
                       <ChevronRight className="h-4 w-4" />
                     )}
-                    Tasks
-                    {project.tasks.length > 0 && (
-                      <span className="text-xs font-normal">({project.tasks.length})</span>
+                    Active Tasks
+                    {activeTasks.length > 0 && (
+                      <span className="text-xs font-normal">({activeTasks.length})</span>
                     )}
                   </button>
                   <div className="flex items-center gap-2">
-                    {project.tasks.length > 0 && (
+                    {activeTasks.length > 0 && (
                       <Button size="sm" variant="ghost" asChild>
                         <Link href={`/projects/${projectId}/tasks`}>
                           View All
@@ -544,9 +552,9 @@ export default function ProjectDetailPage() {
 
                 {showTasks && (
                   <>
-                    {project.tasks.length > 0 ? (
+                    {activeTasks.length > 0 ? (
                       <div className="border rounded-lg divide-y">
-                        {project.tasks.slice(0, 10).map((task) => (
+                        {activeTasks.slice(0, 10).map((task) => (
                           <TaskListItem
                             key={task.id}
                             task={task}
@@ -558,7 +566,7 @@ export default function ProjectDetailPage() {
                       </div>
                     ) : (
                       <div className="text-center py-8 text-muted-foreground border rounded-lg border-dashed">
-                        <p className="mb-1">No tasks yet</p>
+                        <p className="mb-1">No active tasks</p>
                         <p className="text-xs">Add tasks to track work for this project</p>
                       </div>
                     )}
