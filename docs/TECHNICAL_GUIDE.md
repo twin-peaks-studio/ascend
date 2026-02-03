@@ -79,6 +79,7 @@ Ascend follows a modern React architecture with Next.js App Router:
 | **shadcn/ui** | Latest | Pre-built UI components |
 | **@dnd-kit** | 6.x | Drag and drop |
 | **Supabase** | 2.x | Backend as a Service |
+| **React Query** | 5.x | Data fetching, caching, and synchronization |
 | **Zod** | 3.x | Runtime validation |
 | **Lucide React** | Latest | Icons |
 | **vaul** | Latest | Mobile drawer component |
@@ -92,6 +93,7 @@ Ascend follows a modern React architecture with Next.js App Router:
 - **@dnd-kit over react-beautiful-dnd** - Active maintenance, better mobile support, smaller bundle
 - **Zod over Yup** - Better TypeScript inference, more composable
 - **shadcn/ui** - Customizable, accessible, not a dependency (code is copied)
+- **React Query** - Request deduplication, automatic caching, built-in refetchOnWindowFocus for mobile backgrounding
 
 ---
 
@@ -171,10 +173,14 @@ src/
 │       └── markdown-renderer.tsx # Markdown display component
 │
 ├── hooks/                       # Custom React hooks
-│   ├── use-projects.ts          # Project CRUD operations
-│   ├── use-tasks.ts             # Task CRUD operations
-│   ├── use-documents.ts         # Document CRUD operations
-│   ├── use-notes.ts             # Note CRUD operations + task linking
+│   ├── use-projects.ts          # Project CRUD operations (React Query)
+│   ├── use-tasks.ts             # Task CRUD operations (React Query)
+│   ├── use-documents.ts         # Document CRUD operations (React Query)
+│   ├── use-notes.ts             # Note CRUD operations + task linking (React Query)
+│   ├── use-profiles.ts          # User profile data (React Query, team-scoped)
+│   ├── use-project-members.ts   # Project membership management (React Query)
+│   ├── use-auth.tsx             # Authentication state and actions
+│   ├── use-recovery.ts          # App recovery state for mobile backgrounding
 │   ├── use-keyboard-shortcuts.ts # Global keyboard shortcuts
 │   ├── use-media-query.ts       # Responsive breakpoint detection
 │   └── use-sidebar.tsx          # Sidebar collapse state context
@@ -184,9 +190,16 @@ src/
 │   ├── validation.ts            # Zod schemas
 │   ├── supabase/
 │   │   ├── client.ts            # Browser Supabase client
+│   │   ├── client-manager.ts    # Singleton client with health checking
 │   │   └── server.ts            # Server Supabase client
+│   ├── utils/
+│   │   └── with-timeout.ts      # Request timeout utilities
 │   └── security/
 │       └── sanitize.ts          # Input sanitization
+│
+├── providers/
+│   ├── query-provider.tsx       # React Query provider with global config
+│   └── app-recovery-provider.tsx # Mobile backgrounding recovery
 │
 └── types/
     ├── index.ts                 # Application types
@@ -827,38 +840,75 @@ const securityHeaders = [
 
 ## Custom Hooks
 
+All data hooks use **React Query** (`@tanstack/react-query`) for:
+- **Request deduplication** - Multiple components using the same hook = 1 network request
+- **Automatic caching** - Data is cached and served from cache when fresh
+- **Background refetching** - `refetchOnWindowFocus: true` automatically refreshes data when returning from mobile backgrounding
+- **Optimistic updates** - UI updates immediately, syncs to database in background
+
+### Query Provider Configuration (`src/providers/query-provider.tsx`)
+
+```typescript
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 30 * 1000,        // Data fresh for 30 seconds
+      gcTime: 5 * 60 * 1000,       // Keep in cache for 5 minutes
+      retry: 1,                     // Single retry on failure
+      refetchOnWindowFocus: true,   // Refetch when tab becomes visible
+      refetchOnMount: true,         // Refetch when component mounts
+    },
+  },
+});
+```
+
+### Query Key Pattern
+
+Each hook defines query keys for cache management:
+
+```typescript
+// Example from use-projects.ts
+export const projectKeys = {
+  all: ["projects"] as const,
+  lists: () => [...projectKeys.all, "list"] as const,
+  list: (userId: string) => [...projectKeys.lists(), userId] as const,
+  details: () => [...projectKeys.all, "detail"] as const,
+  detail: (id: string) => [...projectKeys.details(), id] as const,
+};
+```
+
 ### useProjects (`src/hooks/use-projects.ts`)
 
 ```typescript
-interface UseProjectsReturn {
-  projects: ProjectWithRelations[];
-  loading: boolean;
-  error: Error | null;
-  createProject: (data: CreateProjectInput) => Promise<Project | null>;
-  updateProject: (id: string, data: UpdateProjectInput) => Promise<Project | null>;
-  deleteProject: (id: string) => Promise<boolean>;
-  refetch: () => Promise<void>;
+export function useProjects() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  const { data: projects = [], isLoading, error, refetch } = useQuery({
+    queryKey: projectKeys.list(user?.id ?? ""),
+    queryFn: () => fetchProjectsForUser(user!.id),
+    enabled: !!user,
+    staleTime: 30 * 1000,
+    refetchOnWindowFocus: true,
+  });
+
+  return {
+    projects,
+    setProjects: (updater) => {
+      queryClient.setQueryData(projectKeys.list(user?.id ?? ""), updater);
+    },
+    loading: isLoading,
+    error,
+    refetch,
+  };
 }
 
-export function useProjects(): UseProjectsReturn {
-  const [projects, setProjects] = useState<ProjectWithRelations[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
-
-  const fetchProjects = useCallback(async () => {
-    const supabase = createClient();
-    const { data, error } = await supabase
-      .from("projects")
-      .select(`*, tasks:tasks(*)`)
-      .order("updated_at", { ascending: false });
-
-    // ... handle response
-  }, []);
-
-  // ... CRUD operations
-
-  return { projects, loading, error, createProject, updateProject, deleteProject, refetch };
-}
+// Mutations invalidate relevant queries
+const createProject = async (input) => {
+  const result = await supabase.from("projects").insert(data).select().single();
+  queryClient.invalidateQueries({ queryKey: projectKeys.lists() });
+  return result;
+};
 ```
 
 ### useTasks (`src/hooks/use-tasks.ts`)
@@ -1863,48 +1913,110 @@ npx shadcn@latest add [component-name]
 
 ## State Management
 
-### Local State Pattern
+### React Query for Server State
 
-The app uses React's built-in state management:
+Server state (data from Supabase) is managed by **React Query**:
 
 ```typescript
-// Component-level state
+// Data hooks use React Query for server state
+const { data: projects, isLoading } = useQuery({
+  queryKey: projectKeys.list(userId),
+  queryFn: () => fetchProjects(userId),
+});
+
+// Mutations with cache invalidation
+const createProject = async (input) => {
+  const result = await supabase.from("projects").insert(data);
+  queryClient.invalidateQueries({ queryKey: projectKeys.lists() });
+  return result;
+};
+```
+
+### Local State for UI
+
+Component-level UI state uses React's built-in state:
+
+```typescript
+// Component-level state for UI
 const [isOpen, setIsOpen] = useState(false);
-
-// Lifted state for shared data
-function ParentComponent() {
-  const [tasks, setTasks] = useState<Task[]>([]);
-
-  return (
-    <>
-      <TaskList tasks={tasks} />
-      <TaskForm onSubmit={(task) => setTasks(prev => [...prev, task])} />
-    </>
-  );
-}
+const [isEditingTitle, setIsEditingTitle] = useState(false);
 ```
 
-### Custom Hook State
+### Optimistic Updates
 
-Hooks encapsulate state and side effects:
+For immediate UI feedback, update React Query cache directly:
 
 ```typescript
-function useTasks() {
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [loading, setLoading] = useState(true);
+// Optimistic update pattern
+const handleUpdate = async (data) => {
+  // Update cache immediately (optimistic)
+  queryClient.setQueryData(projectKeys.detail(id), (old) => ({
+    ...old,
+    ...data,
+  }));
 
-  // Fetch, CRUD operations, etc.
-
-  return { tasks, loading, /* ... */ };
-}
+  // Sync to database
+  await supabase.from("projects").update(data).eq("id", id);
+  // No need to refetch - cache is already correct
+};
 ```
 
-### Why No Global State Library?
+### Why React Query?
 
-- **Simplicity** - App size doesn't warrant Redux/Zustand complexity
-- **Supabase as source of truth** - Data lives in database, not client
-- **React 19 features** - Built-in state management is sufficient
-- **Easy to add later** - Can introduce if needed
+- **Request deduplication** - Multiple components using the same hook = 1 network request
+- **Automatic caching** - Reduces unnecessary network calls
+- **refetchOnWindowFocus** - Handles mobile backgrounding automatically
+- **Supabase as source of truth** - Data lives in database, React Query handles sync
+- **No manual loading/error state** - React Query manages this automatically
+
+---
+
+## Mobile Backgrounding Recovery
+
+When mobile browsers background an app, in-flight requests can get "stuck" and connections become stale. The app handles this automatically:
+
+### How It Works
+
+1. **React Query's `refetchOnWindowFocus: true`** - Automatically refetches all active queries when the browser tab becomes visible again
+2. **App Recovery Provider** - Tracks visibility changes and manages auth state refresh
+3. **Auth Confidence Tracking** - Prevents false login modals during refresh periods
+
+### Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  QueryProvider (React Query)                                 │
+│  - refetchOnWindowFocus: true (handles data refetching)      │
+│  ┌─────────────────────────────────────────────────────────┐ │
+│  │  AppRecoveryProvider                                    │ │
+│  │  - Tracks visibility changes                            │ │
+│  │  - Refreshes auth state after backgrounding             │ │
+│  │  - Provides isRefreshing state (prevents login flash)   │ │
+│  │  ┌─────────────────────────────────────────────────────┐│ │
+│  │  │  AuthProvider                                       ││ │
+│  │  │  - Manages user authentication                      ││ │
+│  │  │  - Tracks auth confidence level                     ││ │
+│  │  └─────────────────────────────────────────────────────┘│ │
+│  └─────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `src/providers/query-provider.tsx` | React Query configuration with `refetchOnWindowFocus` |
+| `src/providers/app-recovery-provider.tsx` | Auth refresh and `isRefreshing` state |
+| `src/hooks/use-recovery.ts` | Consumer hooks for recovery state |
+
+### Usage in Components
+
+```typescript
+// app-shell.tsx uses isRefreshing to prevent login modal flash
+const { isRefreshing } = useRecoveryState();
+
+const shouldShowAuth = initialized && !user && confidence === "confirmed" && !isRefreshing;
+```
 
 ---
 
@@ -1968,38 +2080,67 @@ function TaskList() {
 
 ### Optimizations Implemented
 
-1. **Optimistic UI Updates (No Refetch)**
+1. **React Query Request Deduplication**
+   - Multiple components using the same hook = 1 network request
+   - Example: 5 components calling `useProjects()` = 1 Supabase query
+   - Before React Query: 252 requests per navigation → After: 5-9 requests
+
+2. **Optimistic UI Updates**
    ```typescript
-   // Update UI immediately with local state
-   setTasks(prev => prev.map(t => t.id === id ? { ...t, status } : t));
+   // Update React Query cache immediately
+   queryClient.setQueryData(projectKeys.detail(id), (old) => ({
+     ...old,
+     ...data,
+   }));
    // Sync to database
-   await supabase.from("tasks").update({ status }).eq("id", id);
-   // DON'T call refetch() - it causes a visible UI glitch
-   // Local state is already correct, no need to re-fetch all data
+   await supabase.from("projects").update(data).eq("id", id);
+   // No refetch needed - cache is already correct
    ```
 
-   **Why no refetch?** Calling `refetch()` after every update causes:
-   - A double re-render (local state update + server data)
-   - Visible UI "flash" or "glitch"
-   - Unnecessary network requests
-
-   The hooks already send updates to the server. Local state reflects what the user typed/selected, so it's already correct.
-
-2. **Memoized Callbacks**
+3. **Scalable Data Fetching**
    ```typescript
-   const handleDragEnd = useCallback(async (event: DragEndEvent) => {
-     // ...
-   }, [tasks, updateTaskPosition]);
+   // useProfiles only fetches team members, not all users
+   async function fetchTeamProfiles(userId: string) {
+     // 1. Get projects user has access to
+     // 2. Get user IDs from those projects
+     // 3. Fetch only those profiles
+     return supabase.from("profiles").select("*").in("id", teamUserIds);
+   }
    ```
 
-3. **Lazy Loading**
-   - Components load on-demand via Next.js App Router
-   - Images use Next.js Image component with lazy loading
+4. **Caching Strategy**
+   ```typescript
+   // Different stale times based on data volatility
+   staleTime: 30 * 1000,      // Tasks/Projects: 30 seconds
+   staleTime: 5 * 60 * 1000,  // Profiles: 5 minutes (rarely change)
+   ```
 
-4. **Efficient Re-renders**
-   - Props are primitives where possible
-   - Arrays/objects memoized with useMemo
-   - Event handlers wrapped in useCallback
+5. **Memoized Callbacks**
+   ```typescript
+   // IMPORTANT: Never include derived state in dependencies
+   const fetchData = useCallback(() => { ... }, [userId]);  // ✓ GOOD
+   const fetchData = useCallback(() => { ... }, [data.length]);  // ✗ BAD (infinite loop)
+   ```
+
+### Common Pitfalls to Avoid
+
+1. **Infinite Re-render Loops**
+   ```typescript
+   // BAD - data.length changes after fetch, creating infinite loop
+   const fetchData = useCallback(() => { ... }, [data.length]);
+
+   // GOOD - stable dependencies only
+   const fetchData = useCallback(() => { ... }, [userId]);
+   ```
+
+2. **Object References in Dependencies**
+   ```typescript
+   // BAD - object reference changes every render
+   const fetchItem = useCallback(() => { ... }, [item]);
+
+   // GOOD - use primitive identifier
+   const fetchItem = useCallback(() => { ... }, [itemId]);
+   ```
 
 ### Future Optimizations
 

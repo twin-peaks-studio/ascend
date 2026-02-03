@@ -523,6 +523,12 @@ Ascend is fully responsive and works on all device sizes:
 - **Swipe** - Navigate between Kanban columns on mobile
 - **Properties Sheet** - Swipe down to dismiss the mobile properties panel
 
+### Background Recovery
+When you return to the app after it has been in the background (switching apps, locking screen, etc.):
+- **Data refreshes automatically** - No manual refresh needed
+- **Your session stays active** - No need to log in again
+- **Changes sync immediately** - Any updates made offline will sync
+
 ---
 
 ## Tips & Best Practices
@@ -545,7 +551,8 @@ Ascend is fully responsive and works on all device sizes:
 
 1. **Cross-device sync** - Your data syncs via Supabase automatically
 2. **No manual saves** - All changes save immediately
-3. **Refresh for latest** - If working on multiple devices, refresh to see updates
+3. **Automatic refresh** - Data refreshes automatically when you return to the app after backgrounding
+4. **Refresh for latest** - If working on multiple devices, refresh to see updates
 
 ### Common Workflows
 
@@ -586,6 +593,11 @@ Ascend is fully responsive and works on all device sizes:
 **Dark mode not persisting:**
 - Ensure cookies/localStorage isn't blocked
 - Check browser privacy settings
+
+**Data not updating after returning from background:**
+- Wait a moment - data refreshes automatically when you return
+- If data still seems stale, pull down to refresh (mobile) or click refresh
+- Check your internet connection
 
 ### Getting Help
 

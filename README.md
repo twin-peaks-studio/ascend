@@ -23,6 +23,7 @@ A modern, Linear-inspired task management application with Kanban boards, projec
 - **shadcn/ui** - UI components
 - **@dnd-kit** - Drag-and-drop
 - **Supabase** - Database & auth-ready backend
+- **React Query** - Data fetching with caching, deduplication, and auto-refresh
 - **Zod** - Runtime validation
 
 ## Getting Started
