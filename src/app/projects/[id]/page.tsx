@@ -49,6 +49,7 @@ import {
 import { useProject, useProjectMutations } from "@/hooks/use-projects";
 import { useTaskMutations } from "@/hooks/use-tasks";
 import { useProfiles } from "@/hooks/use-profiles";
+import { useAuth } from "@/hooks/use-auth";
 import { useProjectDocuments, useDocumentMutations } from "@/hooks/use-documents";
 import { useProjectMembers } from "@/hooks/use-project-members";
 import { useProjectNotes } from "@/hooks/use-notes";
@@ -66,6 +67,7 @@ export default function ProjectDetailPage() {
   const { project, setProject, loading, refetch } = useProject(projectId);
   const { documents, refetch: refetchDocuments } = useProjectDocuments(projectId);
   const { profiles } = useProfiles();
+  const { user } = useAuth();
   const { updateProject, deleteProject, loading: projectMutationLoading } =
     useProjectMutations();
   const { createTask, updateTask, deleteTask, loading: taskMutationLoading } = useTaskMutations();
@@ -792,6 +794,8 @@ export default function ProjectDetailPage() {
         projects={[project as Project]}
         profiles={profiles}
         defaultStatus="todo"
+        defaultAssigneeId={user?.id ?? null}
+        defaultProjectId={projectId}
         onSubmit={handleCreateTask}
         loading={taskMutationLoading}
       />

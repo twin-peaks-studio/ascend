@@ -25,6 +25,8 @@ interface TaskFormProps {
   profiles: Profile[];
   initialData?: Partial<Task>;
   defaultStatus?: TaskStatus;
+  defaultAssigneeId?: string | null;
+  defaultProjectId?: string | null;
   onSubmit: (data: CreateTaskInput | UpdateTaskInput) => Promise<void>;
   onCancel: () => void;
   isEditing?: boolean;
@@ -36,6 +38,8 @@ export function TaskForm({
   profiles,
   initialData,
   defaultStatus = "todo",
+  defaultAssigneeId,
+  defaultProjectId,
   onSubmit,
   onCancel,
   isEditing = false,
@@ -43,7 +47,9 @@ export function TaskForm({
 }: TaskFormProps) {
   const [title, setTitle] = useState(initialData?.title || "");
   const [description, setDescription] = useState(initialData?.description || "");
-  const [projectId, setProjectId] = useState(initialData?.project_id || NO_PROJECT_VALUE);
+  const [projectId, setProjectId] = useState(
+    initialData?.project_id || defaultProjectId || NO_PROJECT_VALUE
+  );
   const [status, setStatus] = useState<TaskStatus>(
     initialData?.status || defaultStatus
   );
@@ -54,7 +60,7 @@ export function TaskForm({
     initialData?.due_date ? new Date(initialData.due_date) : null
   );
   const [assigneeId, setAssigneeId] = useState<string | null>(
-    initialData?.assignee_id || null
+    initialData?.assignee_id ?? defaultAssigneeId ?? null
   );
 
   // Get assignable profiles based on selected project

@@ -17,6 +17,8 @@ interface TaskDialogProps {
   profiles: Profile[];
   task?: Task | null;
   defaultStatus?: TaskStatus;
+  defaultAssigneeId?: string | null;
+  defaultProjectId?: string | null;
   onSubmit: (data: CreateTaskInput | UpdateTaskInput) => Promise<void>;
   loading?: boolean;
 }
@@ -28,6 +30,8 @@ export function TaskDialog({
   profiles,
   task,
   defaultStatus = "todo",
+  defaultAssigneeId,
+  defaultProjectId,
   onSubmit,
   loading = false,
 }: TaskDialogProps) {
@@ -49,6 +53,8 @@ export function TaskDialog({
           profiles={profiles}
           initialData={task || undefined}
           defaultStatus={defaultStatus}
+          defaultAssigneeId={defaultAssigneeId}
+          defaultProjectId={defaultProjectId}
           onSubmit={handleSubmit}
           onCancel={() => onOpenChange(false)}
           isEditing={isEditing}

@@ -10,6 +10,7 @@ import { useTasksByStatus, useTaskMutations } from "@/hooks/use-tasks";
 import { useProjects } from "@/hooks/use-projects";
 import { useProfiles } from "@/hooks/use-profiles";
 import { useIsMobile } from "@/hooks/use-media-query";
+import { useAuth } from "@/hooks/use-auth";
 import type { TaskWithProject, TaskStatus, Project } from "@/types";
 import type { CreateTaskInput, UpdateTaskInput } from "@/lib/validation";
 import { DeleteConfirmationDialog } from "@/components/ui/delete-confirmation-dialog";
@@ -19,6 +20,7 @@ export default function TasksPage() {
   const { projects } = useProjects();
   const { profiles } = useProfiles();
   const isMobile = useIsMobile();
+  const { user } = useAuth();
   const {
     createTask,
     updateTask,
@@ -350,6 +352,7 @@ export default function TasksPage() {
         profiles={profiles}
         task={editingTask}
         defaultStatus={defaultStatus}
+        defaultAssigneeId={user?.id ?? null}
         onSubmit={editingTask ? handleUpdateTask : handleCreateTask}
         loading={mutationLoading}
       />
@@ -362,6 +365,7 @@ export default function TasksPage() {
         projects={projects as Project[]}
         profiles={profiles}
         loading={mutationLoading}
+        defaultAssigneeId={user?.id ?? null}
       />
 
       {/* Task details dialog/drawer (responsive) */}

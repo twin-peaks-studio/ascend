@@ -40,6 +40,8 @@ interface QuickAddTaskProps {
   projects: Project[];
   profiles: Profile[];
   loading?: boolean;
+  defaultAssigneeId?: string | null;
+  defaultProjectId?: string | null;
 }
 
 /**
@@ -84,18 +86,22 @@ function QuickAddTaskForm({
   projects,
   profiles,
   loading,
+  defaultAssigneeId,
+  defaultProjectId,
 }: {
   onSubmit: (data: CreateTaskInput) => Promise<void>;
   onClose: () => void;
   projects: Project[];
   profiles: Profile[];
   loading: boolean;
+  defaultAssigneeId?: string | null;
+  defaultProjectId?: string | null;
 }) {
   // Form state - fresh on every mount
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [projectId, setProjectId] = useState<string | null>(null);
-  const [assigneeId, setAssigneeId] = useState<string | null>(null);
+  const [projectId, setProjectId] = useState<string | null>(defaultProjectId ?? null);
+  const [assigneeId, setAssigneeId] = useState<string | null>(defaultAssigneeId ?? null);
   const [dueDate, setDueDate] = useState<Date | null>(null);
   const [priority, setPriority] = useState<TaskPriority>("medium");
 
@@ -456,6 +462,8 @@ export function QuickAddTask({
   projects,
   profiles,
   loading = false,
+  defaultAssigneeId,
+  defaultProjectId,
 }: QuickAddTaskProps) {
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
@@ -469,6 +477,8 @@ export function QuickAddTask({
             projects={projects}
             profiles={profiles}
             loading={loading}
+            defaultAssigneeId={defaultAssigneeId}
+            defaultProjectId={defaultProjectId}
           />
         )}
       </DrawerContent>

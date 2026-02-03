@@ -334,6 +334,7 @@ export function useNoteMutations() {
             priority: "medium",
             position: 0,
             created_by: user.id,
+            assignee_id: user.id,
           })
           .select()
           .single();

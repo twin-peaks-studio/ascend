@@ -13,6 +13,7 @@ import { useProject } from "@/hooks/use-projects";
 import { useTaskMutations } from "@/hooks/use-tasks";
 import { useProfiles } from "@/hooks/use-profiles";
 import { useIsMobile } from "@/hooks/use-media-query";
+import { useAuth } from "@/hooks/use-auth";
 import type { TaskWithProject, TaskStatus, Project, Task } from "@/types";
 import type { CreateTaskInput, UpdateTaskInput } from "@/lib/validation";
 import { DeleteConfirmationDialog } from "@/components/ui/delete-confirmation-dialog";
@@ -24,6 +25,7 @@ export default function ProjectTasksPage() {
   const { project, setProject, loading, refetch } = useProject(projectId);
   const { profiles } = useProfiles();
   const isMobile = useIsMobile();
+  const { user } = useAuth();
   const {
     createTask,
     updateTask,
@@ -420,6 +422,8 @@ export default function ProjectTasksPage() {
         profiles={profiles}
         task={editingTask}
         defaultStatus={defaultStatus}
+        defaultAssigneeId={user?.id ?? null}
+        defaultProjectId={projectId}
         onSubmit={editingTask ? handleUpdateTask : handleCreateTask}
         loading={mutationLoading}
       />
@@ -432,6 +436,8 @@ export default function ProjectTasksPage() {
         projects={[project as Project]}
         profiles={profiles}
         loading={mutationLoading}
+        defaultAssigneeId={user?.id ?? null}
+        defaultProjectId={projectId}
       />
 
       {/* Task details dialog/drawer (responsive) */}
