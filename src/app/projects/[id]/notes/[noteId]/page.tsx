@@ -60,9 +60,14 @@ export default function NoteDetailPage() {
   // Auto-save debounce timer
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Initialize local state from note
+  // Track initialized note ID to prevent re-syncing on refetch
+  const initializedNoteIdRef = useRef<string | null>(null);
+
+  // Initialize local state from note ONLY when switching to a different note
+  // This prevents cursor position loss during auto-save refetches
   useEffect(() => {
-    if (note) {
+    if (note && note.id !== initializedNoteIdRef.current) {
+      initializedNoteIdRef.current = note.id;
       setTitle(note.title);
       setContent(note.content || "");
     }
