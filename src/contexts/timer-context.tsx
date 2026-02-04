@@ -19,7 +19,9 @@ import {
 } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useActiveTimer, timeEntryKeys, formatDuration } from "@/hooks/use-time-tracking";
+import { useTimerRealtime } from "@/hooks/use-timer-realtime";
 import { timerStorage, type ActiveTimerState } from "@/lib/timer-storage";
+import { crossTabSync } from "@/lib/cross-tab-sync";
 import { useAuth } from "@/hooks/use-auth";
 import { getClient } from "@/lib/supabase/client-manager";
 import { withTimeout, TIMEOUTS } from "@/lib/utils/with-timeout";
@@ -61,6 +63,21 @@ export function TimerProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { activeTimer, loading } = useActiveTimer();
+
+  // Subscribe to real-time timer updates (cross-tab & cross-device sync)
+  useTimerRealtime();
+
+  // Subscribe to same-browser cross-tab sync (faster than Realtime for local tabs)
+  useEffect(() => {
+    if (!user) return;
+
+    return crossTabSync.subscribe(() => {
+      // Another tab changed timer state, invalidate our cache
+      queryClient.invalidateQueries({
+        queryKey: timeEntryKeys.activeTimer(user.id),
+      });
+    });
+  }, [user, queryClient]);
 
   // Local state for elapsed time (updates every second)
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
@@ -150,6 +167,9 @@ export function TimerProvider({ children }: { children: ReactNode }) {
         queryKey: timeEntryKeys.list(activeTimer.entity_type as TimeTrackingEntityType, activeTimer.entity_id),
       });
 
+      // Broadcast to other tabs in same browser (instant sync)
+      crossTabSync.broadcast();
+
       toast.success("Timer stopped");
     } catch (error) {
       console.error("Failed to stop timer:", error);
@@ -220,6 +240,9 @@ export function TimerProvider({ children }: { children: ReactNode }) {
         queryClient.invalidateQueries({
           queryKey: timeEntryKeys.list(entityType, entityId),
         });
+
+        // Broadcast to other tabs in same browser (instant sync)
+        crossTabSync.broadcast();
 
         toast.success("Timer started");
       } catch (error) {
