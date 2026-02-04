@@ -2020,6 +2020,105 @@ const shouldShowAuth = initialized && !user && confidence === "confirmed" && !is
 
 ---
 
+## Auth Initialization & Performance
+
+### Problem: Slow Initial Page Load
+
+On initial page load or hard refresh, the app needs to:
+1. Check if the user has an existing session (auth)
+2. Fetch the user's profile
+3. Enable data hooks to fetch projects, tasks, etc.
+
+Previously, profile fetch was **blocking** - the user state wasn't set until profile fetch completed (or timed out after 6+ seconds). This caused:
+- 6-7 second delays on initial load
+- "Project not found" errors when refreshing project pages
+- Poor user experience on cold starts
+
+### Solution: Non-Blocking Profile Fetch
+
+Profile fetch is now non-blocking:
+
+```typescript
+// In use-auth.tsx
+if (event === "SIGNED_IN" && session?.user) {
+  // CRITICAL: Set user immediately so data hooks can start fetching
+  setState({
+    user: session.user,
+    profile: null, // Will be updated when profile fetch completes
+    session,
+    loading: false,
+    initialized: true,
+    confidence: "confirmed",
+  });
+
+  // Fetch profile in background (non-blocking)
+  fetchProfile(session.user.id, useInitialTimeout).then((profile) => {
+    // Only update if still mounted and user hasn't signed out
+    if (profile && isMountedRef.current) {
+      setState((prev) => (prev.user ? { ...prev, profile } : prev));
+    }
+  });
+}
+```
+
+**Key benefits:**
+- User is set **immediately** when SIGNED_IN fires
+- Data hooks with `enabled: !!user` can start fetching right away
+- Profile is updated when it eventually loads (non-critical)
+- Initial page load is now ~instant
+
+### Timeout Configuration
+
+Two tiers of timeouts handle different scenarios:
+
+| Timeout | Value | Use Case |
+|---------|-------|----------|
+| `AUTH_SESSION_INITIAL` | 8000ms | Initial page load (cold start can be slow) |
+| `DATA_QUERY_INITIAL` | 6000ms | Initial data fetch |
+| `AUTH_SESSION` | 3000ms | Recovery after mobile backgrounding |
+| `DATA_QUERY` | 3000ms | Recovery data refresh |
+
+**Why two tiers?**
+- **Initial load** may be slow due to Supabase cold starts, CDN latency, etc.
+- **Recovery** should be fast - if data can't load in 3 seconds after backgrounding, the connection is likely stale
+
+### Safety Patterns
+
+**Preventing state updates after unmount:**
+```typescript
+const isMountedRef = useRef(true);
+
+useEffect(() => {
+  // ... auth logic
+
+  return () => {
+    isMountedRef.current = false;
+    subscription.unsubscribe();
+  };
+}, []);
+
+// In async callback:
+if (profile && isMountedRef.current) {
+  setState((prev) => (prev.user ? { ...prev, profile } : prev));
+}
+```
+
+**Preventing profile update after sign-out:**
+```typescript
+// Only update profile if user still exists
+setState((prev) => (prev.user ? { ...prev, profile } : prev));
+```
+
+### Architecture Decision: Profile is Non-Critical
+
+The profile contains display preferences (name, avatar) but is not required for core functionality. By making it non-blocking:
+- App loads immediately with user ID available
+- Data hooks can fetch projects/tasks right away
+- Profile loads in background and UI updates when ready
+- If profile fails, app still works (just without display name/avatar)
+
+---
+
 ## Error Handling
 
 ### API Error Pattern

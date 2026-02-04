@@ -6,10 +6,29 @@
  * Provides authentication state management using Supabase Auth.
  * Handles login, signup, logout, and session management.
  *
- * Integrates with the App Recovery system to:
- * - Add timeout protection to auth operations
- * - Track auth confidence level (confirmed vs cached)
- * - Register auth refresh handler for recovery
+ * ## Performance Optimization: Non-Blocking Profile Fetch
+ *
+ * On SIGNED_IN events, the user state is set IMMEDIATELY without waiting
+ * for profile fetch. This allows data hooks (with `enabled: !!user`) to
+ * start fetching right away, dramatically improving initial page load time.
+ *
+ * Profile is fetched in the background and state is updated when it completes.
+ * If profile fetch fails, the app continues to work (profile is non-critical).
+ *
+ * ## Safety Patterns
+ *
+ * - `isMountedRef`: Prevents state updates after component unmount
+ * - `prev.user` check: Prevents profile update if user signed out during fetch
+ * - Longer timeouts for initial load vs shorter for recovery
+ *
+ * ## Integration with App Recovery
+ *
+ * - Timeout protection on all auth operations
+ * - Auth confidence tracking (confirmed vs cached vs unknown)
+ * - Recovery refresh handler for mobile backgrounding
+ *
+ * @see docs/TECHNICAL_GUIDE.md "Auth Initialization & Performance" section
+ * @see src/lib/utils/with-timeout.ts for timeout configuration
  */
 
 import {
@@ -90,14 +109,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Track if we've registered the auth refresh handler
   const hasRegisteredHandler = useRef(false);
 
-  // Fetch user profile with timeout
+  // Track if this is the initial auth load (for longer timeout on cold start)
+  const isInitialLoadRef = useRef(true);
+
+  // Track if component is mounted (to prevent state updates after unmount)
+  const isMountedRef = useRef(true);
+
+  // Fetch user profile with timeout (used for recovery - short timeout)
   const fetchProfile = useCallback(
-    async (userId: string): Promise<Profile | null> => {
+    async (userId: string, isInitialLoad = false): Promise<Profile | null> => {
       try {
         const supabase = getClient();
+        // Use longer timeout for initial load, shorter for recovery
+        const timeout = isInitialLoad ? TIMEOUTS.DATA_QUERY_INITIAL : TIMEOUTS.DATA_QUERY;
         const result = await withTimeout(
           supabase.from("profiles").select("*").eq("id", userId).single().then(res => res),
-          TIMEOUTS.DATA_QUERY,
+          timeout,
           "Profile fetch timed out"
         );
 
@@ -198,10 +225,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const supabase = getClient();
 
-        // Use timeout for initial session check
+        // Use longer timeout for initial session check (cold start can be slow)
+        // Recovery after backgrounding uses shorter AUTH_SESSION timeout
         const initResult = await withTimeout(
           supabase.auth.getSession().then(res => res),
-          TIMEOUTS.AUTH_SESSION,
+          TIMEOUTS.AUTH_SESSION_INITIAL,
           "Initial auth check timed out"
         );
 
@@ -219,14 +247,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         if (initResult.data.session?.user) {
-          const profile = await fetchProfile(initResult.data.session.user.id);
+          // CRITICAL: Set user immediately so data hooks can start fetching
+          // Profile fetch is non-blocking
           setState({
             user: initResult.data.session.user,
-            profile,
+            profile: null, // Will be updated when profile fetch completes
             session: initResult.data.session,
             loading: false,
             initialized: true,
             confidence: "confirmed",
+          });
+
+          // Fetch profile in background (non-blocking)
+          fetchProfile(initResult.data.session.user.id, true).then((profile) => {
+            // Only update if still mounted and user hasn't signed out
+            if (profile && isMountedRef.current) {
+              setState((prev) => (prev.user ? { ...prev, profile } : prev));
+            }
           });
         } else {
           setState({
@@ -270,14 +307,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log("[Auth] Auth state change:", event);
 
       if (event === "SIGNED_IN" && session?.user) {
-        const profile = await fetchProfile(session.user.id);
+        // CRITICAL: Set user immediately so data hooks can start fetching
+        // Profile fetch is non-blocking - we update profile when it completes
         setState({
           user: session.user,
-          profile,
+          profile: null, // Will be updated when profile fetch completes
           session,
           loading: false,
           initialized: true,
           confidence: "confirmed",
+        });
+
+        // Fetch profile in background (non-blocking)
+        const useInitialTimeout = isInitialLoadRef.current;
+        isInitialLoadRef.current = false;
+        fetchProfile(session.user.id, useInitialTimeout).then((profile) => {
+          // Only update if still mounted and user hasn't signed out
+          if (profile && isMountedRef.current) {
+            setState((prev) => (prev.user ? { ...prev, profile } : prev));
+          }
         });
       } else if (event === "SIGNED_OUT") {
         setState({
@@ -298,6 +346,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     return () => {
+      isMountedRef.current = false;
       subscription.unsubscribe();
     };
   }, [fetchProfile]);

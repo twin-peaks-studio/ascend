@@ -8,16 +8,40 @@
 
 /**
  * Timeout constants for different operation types (in milliseconds)
+ *
+ * Two-Tier Timeout Strategy:
+ * --------------------------
+ * INITIAL timeouts (longer): Used for initial page load / cold starts
+ *   - Supabase may have cold start latency
+ *   - CDN/network may be slower on first request
+ *   - User expects some loading time on fresh page load
+ *
+ * RECOVERY timeouts (shorter): Used after mobile backgrounding
+ *   - Connection should already be warm
+ *   - If data can't load quickly, connection is likely stale
+ *   - Fast failure allows recovery system to reset client
+ *
+ * @see docs/TECHNICAL_GUIDE.md "Auth Initialization & Performance" section
  */
 export const TIMEOUTS = {
   /** Quick connectivity test */
   HEALTH_CHECK: 2000,
-  /** Auth session operations */
+
+  // === Recovery Timeouts (short - fail fast after backgrounding) ===
+  /** Auth session check during recovery after backgrounding */
   AUTH_SESSION: 3000,
-  /** Auth refresh operations (slightly longer) */
-  AUTH_REFRESH: 5000,
-  /** Data fetch queries - keep short to fail fast after backgrounding */
+  /** Data fetch during recovery - short to detect stale connections */
   DATA_QUERY: 3000,
+
+  // === Initial Load Timeouts (longer - handle cold starts) ===
+  /** Auth session check on initial page load (cold start can be slow) */
+  AUTH_SESSION_INITIAL: 8000,
+  /** Data fetch on initial page load (cold start can be slow) */
+  DATA_QUERY_INITIAL: 6000,
+
+  // === Other Operations ===
+  /** Auth token refresh operations */
+  AUTH_REFRESH: 5000,
   /** Mutation operations (more critical, allow more time) */
   MUTATION: 10000,
   /** Minimum background duration to trigger recovery */
