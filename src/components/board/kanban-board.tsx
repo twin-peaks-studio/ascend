@@ -18,6 +18,7 @@ import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { KanbanColumn } from "./kanban-column";
 import { TaskCardDragOverlay } from "@/components/task";
 import type { TaskWithProject, TaskStatus, Project } from "@/types";
+import { sortTasks, type TaskSortField, type TaskSortDirection } from "@/lib/task-sort";
 
 interface KanbanBoardProps {
   tasks: TaskWithProject[];
@@ -34,6 +35,10 @@ interface KanbanBoardProps {
   onDeleteTask?: (taskId: string) => void;
   onArchiveTask?: (taskId: string) => void;
   onMarkDuplicate?: (taskId: string, isDuplicate: boolean) => void;
+  /** Sort field for tasks within columns (default: position) */
+  sortField?: TaskSortField;
+  /** Sort direction for tasks within columns (default: asc) */
+  sortDirection?: TaskSortDirection;
 }
 
 const COLUMNS: { id: TaskStatus; title: string }[] = [
@@ -52,6 +57,8 @@ export function KanbanBoard({
   onDeleteTask,
   onArchiveTask,
   onMarkDuplicate,
+  sortField = "position",
+  sortDirection = "asc",
 }: KanbanBoardProps) {
   const [activeTask, setActiveTask] = useState<TaskWithProject | null>(null);
 
@@ -78,11 +85,10 @@ export function KanbanBoard({
   // Get tasks by status
   const getTasksByStatus = useCallback(
     (status: TaskStatus) => {
-      return tasks
-        .filter((task) => task.status === status)
-        .sort((a, b) => a.position - b.position);
+      const statusTasks = tasks.filter((task) => task.status === status);
+      return sortTasks(statusTasks, sortField, sortDirection);
     },
-    [tasks]
+    [tasks, sortField, sortDirection]
   );
 
   // Handle drag start

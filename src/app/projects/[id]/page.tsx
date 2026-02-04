@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { AppShell } from "@/components/layout";
 import { TaskDialog, TaskDetailsResponsive, TaskListItem } from "@/components/task";
+import { sortTasks } from "@/lib/task-sort";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -76,12 +77,14 @@ export default function ProjectDetailPage() {
   const { members } = useProjectMembers(projectId);
   const { notes } = useProjectNotes(projectId);
 
-  // Filter to only show active tasks (not done and not archived)
+  // Filter to only show active tasks (not done and not archived), sorted by priority (highest first)
   const activeTasks = useMemo(() => {
     if (!project?.tasks) return [];
-    return project.tasks.filter(
+    const filtered = project.tasks.filter(
       (task) => task.status !== "done" && !task.is_archived
     );
+    // Default sort by priority (highest first) for the project overview
+    return sortTasks(filtered, "priority", "desc");
   }, [project?.tasks]);
 
   // Inline editing state - use project values directly as initial values
