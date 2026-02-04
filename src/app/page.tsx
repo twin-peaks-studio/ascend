@@ -15,6 +15,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ProjectDialog } from "@/components/project";
 import { QuickAddTask } from "@/components/task";
+import { LandingPage } from "@/components/landing";
+import { useAuth } from "@/hooks/use-auth";
 import { useProjects, useProjectMutations } from "@/hooks/use-projects";
 import { useTasks, useTaskMutations } from "@/hooks/use-tasks";
 import { useProfiles } from "@/hooks/use-profiles";
@@ -46,7 +48,24 @@ function StatCard({ title, value, icon, href }: StatCardProps) {
   );
 }
 
-export default function DashboardPage() {
+export default function HomePage() {
+  const { user, initialized } = useAuth();
+
+  // Show nothing while auth initializes to avoid flash
+  if (!initialized) {
+    return null;
+  }
+
+  // Show landing page for unauthenticated users
+  if (!user) {
+    return <LandingPage />;
+  }
+
+  // Show dashboard for authenticated users
+  return <Dashboard />;
+}
+
+function Dashboard() {
   const { projects, loading: projectsLoading, refetch: refetchProjects } = useProjects();
   const { tasks, loading: tasksLoading, refetch: refetchTasks } = useTasks();
   const { profiles } = useProfiles();
