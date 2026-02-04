@@ -15,7 +15,7 @@ import {
 import { AppShell } from "@/components/layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { MarkdownEditor } from "@/components/shared";
+import { RichTextEditor } from "@/components/shared";
 import { DeleteConfirmationDialog } from "@/components/ui/delete-confirmation-dialog";
 import { TaskDetailsResponsive } from "@/components/task";
 import { useProject } from "@/hooks/use-projects";
@@ -356,12 +356,10 @@ export default function NoteDetailPage() {
 
         {/* Content Editor */}
         <div className="mb-8">
-          <MarkdownEditor
+          <RichTextEditor
             value={content}
             onChange={handleContentChange}
-            placeholder="Start typing your notes... (supports **bold**, *italic*, - bullets)"
-            rows={16}
-            maxLength={50000}
+            placeholder="Start typing your notes..."
           />
           <p className="text-xs text-muted-foreground mt-2">
             Changes are saved automatically

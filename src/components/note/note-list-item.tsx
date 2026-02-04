@@ -38,15 +38,18 @@ export function NoteListItem({ note, onClick }: NoteListItemProps) {
   // Get a preview of the content (first line or truncated)
   const getContentPreview = (content: string | null) => {
     if (!content) return null;
-    // Get first non-empty line
-    const firstLine = content.split("\n").find((line) => line.trim());
-    if (!firstLine) return null;
-    // Remove markdown formatting for preview
-    const cleaned = firstLine
-      .replace(/[*_~`#]/g, "")
-      .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+    // Strip HTML tags for preview (TipTap stores HTML)
+    const textOnly = content
+      .replace(/<[^>]*>/g, " ") // Remove HTML tags
+      .replace(/&nbsp;/g, " ") // Replace HTML entities
+      .replace(/&amp;/g, "&")
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .replace(/&quot;/g, '"')
+      .replace(/\s+/g, " ") // Collapse whitespace
       .trim();
-    return cleaned.length > 80 ? cleaned.substring(0, 80) + "..." : cleaned;
+    if (!textOnly) return null;
+    return textOnly.length > 80 ? textOnly.substring(0, 80) + "..." : textOnly;
   };
 
   const contentPreview = getContentPreview(note.content);

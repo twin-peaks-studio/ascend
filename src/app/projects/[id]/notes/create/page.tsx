@@ -8,7 +8,7 @@ import { AppShell } from "@/components/layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { MarkdownEditor } from "@/components/shared";
+import { RichTextEditor } from "@/components/shared";
 import { useProject } from "@/hooks/use-projects";
 import { useNoteMutations } from "@/hooks/use-notes";
 
@@ -116,12 +116,10 @@ export default function CreateNotePage() {
           {/* Content */}
           <div className="space-y-2">
             <Label htmlFor="content">Content</Label>
-            <MarkdownEditor
+            <RichTextEditor
               value={content}
               onChange={setContent}
-              placeholder="Start typing your notes... (supports **bold**, *italic*, - bullets)"
-              rows={12}
-              maxLength={50000}
+              placeholder="Start typing your notes..."
             />
           </div>
 
