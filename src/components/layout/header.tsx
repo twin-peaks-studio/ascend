@@ -13,10 +13,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { useEffect, useState, useLayoutEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { getInitials } from "@/lib/profile-utils";
-import { useSearchDialog, useFeedbackDialog } from "./app-shell";
+import { useSearchDialog, useFeedbackDialog, useTheme } from "./app-shell";
 
 export type ViewMode = "board" | "list";
 
@@ -29,10 +28,6 @@ interface HeaderProps {
   onViewModeChange?: (mode: ViewMode) => void;
 }
 
-// Use useLayoutEffect on client, useEffect on server (SSR safe)
-const useIsomorphicLayoutEffect =
-  typeof window !== "undefined" ? useLayoutEffect : useEffect;
-
 export function Header({
   title,
   description,
@@ -44,42 +39,7 @@ export function Header({
   const { user, profile, signOut } = useAuth();
   const { openSearch } = useSearchDialog();
   const { openFeedback } = useFeedbackDialog();
-  const [isDark, setIsDark] = useState(false);
-  const [mounted, setMounted] = useState(false);
-
-  // Initialize theme from localStorage or system preference
-  useIsomorphicLayoutEffect(() => {
-    setMounted(true);
-    const stored = localStorage.getItem("theme");
-    if (stored === "dark") {
-      setIsDark(true);
-      document.documentElement.classList.add("dark");
-    } else if (stored === "light") {
-      setIsDark(false);
-      document.documentElement.classList.remove("dark");
-    } else {
-      // Use system preference
-      const prefersDark = window.matchMedia(
-        "(prefers-color-scheme: dark)"
-      ).matches;
-      setIsDark(prefersDark);
-      if (prefersDark) {
-        document.documentElement.classList.add("dark");
-      }
-    }
-  }, []);
-
-  const toggleTheme = () => {
-    const newIsDark = !isDark;
-    setIsDark(newIsDark);
-    if (newIsDark) {
-      document.documentElement.classList.add("dark");
-      localStorage.setItem("theme", "dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-      localStorage.setItem("theme", "light");
-    }
-  };
+  const { isDark, toggleTheme, mounted } = useTheme();
 
   return (
     <header className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">

@@ -2,7 +2,7 @@
 
 import { Sidebar } from "./sidebar";
 import { MobileBottomNav } from "./mobile-bottom-nav";
-import { useState, useCallback, useEffect, useRef, createContext, useContext } from "react";
+import { useState, useCallback, useEffect, useLayoutEffect, useRef, createContext, useContext } from "react";
 import { ShortcutsDialog } from "../shortcuts-dialog";
 import { SearchDialog } from "../search";
 import { AuthDialog } from "../auth";
@@ -40,6 +40,24 @@ export const useFeedbackDialog = () => {
   }
   return context;
 };
+
+// Context for theme state
+const ThemeContext = createContext<{
+  isDark: boolean;
+  toggleTheme: () => void;
+  mounted: boolean;
+} | null>(null);
+export const useTheme = () => {
+  const context = useContext(ThemeContext);
+  if (!context) {
+    throw new Error("useTheme must be used within AppShell");
+  }
+  return context;
+};
+
+// Use useLayoutEffect on client, useEffect on server (SSR safe)
+const useIsomorphicLayoutEffect =
+  typeof window !== "undefined" ? useLayoutEffect : useEffect;
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -127,9 +145,47 @@ export function AppShell({
   const [showSearch, setShowSearch] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
   const [showAuthDialog, setShowAuthDialog] = useState(false);
+  const [isDark, setIsDark] = useState(false);
+  const [themeMounted, setThemeMounted] = useState(false);
   const { isCollapsed } = useSidebar();
   const { user, initialized, confidence } = useAuth();
   const { isRefreshing } = useRecoveryState();
+
+  // Initialize theme from localStorage or system preference
+  useIsomorphicLayoutEffect(() => {
+    setThemeMounted(true);
+    const stored = localStorage.getItem("theme");
+    if (stored === "dark") {
+      setIsDark(true);
+      document.documentElement.classList.add("dark");
+    } else if (stored === "light") {
+      setIsDark(false);
+      document.documentElement.classList.remove("dark");
+    } else {
+      // Use system preference
+      const prefersDark = window.matchMedia(
+        "(prefers-color-scheme: dark)"
+      ).matches;
+      setIsDark(prefersDark);
+      if (prefersDark) {
+        document.documentElement.classList.add("dark");
+      }
+    }
+  }, []);
+
+  const toggleTheme = useCallback(() => {
+    setIsDark((prev) => {
+      const newIsDark = !prev;
+      if (newIsDark) {
+        document.documentElement.classList.add("dark");
+        localStorage.setItem("theme", "dark");
+      } else {
+        document.documentElement.classList.remove("dark");
+        localStorage.setItem("theme", "light");
+      }
+      return newIsDark;
+    });
+  }, []);
 
   // Show auth dialog ONLY when we're confident the user is logged out
   // Don't show during refresh or when auth state is uncertain (cached/unknown)
@@ -184,6 +240,7 @@ export function AppShell({
 
   return (
     <TimerProvider>
+    <ThemeContext.Provider value={{ isDark, toggleTheme, mounted: themeMounted }}>
     <SearchContext.Provider value={{ openSearch: handleOpenSearch }}>
       <FeedbackContext.Provider value={{ openFeedback: handleOpenFeedback }}>
       <div className="min-h-screen bg-background">
@@ -233,6 +290,7 @@ export function AppShell({
       </div>
       </FeedbackContext.Provider>
     </SearchContext.Provider>
+    </ThemeContext.Provider>
     </TimerProvider>
   );
 }
