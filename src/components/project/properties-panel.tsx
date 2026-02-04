@@ -1,6 +1,6 @@
 "use client";
 
-import { User, Calendar, Flag, X, Users } from "lucide-react";
+import { User, Calendar, Flag, X, Users, Clock, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -49,6 +49,8 @@ interface PropertiesPanelProps {
   onPriorityChange: (priority: string) => void;
   onColorChange: (color: string) => void;
   onShowMembers: () => void;
+  totalProjectTime?: string;
+  onShowTimeReport?: () => void;
 }
 
 export function PropertiesPanel({
@@ -62,6 +64,8 @@ export function PropertiesPanel({
   onPriorityChange,
   onColorChange,
   onShowMembers,
+  totalProjectTime,
+  onShowTimeReport,
 }: PropertiesPanelProps) {
   const statusConfig = PROJECT_STATUS_CONFIG[project.status];
 
@@ -333,7 +337,7 @@ export function PropertiesPanel({
       </SidebarRow>
 
       {/* Team Members */}
-      <SidebarRow label="Team" className="border-b-0">
+      <SidebarRow label="Team">
         <button
           onClick={onShowMembers}
           className="flex items-center gap-2 -mx-2 px-2 py-1 rounded hover:bg-muted/50 w-full text-left"
@@ -346,6 +350,20 @@ export function PropertiesPanel({
               ? "1 member"
               : `${membersCount} members`}
           </span>
+        </button>
+      </SidebarRow>
+
+      {/* Time Report */}
+      <SidebarRow label="Time" className="border-b-0">
+        <button
+          onClick={onShowTimeReport}
+          className="flex items-center gap-2 -mx-2 px-2 py-1 rounded hover:bg-muted/50 w-full text-left"
+        >
+          <Clock className="h-4 w-4 text-muted-foreground" />
+          <span className="flex-1">
+            {totalProjectTime || "No time tracked"}
+          </span>
+          <ChevronRight className="h-4 w-4 text-muted-foreground" />
         </button>
       </SidebarRow>
     </div>

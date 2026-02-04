@@ -55,6 +55,8 @@ import { useProjectDocuments, useDocumentMutations } from "@/hooks/use-documents
 import { useProjectMembers } from "@/hooks/use-project-members";
 import { useProjectNotes } from "@/hooks/use-notes";
 import { InviteMemberDialog, PropertiesPanel } from "@/components/project";
+import { TimeReportDialog } from "@/components/time/project-time-report";
+import { useProjectTotalTime } from "@/hooks/use-time-tracking";
 import { NoteListItem } from "@/components/note";
 import type { DocumentType, Project, ProjectStatus, TaskPriority, TaskWithProject, Task, TaskStatus } from "@/types";
 import type { CreateTaskInput, UpdateTaskInput, CreateDocumentInput } from "@/lib/validation";
@@ -76,6 +78,7 @@ export default function ProjectDetailPage() {
     useDocumentMutations();
   const { members } = useProjectMembers(projectId);
   const { notes } = useProjectNotes(projectId);
+  const { formattedTime: totalProjectTime } = useProjectTotalTime(projectId);
 
   // Filter to only show active tasks (not done and not archived), sorted by priority (highest first)
   const activeTasks = useMemo(() => {
@@ -131,6 +134,7 @@ export default function ProjectDetailPage() {
   // Properties panel state
   const [showProperties, setShowProperties] = useState(true);
   const [showMobileProperties, setShowMobileProperties] = useState(false);
+  const [showTimeReport, setShowTimeReport] = useState(false);
 
   // Document form state
   const [docTitle, setDocTitle] = useState("");
@@ -237,6 +241,19 @@ export default function ProjectDetailPage() {
     };
     setSelectedTask(taskWithProject);
     setShowTaskDetails(true);
+  }, [project]);
+
+  // Handle opening task details by ID (for time report)
+  const handleOpenTaskDetailsById = useCallback((taskId: string) => {
+    const task = project?.tasks.find((t) => t.id === taskId);
+    if (task) {
+      const taskWithProject: TaskWithProject = {
+        ...task,
+        project: project || null,
+      };
+      setSelectedTask(taskWithProject);
+      setShowTaskDetails(true);
+    }
   }, [project]);
 
   // Handle task update from details dialog
@@ -746,6 +763,8 @@ export default function ProjectDetailPage() {
                   onPriorityChange={handlePriorityChange}
                   onColorChange={handleColorChange}
                   onShowMembers={() => setShowMembersDialog(true)}
+                  totalProjectTime={totalProjectTime}
+                  onShowTimeReport={() => setShowTimeReport(true)}
                 />
               </div>
             )}
@@ -794,9 +813,20 @@ export default function ProjectDetailPage() {
             onPriorityChange={handlePriorityChange}
             onColorChange={handleColorChange}
             onShowMembers={() => setShowMembersDialog(true)}
+            totalProjectTime={totalProjectTime}
+            onShowTimeReport={() => setShowTimeReport(true)}
           />
         </SheetContent>
       </Sheet>
+
+      {/* Time Report dialog */}
+      <TimeReportDialog
+        open={showTimeReport}
+        onOpenChange={setShowTimeReport}
+        projectId={projectId}
+        projectTitle={project.title}
+        onTaskClick={handleOpenTaskDetailsById}
+      />
 
       {/* Task create dialog */}
       <TaskDialog
