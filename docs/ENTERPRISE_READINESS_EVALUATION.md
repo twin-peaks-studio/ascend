@@ -251,6 +251,183 @@ No URL scheme for native app linking.
 
 ---
 
+## 5a. React Native for Mobile: Risks & Tradeoffs
+
+The original evaluation recommended Capacitor (web wrapper) as the path of least resistance. This section provides a full analysis of the React Native alternative, focused on **risks and tradeoffs** rather than effort.
+
+### What Can Be Shared Between Web and React Native
+
+Understanding what code is reusable helps frame the scope. Based on the current codebase:
+
+| Layer | Can Share? | Details |
+|-------|-----------|---------|
+| TypeScript types (`types/database.ts`) | Yes | Works as-is in RN |
+| Zod validation schemas (`lib/validation.ts`) | Yes | Works as-is in RN |
+| Input sanitization (`lib/security/sanitize.ts`) | Yes | Works as-is in RN |
+| AI extraction types/validation | Yes | Works as-is in RN |
+| Timeout/retry utilities (`lib/utils/with-timeout.ts`) | Yes | Works as-is in RN |
+| Supabase client (`lib/supabase/client.ts`) | Partial | Must switch from `@supabase/ssr` (cookie auth) to `@supabase/supabase-js` with AsyncStorage (token auth) |
+| React Query hooks (`hooks/use-tasks.ts`, etc.) | Partial | Query/mutation logic reusable, but hooks reference web-only toast library |
+| All UI components (Radix, shadcn, Tailwind) | No | Every component must be rebuilt for RN |
+| TipTap rich text editor | No | No equivalent exists in RN (see below) |
+| DND-Kit drag and drop | No | Must use `react-native-draggable-flatlist` or `react-native-reanimated` gestures |
+| Next.js routing, middleware, layouts | No | Must use React Navigation or Expo Router |
+| Timer localStorage persistence | No | Must use AsyncStorage or MMKV |
+
+**Bottom line:** ~15% of the codebase (types, validation, utilities) is directly shareable. The data-fetching hooks are ~50% reusable with modifications. All UI must be rebuilt from scratch.
+
+### Risks of Going React Native
+
+#### RISK 1: Feature Parity Drift (HIGH)
+
+This is the #1 risk of any dual-codebase approach. Once you have a web codebase and a React Native codebase:
+
+- A bug fix on web might not make it to mobile (and vice versa)
+- New features ship on one platform first, with the other lagging weeks or months behind
+- UI/UX patterns diverge over time as each platform team optimizes for their context
+- Users who switch between desktop and mobile get confused by inconsistencies
+- Support burden increases because every issue has a "which platform?" qualifier
+
+**Why this matters for Ascend specifically:** Your product is a team collaboration tool. Team members will use both web and mobile. If the task detail dialog behaves differently on each platform, if fields are in a different order, if a feature exists on web but not mobile -- that erodes trust in the product.
+
+**Mitigation:** Monorepo (Turborepo/Nx) with a shared `packages/core` for all business logic. Strict feature parity reviews. Shared design system documentation. This reduces drift but doesn't eliminate it.
+
+#### RISK 2: Rich Text Editor Gap (HIGH)
+
+The web app uses TipTap (ProseMirror-based) for the notes editor with link support, placeholders, and markdown rendering. This is a core feature.
+
+**The problem:** There is no React Native library that matches TipTap's capabilities. The options:
+- `react-native-pell-rich-editor` -- Limited, poorly maintained, WebView-based
+- `react-native-cn-quill` -- Quill wrapper, WebView-based, different data model
+- `10play/tentap-editor` -- TipTap port for RN, but early-stage and limited extensions
+- Custom WebView with TipTap -- Negates the performance benefit of RN
+
+**Concrete risk:** Notes created on web with TipTap formatting may not render correctly on mobile. Notes edited on mobile may lose formatting when viewed on web. This creates data integrity issues in your notes feature, which is a differentiator.
+
+**Mitigation:** Standardize on a portable content format (Markdown or a strict ProseMirror JSON schema) that both platforms can render. Accept that mobile will have a simpler editor.
+
+#### RISK 3: App Store Rejection (MEDIUM-HIGH)
+
+Apple's App Store Review Guidelines (section 4.2) reject apps that are "not useful, unique, or 'app-like'." Apple has specifically targeted apps that look like wrapped websites.
+
+React Native produces native views (not a WebView), so it's safer than Capacitor in this regard. However:
+- If the UX feels too "web-like" (no native navigation patterns, no native gestures), Apple may reject
+- Apple may question why the app needs to be a native app vs. a website
+- Rejection appeals take days-to-weeks and delay launches
+- Apple's guidelines are subjective and enforced inconsistently
+
+**Google Play** is more lenient but has increased scrutiny on content policies.
+
+**Mitigation:** Follow platform-specific UX patterns (stack navigation on iOS, material design on Android). Use native components (bottom sheets, haptics, native date pickers). Don't just port the web layout -- redesign for mobile.
+
+#### RISK 4: Authentication Model Split (MEDIUM)
+
+The web app uses **cookie-based auth** via `@supabase/ssr`. React Native **cannot use cookies** -- it must use token-based auth stored in AsyncStorage or Keychain.
+
+This creates two different authentication flows:
+- Different token refresh behavior
+- Different session persistence mechanisms
+- Different security surfaces (cookies have CSRF risk; tokens have storage risk)
+- A vulnerability in one auth flow won't exist in the other, meaning security audits must cover both paths
+- Password reset, magic links, and OAuth redirects all work differently in a native app context
+
+**Mitigation:** Abstract auth behind a shared interface. Store tokens in iOS Keychain / Android Keystore (not plain AsyncStorage) for the mobile app.
+
+#### RISK 5: Kanban Drag-Drop Feels Different (MEDIUM)
+
+DND-Kit (web) and react-native gesture libraries (mobile) have fundamentally different interaction models:
+- Web: pointer events, cursor changes, drop zones with visual feedback
+- Mobile: long-press to grab, pan gestures, haptic feedback, momentum scrolling conflicts
+
+The Kanban board is the primary UX surface. If it feels awkward or unreliable on mobile, users won't use the mobile app for task management -- which defeats the purpose.
+
+**Mitigation:** Design the mobile Kanban interaction from scratch for touch. Don't try to replicate the web drag-drop -- use mobile-native patterns (swipe to change status, long-press to reorder within a column).
+
+#### RISK 6: Native Dependency Fragmentation (MEDIUM)
+
+React Native apps depend on "native modules" -- bridges between JavaScript and iOS/Android native code. Critical infrastructure libraries:
+- `react-native-reanimated` (animations)
+- `react-native-gesture-handler` (touch)
+- `react-native-screens` (navigation performance)
+- `react-native-safe-area-context` (notch/island handling)
+
+**The risk:** When Apple ships iOS 19 or Google ships Android 16, some native modules may break until maintainers release updates. You can be blocked from submitting to the App Store if your app crashes on the latest OS. You're dependent on open-source maintainers' timelines.
+
+**Mitigation:** Use Expo's managed workflow, which handles most native module compatibility. Pin dependency versions aggressively. Keep a 2-week buffer before adopting new OS versions.
+
+#### RISK 7: Two Release Cadences (MEDIUM)
+
+- **Web:** Deploy instantly via Vercel. Bug fix at 2pm, live at 2:01pm.
+- **Mobile:** Submit to App Store review (1-7 days), users must update the app. A critical bug fix that ships instantly on web takes **3-7 days** to reach mobile users.
+
+This means:
+- Security patches have a multi-day exposure window on mobile
+- Feature launches must either be staggered (confusing) or held back until both platforms are ready (slower)
+- You need "kill switch" capability to remotely disable broken features in shipped mobile versions
+
+**Mitigation:** Use Expo Updates (OTA) for JavaScript-only changes (bypasses App Store review). Use feature flags with remote config to disable broken features. Accept that native module changes still require store review.
+
+#### RISK 8: Cross-Platform Data Sync Edge Cases (LOW-MEDIUM)
+
+Timer started on web → user opens mobile app. Does the timer show? Theoretically yes (via Supabase Realtime), but:
+- Web uses BroadcastChannel for cross-tab sync; this doesn't exist in RN
+- Web uses `localStorage` for timer persistence; RN uses AsyncStorage
+- Supabase Realtime subscriptions are set up differently in each auth context
+- React Navigation's app lifecycle (foreground/background) is different from Next.js page lifecycle
+- The `app-recovery-provider.tsx` mobile backgrounding system is web-specific
+
+Edge cases will emerge where data appears out of sync between platforms.
+
+**Mitigation:** Share the Supabase Realtime subscription logic. Test cross-platform scenarios explicitly (start timer on web, stop on mobile; create task on mobile, edit on web).
+
+### Advantages of React Native (What You Gain)
+
+| Capability | Web (Current) | Capacitor (Wrapper) | React Native |
+|-----------|---------------|---------------------|-------------|
+| Native gestures/haptics | No | Limited | Full |
+| Push notifications | Web Push only | Via plugin | Native APNs/FCM |
+| Biometric auth (Face ID) | No | Via plugin | Native |
+| Offline + SQLite | IndexedDB (limited) | Via plugin | Native (WatermelonDB) |
+| App Store presence | No | Yes | Yes |
+| Background tasks | No | Limited | Full |
+| Performance (complex UI) | Good | Degraded (WebView) | Near-native |
+| Camera/file access | Limited | Via plugin | Native |
+| Keychain/Keystore | No | Via plugin | Native |
+| Widget support (iOS/Android) | No | No | Yes (via native modules) |
+
+### When React Native Is the Right Call
+
+React Native makes strategic sense if **any** of these are true:
+1. Mobile will become the **primary** platform (not just a companion to web)
+2. You need deep native capabilities (biometrics, background sync, widgets) that are core to the experience
+3. You plan to differentiate with a **mobile-specific UX** that goes beyond the web feature set
+4. Offline-first is a hard requirement (construction, field work, travel)
+5. You're hiring or have hired mobile-experienced React developers
+
+### When Capacitor Is the Right Call
+
+Capacitor makes strategic sense if:
+1. Mobile is a **companion** to the desktop/web experience
+2. Feature parity between web and mobile is critical
+3. Your team is web-focused and will stay that way
+4. You want to ship mobile quickly with minimal codebase divergence
+5. Your features don't require deep native integration
+
+### Recommendation
+
+For Ascend's current position, the decision hinges on one question: **Is mobile the primary experience, or a companion?**
+
+For a project management tool used by US knowledge workers:
+- Most task management happens at a desk (web)
+- Mobile is for quick status checks, timer start/stop, and receiving notifications
+- The rich text editor (notes) is fundamentally a desktop activity
+
+This profile favors **Capacitor first**, with a migration path to React Native if mobile usage data shows users want a deeper mobile experience. You can make this decision with data once you have analytics (Section 11).
+
+The biggest risk of going React Native now is **premature optimization** -- investing in a native mobile codebase before you've validated that your core product has market fit, before you have analytics showing how mobile users behave, and before the web experience is fully mature.
+
+---
+
 ## 6. Operational Readiness
 
 ### P0: Zero Test Coverage
