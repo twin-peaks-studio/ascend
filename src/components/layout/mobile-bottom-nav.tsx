@@ -15,6 +15,7 @@ import {
   ChevronRight,
   X,
   Filter,
+  ArrowUpDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -24,6 +25,12 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
+import {
+  TASK_SORT_OPTIONS,
+  getSortOptionKey,
+  type TaskSortField,
+  type TaskSortDirection,
+} from "@/lib/task-sort";
 import type { ViewMode } from "./header";
 import type { Project } from "@/types";
 
@@ -58,9 +65,12 @@ interface MobileBottomNavProps {
   projects?: Project[];
   selectedProjectIds?: string[];
   onProjectsChange?: (projectIds: string[]) => void;
+  sortField?: TaskSortField;
+  sortDirection?: TaskSortDirection;
+  onSortChange?: (field: TaskSortField, direction: TaskSortDirection) => void;
 }
 
-type FilterView = "main" | "project";
+type FilterView = "main" | "project" | "sort";
 
 export function MobileBottomNav({
   onAddTask,
@@ -69,14 +79,17 @@ export function MobileBottomNav({
   projects = [],
   selectedProjectIds = [],
   onProjectsChange,
+  sortField = "position",
+  sortDirection = "asc",
+  onSortChange,
 }: MobileBottomNavProps) {
   const pathname = usePathname();
   const [showSettings, setShowSettings] = useState(false);
   const [filterView, setFilterView] = useState<FilterView>("main");
   const [projectSearch, setProjectSearch] = useState("");
 
-  // Only show settings button on tasks page
-  const showSettingsButton = pathname === "/tasks";
+  // Show settings button on tasks pages (global tasks and project tasks)
+  const showSettingsButton = pathname === "/tasks" || pathname.match(/^\/projects\/[^/]+\/tasks$/);
 
   // Filter and sort projects - selected ones at the top
   const filteredProjects = useMemo(() => {
@@ -109,9 +122,22 @@ export function MobileBottomNav({
 
   // Count active filters
   const activeFilterCount = useMemo(() => {
-    // Add future filters here (date, tags, etc.)
-    return selectedProjectIds.length;
-  }, [selectedProjectIds]);
+    let count = selectedProjectIds.length;
+    // Count non-default sorting as an active filter
+    if (sortField !== "position" || sortDirection !== "asc") {
+      count += 1;
+    }
+    return count;
+  }, [selectedProjectIds, sortField, sortDirection]);
+
+  // Get the current sort option label
+  const currentSortLabel = useMemo(() => {
+    const currentKey = getSortOptionKey(sortField, sortDirection);
+    const option = TASK_SORT_OPTIONS.find(
+      (opt) => getSortOptionKey(opt.field, opt.direction) === currentKey
+    );
+    return option?.label || "Default";
+  }, [sortField, sortDirection]);
 
   // Reset filter view when sheet closes
   const handleSheetChange = (open: boolean) => {
@@ -239,14 +265,29 @@ export function MobileBottomNav({
                     </button>
                   )}
 
-                  {/* Future filters will go here as similar rows */}
+                  {/* Sort Row */}
+                  {onSortChange && (
+                    <button
+                      onClick={() => setFilterView("sort")}
+                      className="flex items-center gap-3 w-full p-3 rounded-lg transition-colors hover:bg-muted"
+                    >
+                      <ArrowUpDown className="h-5 w-5 text-muted-foreground" />
+                      <div className="flex-1 text-left">
+                        <p className="font-medium">Sort</p>
+                        <p className="text-xs text-muted-foreground">
+                          {currentSortLabel}
+                        </p>
+                      </div>
+                      <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                    </button>
+                  )}
 
                   {/* Clear all filters option - only visible when filters are active */}
                   {activeFilterCount > 0 && (
                     <button
                       onClick={() => {
                         onProjectsChange?.([]);
-                        // Clear future filters here
+                        onSortChange?.("position", "asc");
                       }}
                       className="flex items-center gap-3 w-full p-3 rounded-lg transition-colors text-destructive hover:bg-destructive/10"
                     >
@@ -392,6 +433,53 @@ export function MobileBottomNav({
                     No projects found
                   </p>
                 )}
+              </div>
+            </>
+          )}
+
+          {/* Sort Selection View */}
+          {filterView === "sort" && (
+            <>
+              <SheetHeader className="pb-2 flex-shrink-0">
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setFilterView("main")}
+                    className="p-1 -ml-1 rounded-md hover:bg-muted"
+                  >
+                    <ChevronRight className="h-5 w-5 rotate-180" />
+                  </button>
+                  <SheetTitle>Sort Tasks</SheetTitle>
+                </div>
+              </SheetHeader>
+
+              <div className="overflow-y-auto flex-1 space-y-1 pt-2">
+                {TASK_SORT_OPTIONS.map((option) => {
+                  const optionKey = getSortOptionKey(option.field, option.direction);
+                  const currentKey = getSortOptionKey(sortField, sortDirection);
+                  const isSelected = optionKey === currentKey;
+
+                  return (
+                    <button
+                      key={optionKey}
+                      onClick={() => {
+                        onSortChange?.(option.field, option.direction);
+                        setFilterView("main");
+                      }}
+                      className={cn(
+                        "flex items-center gap-3 w-full p-3 rounded-lg transition-colors",
+                        isSelected
+                          ? "bg-primary/10 text-primary"
+                          : "hover:bg-muted"
+                      )}
+                    >
+                      <ArrowUpDown className="h-5 w-5" />
+                      <span className="flex-1 text-left font-medium">
+                        {option.label}
+                      </span>
+                      {isSelected && <Check className="h-5 w-5" />}
+                    </button>
+                  );
+                })}
               </div>
             </>
           )}

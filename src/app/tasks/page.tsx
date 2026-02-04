@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import { AppShell, Header } from "@/components/layout";
 import type { ViewMode } from "@/components/layout";
 import { KanbanBoard } from "@/components/board";
-import { TaskDialog, TaskDetailsResponsive, QuickAddTask, TaskListView, TaskSortSelect, TaskFilterMenu } from "@/components/task";
+import { TaskDialog, TaskDetailsResponsive, QuickAddTask, TaskListView, TaskSortSelect } from "@/components/task";
 import { parseSortOptionKey, type TaskSortField, type TaskSortDirection } from "@/lib/task-sort";
 import { ProjectFilter } from "@/components/filters";
 import { useTasksByStatus, useTaskMutations } from "@/hooks/use-tasks";
@@ -301,6 +301,9 @@ export default function TasksPage() {
       projects={projects as Project[]}
       selectedProjectIds={selectedProjectIds}
       onProjectsChange={setSelectedProjectIds}
+      sortField={sortField}
+      sortDirection={sortDirection}
+      onSortChange={handleSortChange}
     >
       <Header
         title="Tasks"
@@ -312,37 +315,18 @@ export default function TasksPage() {
       />
 
       <div className="p-4 md:p-6">
-        {/* Filters and sorting */}
-        <div className="mb-4 flex items-center justify-between gap-2">
-          {/* Desktop: Project filter and sort selector */}
-          <div className="hidden lg:flex lg:items-center lg:gap-2">
-            <ProjectFilter
-              projects={projects as Project[]}
-              selectedProjectIds={selectedProjectIds}
-              onProjectsChange={setSelectedProjectIds}
-            />
-          </div>
-          {/* Desktop: Sort selector */}
-          <div className="hidden lg:block">
-            <TaskSortSelect
-              field={sortField}
-              direction={sortDirection}
-              onChange={handleSortChange}
-            />
-          </div>
-          {/* Mobile/Tablet: Combined filter menu */}
-          <div className="flex flex-1 justify-end lg:hidden">
-            <TaskFilterMenu
-              sortField={sortField}
-              sortDirection={sortDirection}
-              onSortChange={handleSortChange}
-              viewMode={viewMode}
-              onViewModeChange={handleViewModeChange}
-              projects={projects as Project[]}
-              selectedProjectIds={selectedProjectIds}
-              onProjectsChange={setSelectedProjectIds}
-            />
-          </div>
+        {/* Filters and sorting - desktop only, mobile uses bottom nav filter sheet */}
+        <div className="mb-4 hidden items-center justify-between gap-2 lg:flex">
+          <ProjectFilter
+            projects={projects as Project[]}
+            selectedProjectIds={selectedProjectIds}
+            onProjectsChange={setSelectedProjectIds}
+          />
+          <TaskSortSelect
+            field={sortField}
+            direction={sortDirection}
+            onChange={handleSortChange}
+          />
         </div>
 
         {loading ? (

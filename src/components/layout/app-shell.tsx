@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 import type { ViewMode } from "./header";
 import type { Project, TaskWithProject } from "@/types";
 import type { UpdateTaskInput } from "@/lib/validation";
+import type { TaskSortField, TaskSortDirection } from "@/lib/task-sort";
 
 // Context for search dialog trigger
 const SearchContext = createContext<{ openSearch: () => void } | null>(null);
@@ -48,6 +49,9 @@ interface AppShellProps {
   projects?: Project[];
   selectedProjectIds?: string[];
   onProjectsChange?: (projectIds: string[]) => void;
+  sortField?: TaskSortField;
+  sortDirection?: TaskSortDirection;
+  onSortChange?: (field: TaskSortField, direction: TaskSortDirection) => void;
 }
 
 /**
@@ -115,6 +119,9 @@ export function AppShell({
   projects,
   selectedProjectIds,
   onProjectsChange,
+  sortField,
+  sortDirection,
+  onSortChange,
 }: AppShellProps) {
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
@@ -200,6 +207,9 @@ export function AppShell({
           projects={projects}
           selectedProjectIds={selectedProjectIds}
           onProjectsChange={onProjectsChange}
+          sortField={sortField}
+          sortDirection={sortDirection}
+          onSortChange={onSortChange}
         />
 
         {/* Shortcuts dialog */}

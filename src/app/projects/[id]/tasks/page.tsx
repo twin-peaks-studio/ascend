@@ -7,7 +7,7 @@ import { ArrowLeft } from "lucide-react";
 import { AppShell, Header } from "@/components/layout";
 import type { ViewMode } from "@/components/layout";
 import { KanbanBoard } from "@/components/board";
-import { TaskDialog, TaskDetailsResponsive, QuickAddTask, TaskListView, TaskSortSelect, TaskFilterMenu } from "@/components/task";
+import { TaskDialog, TaskDetailsResponsive, QuickAddTask, TaskListView, TaskSortSelect } from "@/components/task";
 import { parseSortOptionKey, type TaskSortField, type TaskSortDirection } from "@/lib/task-sort";
 import { Button } from "@/components/ui/button";
 import { useProject } from "@/hooks/use-projects";
@@ -377,6 +377,9 @@ export default function ProjectTasksPage() {
       onAddTask={handleQuickCreate}
       viewMode={viewMode}
       onViewModeChange={handleViewModeChange}
+      sortField={sortField}
+      sortDirection={sortDirection}
+      onSortChange={handleSortChange}
     >
       {/* Top navigation bar */}
       <div className="border-b px-4 py-2 flex items-center justify-between bg-background">
@@ -410,26 +413,13 @@ export default function ProjectTasksPage() {
       />
 
       <div className="p-4 md:p-6">
-        {/* Sort selector */}
-        <div className="mb-4 flex justify-end">
-          {/* Desktop: Sort selector */}
-          <div className="hidden lg:block">
-            <TaskSortSelect
-              field={sortField}
-              direction={sortDirection}
-              onChange={handleSortChange}
-            />
-          </div>
-          {/* Mobile/Tablet: Combined filter menu */}
-          <div className="lg:hidden">
-            <TaskFilterMenu
-              sortField={sortField}
-              sortDirection={sortDirection}
-              onSortChange={handleSortChange}
-              viewMode={viewMode}
-              onViewModeChange={handleViewModeChange}
-            />
-          </div>
+        {/* Sort selector - desktop only, mobile uses bottom nav filter sheet */}
+        <div className="mb-4 hidden justify-end lg:flex">
+          <TaskSortSelect
+            field={sortField}
+            direction={sortDirection}
+            onChange={handleSortChange}
+          />
         </div>
 
         {viewMode === "board" ? (
