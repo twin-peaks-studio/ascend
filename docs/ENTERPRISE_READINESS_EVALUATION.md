@@ -354,6 +354,244 @@ Migrations split between `docs/migrations.sql` and `supabase/migrations/`. No cl
 
 ---
 
+## 8. Accessibility / ADA Legal Risk (CRITICAL)
+
+Accessibility lawsuits against web and mobile apps are increasing. WCAG 2.1 AA compliance is the legal standard. This audit found significant gaps.
+
+### P0: Kanban Board Inaccessible to Screen Readers
+
+`src/components/board/kanban-board.tsx` - The drag-and-drop board is a core feature and has no screen reader announcements. DND-Kit's KeyboardSensor is configured, but:
+- No `aria-live` region announcing "Task X moved to Y column"
+- Droppable columns have no `aria-label` (`kanban-column.tsx:39-41`)
+- Task cards have no `aria-describedby` explaining they are draggable (`task-card.tsx:90-91`)
+- A user relying on a screen reader **cannot reorder tasks at all**
+
+### P0: No `aria-live` Regions Anywhere
+
+Zero `aria-live` regions in the entire codebase. Dynamic updates (loading states, toast-style status changes, timer updates, error messages) are **invisible to screen readers**. This affects every page.
+
+### P0: Form Labels Not Associated With Inputs
+
+Multiple forms have `<Label>` elements that are not connected to their inputs via `htmlFor`/`id`:
+- `task-form.tsx:202-218` -- DatePicker and AssigneeSelector have no `id` props
+- `markdown-editor.tsx:445-457` -- Textarea has no label association
+- Error messages in `auth-dialog.tsx:176-180` are not linked via `aria-describedby`
+
+Screen reader users cannot determine which label belongs to which field.
+
+### P1: Interactive Elements Missing Accessibility Attributes
+
+`task-details-dialog.tsx` has multiple toggle buttons (status checkbox, title edit, description edit, attachments expand, time tracking expand) that lack `aria-label`, `aria-pressed`, or `aria-expanded` attributes. Screen readers announce these as generic buttons with no meaning.
+
+### P1: No Skip Navigation Link
+
+`app-shell.tsx` has no "Skip to main content" link. Keyboard-only users must tab through the entire sidebar/header before reaching page content.
+
+### P1: Color Used Alone to Convey Meaning
+
+Project colors in filters (`project-filter.tsx:88-102`) and project cards use color dots with no text labels. Users with color blindness cannot distinguish projects by color alone.
+
+### P1: No Dynamic Page Titles
+
+Sub-pages (`/projects/[id]`, `/tasks`) don't set their own `<title>`. All pages show the root title. Screen readers and browser history provide no navigation context.
+
+### P2: Color Contrast Not Verified
+
+Multiple hardcoded color classes (`text-red-500`, `text-orange-500`, `text-blue-500`) for priorities, overdue badges, and status indicators have not been checked against WCAG 4.5:1 contrast ratio requirements.
+
+---
+
+## 9. Race Conditions & Data Integrity (CRITICAL)
+
+These are bugs that will cause real data corruption with multiple concurrent users.
+
+### P0: Multiple Active Timers Per User (No DB Constraint)
+
+`time_entries` table has **no UNIQUE constraint** preventing multiple rows with `(user_id, end_time IS NULL)`. The timer start check relies on client-side cached state (`activeTimer` from React Query with 5s staleTime). If a user opens two tabs, both can start timers within the stale window, resulting in multiple concurrent timers.
+
+`fetchActiveTimer` in `use-time-tracking.ts:97-113` uses `maybeSingle()` which silently returns only one row when multiples exist, hiding the data corruption.
+
+**Fix:** Add partial unique index: `CREATE UNIQUE INDEX ON time_entries (user_id) WHERE end_time IS NULL;`
+
+### P0: Task Position Corruption on Concurrent Drag-Drop
+
+`use-tasks.ts:332-360` fires N parallel UPDATE queries (not a transaction) when reordering. Two users dragging in the same column simultaneously can produce:
+- Duplicate position values
+- Non-sequential positions (gaps)
+- Tasks in the wrong order
+
+The Kanban board in `kanban-board.tsx:204-218` makes it worse: it optimistically updates ALL tasks locally but only sends `onTaskMove` for the **dragged task**, not the shifted tasks.
+
+**Fix:** Supabase RPC function wrapping reorder in a single `BEGIN...COMMIT` transaction.
+
+### P1: No Optimistic Conflict Detection
+
+Task updates (`use-tasks.ts:248-294`) have no version checking. If User A edits a task title while User B's cache still shows the old title, and User B then edits the description, they can silently overwrite User A's title change. The `updated_at` field exists but is never used for conflict detection.
+
+**Fix:** Add `version` column (integer, incremented on every update). Check `WHERE version = expected_version` on update. If 0 rows affected, the task was modified by someone else -- prompt for refresh.
+
+### P1: Orphaned Files in Storage
+
+`use-attachments.ts:76-129` uploads files in two steps (storage then DB insert). If the DB insert fails, cleanup is attempted but if the user navigates away or cleanup fails, orphaned files remain in Supabase Storage consuming space with no DB record.
+
+**Fix:** Upload to a `staging/` prefix first, then move to final path only after DB insert succeeds. Run a periodic cleanup job for stale staging files.
+
+### P2: Project Creator Can Remove Themselves
+
+`use-project-members.ts` allows the creator to remove themselves from a project because the `canRemove` check allows self-removal for any user. The "creator cannot be removed" check only blocks *other* users from removing the creator, not the creator removing themselves. This would orphan the project.
+
+---
+
+## 10. Vendor Lock-In & Disaster Recovery
+
+### P0: Complete Supabase Dependency -- No Fallback
+
+The app uses **5 Supabase services** (Database, Auth, Storage, Realtime, RLS) with **no abstraction layer**. 9+ files import directly from `@supabase/*`. A Supabase outage takes down 100% of functionality including the ability to log in.
+
+**Blast radius of 1-hour Supabase outage:** Complete app outage. No login, no data, no file access. Middleware runs `supabase.auth.getUser()` on every request, so even serving cached pages is degraded.
+
+### P0: No Backup Verification
+
+Supabase provides daily automatic backups, but there is:
+- No backup restoration testing
+- No documented restore procedure
+- No RTO/RPO targets
+- No disaster recovery runbook
+
+If you've never tested a restore, you don't know if your backups work.
+
+### P0: No Health Check Endpoint
+
+No `/api/health` endpoint exists. External monitoring tools have nothing to check. You won't know the app is broken until users report it.
+
+### P1: No Error Monitoring
+
+No Sentry, Datadog, New Relic, or any error tracking service. 83 `console.log` statements are the only "monitoring." Production errors are invisible unless a user reports them.
+
+### P1: Single-Region Deployment
+
+Database, storage, and auth are all in a single Supabase region. No read replicas, no multi-region failover. A regional outage is a complete outage.
+
+### P2: Hosting Is Portable (Positive)
+
+The app is NOT locked into Vercel. No Vercel-specific APIs are used. It can deploy to AWS, GCP, Cloudflare, or a Docker container with minimal effort. This is a strength.
+
+---
+
+## 11. Missing Product Infrastructure
+
+Things a senior engineer would flag that aren't in the "security" or "architecture" bucket but will block product-market fit.
+
+### P0: No Email System At All
+
+Zero transactional email infrastructure. No welcome email, no password reset flow, no invite notifications, no activity alerts, no digest emails. When a team member is invited (`invite-member-dialog.tsx:211`), the note says "The user must already have an account" -- there is no invite email.
+
+**This means:** Users never know they've been invited. Password reset requires direct support intervention. No engagement emails for retention.
+
+**Fix:** Integrate Resend or SendGrid. Start with: password reset, invite notification, welcome email.
+
+### P0: Settings Page Is a Broken Link
+
+The sidebar at `sidebar.tsx:221-237` links to `/settings`, but **no `/settings` page exists**. Clicking it returns a 404. Users cannot:
+- Change their display name after signup
+- Change their email
+- Upload an avatar
+- Set notification preferences
+- Set timezone
+- Delete their account
+
+### P1: No Analytics or Product Instrumentation
+
+Zero event tracking. You cannot answer basic questions like:
+- How many users are active daily/weekly/monthly?
+- Which features are used most?
+- Where do users drop off after signup?
+- Is the AI extraction feature valued?
+- What is your retention rate?
+
+**You are flying blind on product decisions.** This isn't just a nice-to-have -- without analytics, you can't make informed product decisions or report metrics to stakeholders.
+
+### P1: No User Onboarding
+
+After signup, a new user lands on an empty dashboard with a static 3-step text guide. No interactive tutorial, no sample project, no progressive feature discovery. For a project management tool competing with Linear, Asana, etc., first-time user experience is critical for activation.
+
+### P1: No Marketing/Landing Page
+
+The root URL goes directly to the app (behind auth). There is no:
+- Public marketing page with features/pricing
+- SEO meta tags or OpenGraph images
+- Sitemap for search engines
+- Any public content to share
+
+Users cannot learn about the product before signing up.
+
+### P2: No Abuse Prevention
+
+No mechanisms for:
+- Login attempt throttling (brute-force protection beyond Supabase defaults)
+- Content moderation (offensive task/project names)
+- Spam account detection
+- Account takeover detection
+- IP-based blocking
+- Suspicious activity alerts
+
+---
+
+## Revised Prioritized Action Plan
+
+### Phase 0: Critical Fixes (Before ANY scaling)
+1. Add RLS policies for `notes`, `note_tasks`, `time_entries`
+2. Add `UNIQUE(user_id) WHERE end_time IS NULL` on `time_entries`
+3. Switch attachment URLs from public to signed
+4. Add `/api/health` endpoint
+5. Integrate Sentry for error monitoring
+6. Set up CI/CD with GitHub Actions
+7. Add initial test suite (validation schemas + auth + RLS)
+8. Fix settings page (create `/settings` route with profile editing + account deletion)
+
+### Phase 1: Compliance & Stability
+9. Build account deletion endpoint (GDPR Article 17)
+10. Build data export endpoint (GDPR Article 20)
+11. Add consent management (signup + cookies)
+12. Add rate limiting to API routes
+13. Fix CSP (nonce-based, remove unsafe-inline/eval)
+14. Add file type validation on uploads
+15. Restrict profile visibility to team scope
+16. Add React Error Boundaries
+17. Add audit logging via DB triggers
+18. Replace console.* with structured logging
+
+### Phase 2: Product Foundation
+19. Integrate email service (Resend/SendGrid) -- password reset, invites, welcome
+20. Add user onboarding flow
+21. Add analytics (Mixpanel, Amplitude, or Plausible)
+22. Create marketing landing page
+23. Implement server-side search
+24. Create Supabase RPCs for N+1 queries and batch reorder
+25. Add pagination to data hooks
+
+### Phase 3: Monetization
+26. Implement feature flag system + `useEntitlement` hook
+27. Integrate Stripe billing + subscriptions table
+28. Add usage metering
+29. Add notification system (in-app + email + push)
+
+### Phase 4: Accessibility & App Store
+30. Fix WCAG violations (aria-live, form labels, skip nav, keyboard DnD)
+31. Verify color contrast across all components
+32. Capacitor wrapper for iOS/Android
+33. Offline support + mutation queue
+34. Deep linking
+
+### Phase 5: Resilience
+35. Test backup restoration (and document procedure)
+36. Define RTO/RPO targets
+37. Write disaster recovery runbook
+38. Evaluate multi-region database replica
+39. Implement conflict detection (version column on tasks)
+
+---
+
 ## Current Strengths (Keep These)
 
 - TypeScript strict mode throughout
@@ -366,3 +604,5 @@ Migrations split between `docs/migrations.sql` and `supabase/migrations/`. No cl
 - Cross-tab synchronization for timers
 - Mobile backgrounding recovery system
 - Optimistic updates for smooth UX
+- Vercel-portable deployment (no vendor lock-in on hosting)
+- Clean separation of concerns (hooks, components, lib, types)
