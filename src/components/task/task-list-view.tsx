@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import {
   Circle,
   CheckCircle2,
@@ -13,6 +13,11 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import type { TaskWithProject, TaskStatus, Task, Profile } from "@/types";
 import { getInitials } from "@/lib/profile-utils";
 import { formatDueDate, isOverdue } from "@/lib/date-utils";
+import {
+  sortTasksWithCompletedLast,
+  type TaskSortField,
+  type TaskSortDirection,
+} from "@/lib/task-sort";
 
 // Priority colors for the circle indicator
 export const PRIORITY_CIRCLE_COLORS: Record<string, string> = {
@@ -31,6 +36,10 @@ interface TaskListViewProps {
   compact?: boolean;
   /** Hide the empty state message */
   hideEmptyState?: boolean;
+  /** Sort field (default: position) */
+  sortField?: TaskSortField;
+  /** Sort direction (default: asc) */
+  sortDirection?: TaskSortDirection;
 }
 
 export interface TaskListItemProps {
@@ -143,15 +152,14 @@ export function TaskListView({
   onTaskClick,
   onStatusToggle,
   onAddTask,
+  sortField = "position",
+  sortDirection = "asc",
 }: TaskListViewProps) {
-  // Sort tasks: incomplete first (sorted by position), then completed
-  const sortedTasks = [...tasks].sort((a, b) => {
-    // Completed tasks go to the bottom
-    if (a.status === "done" && b.status !== "done") return 1;
-    if (a.status !== "done" && b.status === "done") return -1;
-    // Within same completion status, sort by position
-    return a.position - b.position;
-  });
+  // Sort tasks with completed tasks at the bottom
+  const sortedTasks = useMemo(
+    () => sortTasksWithCompletedLast(tasks, sortField, sortDirection),
+    [tasks, sortField, sortDirection]
+  );
 
   return (
     <div className="max-w-3xl mx-auto">

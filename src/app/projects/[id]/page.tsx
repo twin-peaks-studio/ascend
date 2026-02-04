@@ -19,7 +19,8 @@ import {
   Settings2,
 } from "lucide-react";
 import { AppShell } from "@/components/layout";
-import { TaskDialog, TaskDetailsResponsive, TaskListItem } from "@/components/task";
+import { TaskDialog, TaskDetailsResponsive, TaskListItem, TaskSortSelect } from "@/components/task";
+import { sortTasks, type TaskSortField, type TaskSortDirection } from "@/lib/task-sort";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -76,13 +77,24 @@ export default function ProjectDetailPage() {
   const { members } = useProjectMembers(projectId);
   const { notes } = useProjectNotes(projectId);
 
-  // Filter to only show active tasks (not done and not archived)
+  // Task sorting state
+  const [taskSortField, setTaskSortField] = useState<TaskSortField>("position");
+  const [taskSortDirection, setTaskSortDirection] = useState<TaskSortDirection>("asc");
+
+  // Handle sort change
+  const handleTaskSortChange = useCallback((field: TaskSortField, direction: TaskSortDirection) => {
+    setTaskSortField(field);
+    setTaskSortDirection(direction);
+  }, []);
+
+  // Filter to only show active tasks (not done and not archived), then sort
   const activeTasks = useMemo(() => {
     if (!project?.tasks) return [];
-    return project.tasks.filter(
+    const filtered = project.tasks.filter(
       (task) => task.status !== "done" && !task.is_archived
     );
-  }, [project?.tasks]);
+    return sortTasks(filtered, taskSortField, taskSortDirection);
+  }, [project?.tasks, taskSortField, taskSortDirection]);
 
   // Inline editing state - use project values directly as initial values
   // Use projectId as key to reset state when navigating between projects
@@ -532,12 +544,19 @@ export default function ProjectDetailPage() {
                   </button>
                   <div className="flex items-center gap-2">
                     {activeTasks.length > 0 && (
-                      <Button size="sm" variant="ghost" asChild>
-                        <Link href={`/projects/${projectId}/tasks`}>
-                          View All
-                          <ChevronRight className="h-4 w-4 ml-1" />
-                        </Link>
-                      </Button>
+                      <>
+                        <TaskSortSelect
+                          field={taskSortField}
+                          direction={taskSortDirection}
+                          onChange={handleTaskSortChange}
+                        />
+                        <Button size="sm" variant="ghost" asChild>
+                          <Link href={`/projects/${projectId}/tasks`}>
+                            View All
+                            <ChevronRight className="h-4 w-4 ml-1" />
+                          </Link>
+                        </Button>
+                      </>
                     )}
                     <Button
                       size="sm"

@@ -4,7 +4,8 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import { AppShell, Header } from "@/components/layout";
 import type { ViewMode } from "@/components/layout";
 import { KanbanBoard } from "@/components/board";
-import { TaskDialog, TaskDetailsResponsive, QuickAddTask, TaskListView } from "@/components/task";
+import { TaskDialog, TaskDetailsResponsive, QuickAddTask, TaskListView, TaskSortSelect } from "@/components/task";
+import { parseSortOptionKey, type TaskSortField, type TaskSortDirection } from "@/lib/task-sort";
 import { ProjectFilter } from "@/components/filters";
 import { useTasksByStatus, useTaskMutations } from "@/hooks/use-tasks";
 import { useProjects } from "@/hooks/use-projects";
@@ -46,6 +47,27 @@ export default function TasksPage() {
   const handleViewModeChange = useCallback((mode: ViewMode) => {
     setViewMode(mode);
     localStorage.setItem("tasks-view-mode", mode);
+  }, []);
+
+  // Sort state - persisted in localStorage
+  const [sortField, setSortField] = useState<TaskSortField>("position");
+  const [sortDirection, setSortDirection] = useState<TaskSortDirection>("asc");
+
+  // Load sort preference from localStorage
+  useEffect(() => {
+    const stored = localStorage.getItem("tasks-sort");
+    if (stored) {
+      const { field, direction } = parseSortOptionKey(stored);
+      setSortField(field);
+      setSortDirection(direction);
+    }
+  }, []);
+
+  // Handle sort change
+  const handleSortChange = useCallback((field: TaskSortField, direction: TaskSortDirection) => {
+    setSortField(field);
+    setSortDirection(direction);
+    localStorage.setItem("tasks-sort", `${field}:${direction}`);
   }, []);
 
   // Filter state - now supports multiple projects
@@ -290,12 +312,23 @@ export default function TasksPage() {
       />
 
       <div className="p-4 md:p-6">
-        {/* Filters - hidden on mobile/tablet, shown on desktop */}
-        <div className="mb-4 hidden items-center gap-2 lg:flex">
-          <ProjectFilter
-            projects={projects as Project[]}
-            selectedProjectIds={selectedProjectIds}
-            onProjectsChange={setSelectedProjectIds}
+        {/* Filters and sorting */}
+        <div className="mb-4 flex items-center justify-between gap-2">
+          {/* Project filter - hidden on mobile/tablet */}
+          <div className="hidden lg:block">
+            <ProjectFilter
+              projects={projects as Project[]}
+              selectedProjectIds={selectedProjectIds}
+              onProjectsChange={setSelectedProjectIds}
+            />
+          </div>
+          {/* Spacer for mobile */}
+          <div className="lg:hidden" />
+          {/* Sort selector - always visible */}
+          <TaskSortSelect
+            field={sortField}
+            direction={sortDirection}
+            onChange={handleSortChange}
           />
         </div>
 
@@ -330,6 +363,8 @@ export default function TasksPage() {
             onDeleteTask={(id) => setDeleteConfirm(id)}
             onArchiveTask={handleArchive}
             onMarkDuplicate={handleMarkDuplicate}
+            sortField={sortField}
+            sortDirection={sortDirection}
           />
         ) : (
           <TaskListView
@@ -337,6 +372,8 @@ export default function TasksPage() {
             onTaskClick={handleOpenDetails}
             onStatusToggle={handleStatusToggle}
             onAddTask={handleAddTask}
+            sortField={sortField}
+            sortDirection={sortDirection}
           />
         )}
       </div>

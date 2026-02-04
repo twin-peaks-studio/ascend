@@ -7,7 +7,8 @@ import { ArrowLeft } from "lucide-react";
 import { AppShell, Header } from "@/components/layout";
 import type { ViewMode } from "@/components/layout";
 import { KanbanBoard } from "@/components/board";
-import { TaskDialog, TaskDetailsResponsive, QuickAddTask, TaskListView } from "@/components/task";
+import { TaskDialog, TaskDetailsResponsive, QuickAddTask, TaskListView, TaskSortSelect } from "@/components/task";
+import { parseSortOptionKey, type TaskSortField, type TaskSortDirection } from "@/lib/task-sort";
 import { Button } from "@/components/ui/button";
 import { useProject } from "@/hooks/use-projects";
 import { useTaskMutations } from "@/hooks/use-tasks";
@@ -52,6 +53,27 @@ export default function ProjectTasksPage() {
   const handleViewModeChange = useCallback((mode: ViewMode) => {
     setViewMode(mode);
     localStorage.setItem("project-tasks-view-mode", mode);
+  }, []);
+
+  // Sort state - persisted in localStorage
+  const [sortField, setSortField] = useState<TaskSortField>("position");
+  const [sortDirection, setSortDirection] = useState<TaskSortDirection>("asc");
+
+  // Load sort preference from localStorage
+  useEffect(() => {
+    const stored = localStorage.getItem("project-tasks-sort");
+    if (stored) {
+      const { field, direction } = parseSortOptionKey(stored);
+      setSortField(field);
+      setSortDirection(direction);
+    }
+  }, []);
+
+  // Handle sort change
+  const handleSortChange = useCallback((field: TaskSortField, direction: TaskSortDirection) => {
+    setSortField(field);
+    setSortDirection(direction);
+    localStorage.setItem("project-tasks-sort", `${field}:${direction}`);
   }, []);
 
   // Convert project tasks to TaskWithProject format
@@ -388,6 +410,15 @@ export default function ProjectTasksPage() {
       />
 
       <div className="p-4 md:p-6">
+        {/* Sort selector */}
+        <div className="mb-4 flex justify-end">
+          <TaskSortSelect
+            field={sortField}
+            direction={sortDirection}
+            onChange={handleSortChange}
+          />
+        </div>
+
         {viewMode === "board" ? (
           <KanbanBoard
             tasks={tasks}
@@ -400,6 +431,8 @@ export default function ProjectTasksPage() {
             onDeleteTask={(id) => setDeleteConfirm(id)}
             onArchiveTask={handleArchive}
             onMarkDuplicate={handleMarkDuplicate}
+            sortField={sortField}
+            sortDirection={sortDirection}
           />
         ) : (
           <TaskListView
@@ -407,6 +440,8 @@ export default function ProjectTasksPage() {
             onTaskClick={handleOpenDetails}
             onStatusToggle={handleStatusToggle}
             onAddTask={handleAddTask}
+            sortField={sortField}
+            sortDirection={sortDirection}
           />
         )}
       </div>
