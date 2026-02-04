@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -22,6 +22,7 @@ interface AuthDialogProps {
   onOpenChange: (open: boolean) => void;
   onSuccess?: () => void;
   preventClose?: boolean;
+  defaultTab?: "login" | "signup";
 }
 
 export function AuthDialog({
@@ -29,9 +30,15 @@ export function AuthDialog({
   onOpenChange,
   onSuccess,
   preventClose = false,
+  defaultTab = "login",
 }: AuthDialogProps) {
   const { signIn, signUp, loading } = useAuth();
-  const [activeTab, setActiveTab] = useState<"login" | "signup">("login");
+  const [activeTab, setActiveTab] = useState<"login" | "signup">(defaultTab);
+
+  // Sync active tab when defaultTab changes externally
+  useEffect(() => {
+    setActiveTab(defaultTab);
+  }, [defaultTab]);
 
   // Login form
   const [loginEmail, setLoginEmail] = useState("");
