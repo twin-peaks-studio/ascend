@@ -4,7 +4,7 @@ import { useState, useEffect, useLayoutEffect, useCallback } from "react";
 import {
   BarChart3,
   Brain,
-  Target,
+  Zap,
   ArrowRight,
   Sun,
   Moon,
@@ -123,8 +123,9 @@ export function LandingPage() {
           </h1>
 
           <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed">
-            Ascend learns how you work — understanding your patterns, predicting
-            timelines, and helping your team deliver faster and more reliably.
+            Ascend automates the repetitive work and learns how you operate —
+            so your team spends less time on busywork and more time on what
+            actually moves the needle.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
@@ -158,19 +159,19 @@ export function LandingPage() {
 
           <div className="grid gap-8 md:grid-cols-3">
             <FeatureCard
-              icon={<Target className="h-5 w-5" />}
-              title="Smart project management"
-              description="Organize work with Kanban boards, project grouping, and drag-and-drop task management that adapts to your workflow."
+              icon={<Zap className="h-5 w-5" />}
+              title="Automate the busywork"
+              description="Identify and automate the repetitive, low-impact tasks that drain your team's time — so everyone can focus on the work that actually matters."
             />
             <FeatureCard
               icon={<Brain className="h-5 w-5" />}
               title="Pattern intelligence"
-              description="Ascend learns how long certain types of tasks take you and your team, building an accurate model of your work patterns."
+              description="Ascend learns how long tasks take, which work is repetitive, and where your team's time goes — building an accurate model of how you operate."
             />
             <FeatureCard
               icon={<BarChart3 className="h-5 w-5" />}
               title="Predictable delivery"
-              description="With learned patterns, get realistic timelines and identify bottlenecks before they derail your projects."
+              description="With learned patterns and automated workflows, get realistic timelines and catch bottlenecks before they derail your projects."
             />
           </div>
         </div>
@@ -195,13 +196,13 @@ export function LandingPage() {
               />
               <StepItem
                 number="02"
-                title="Patterns emerge over time"
-                description="As you work, Ascend quietly learns — which tasks take longer, where bottlenecks form, and how your team's velocity changes across project types."
+                title="Patterns emerge, automation kicks in"
+                description="As you work, Ascend learns which tasks are repetitive and low-impact. It starts automating the busywork so your team can reclaim hours every week."
               />
               <StepItem
                 number="03"
-                title="Predictability improves"
-                description="Over time, you get increasingly accurate estimates, smarter prioritization suggestions, and a clear picture of what your team can realistically deliver."
+                title="Focus on what matters"
+                description="With routine work handled and accurate predictions in place, your team operates faster, delivers more reliably, and stays focused on high-impact work."
               />
             </div>
           </div>
@@ -215,8 +216,8 @@ export function LandingPage() {
             Ready to reach new heights?
           </h2>
           <p className="text-lg text-muted-foreground max-w-xl mx-auto mb-8">
-            Join Ascend and start building a smarter, more predictable way to
-            get things done.
+            Automate the busywork, focus on the work that matters, and deliver
+            with confidence.
           </p>
           <Button
             size="lg"
