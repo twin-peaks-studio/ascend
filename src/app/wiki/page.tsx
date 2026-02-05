@@ -48,6 +48,11 @@ interface WikiContentBlock {
   paragraphs?: string[];
   list?: string[];
   tip?: string;
+  image?: {
+    src: string;
+    alt: string;
+    caption?: string;
+  };
 }
 
 const sections: WikiSection[] = [
@@ -79,6 +84,13 @@ const sections: WikiSection[] = [
           "Track time on tasks to understand where effort goes",
           "Write meeting notes and use AI to extract action items",
         ],
+      },
+      {
+        image: {
+          src: "/wiki/landing-page.png",
+          alt: "Ascend landing page",
+          caption: "The Ascend landing page with dark mode",
+        },
       },
     ],
   },
@@ -131,12 +143,22 @@ const sections: WikiSection[] = [
           "Kanban Board — Drag-and-drop cards between To Do, In Progress, and Done columns. Great for visual workflow management.",
           "List View — A compact, Todoist-style list with checkboxes for quick status toggling. Shows priority indicators and due dates inline.",
         ],
+        image: {
+          src: "/wiki/tasks-board.png",
+          alt: "Tasks page with board and list view toggles",
+          caption: "The Tasks page showing the board/list toggle, project filter, and sort controls",
+        },
       },
       {
         heading: "Creating Tasks",
         paragraphs: [
           "Create tasks from the header's \"Create\" button (desktop) or the floating \"+\" button (mobile). Each task has:",
         ],
+        image: {
+          src: "/wiki/create-task.png",
+          alt: "Create task dialog",
+          caption: "The task creation dialog with title, description, project, status, priority, due date, and assignee fields",
+        },
         list: [
           "Title (required) — A short description of what needs to be done",
           "Description — Additional details in plain text",
@@ -186,6 +208,11 @@ const sections: WikiSection[] = [
         paragraphs: [
           "The Projects page shows all your projects in a responsive grid. Filter projects by status using the tabs: All, Active, Completed, and Archived.",
         ],
+        image: {
+          src: "/wiki/projects.png",
+          alt: "Projects page with status filter tabs",
+          caption: "The Projects page with All, Active, Completed, and Archived filter tabs",
+        },
       },
       {
         heading: "Creating a Project",
@@ -800,6 +827,23 @@ export default function WikiPage() {
                                   </span>
                                 </p>
                               </div>
+                            )}
+                            {block.image && (
+                              <figure className="mt-6">
+                                <div className="overflow-hidden rounded-lg border border-border/60 shadow-sm">
+                                  <img
+                                    src={block.image.src}
+                                    alt={block.image.alt}
+                                    className="w-full h-auto"
+                                    loading="lazy"
+                                  />
+                                </div>
+                                {block.image.caption && (
+                                  <figcaption className="mt-2 text-center text-xs text-muted-foreground">
+                                    {block.image.caption}
+                                  </figcaption>
+                                )}
+                              </figure>
                             )}
                           </div>
                         ))}
