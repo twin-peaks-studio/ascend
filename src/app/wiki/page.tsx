@@ -106,6 +106,11 @@ const sections: WikiSection[] = [
         paragraphs: [
           "The Dashboard is the first screen you see after logging in. It provides a bird's-eye view of your work with statistics cards, recent projects, and a quick start guide.",
         ],
+        image: {
+          src: "/wiki/dashboard.png",
+          alt: "Dashboard overview with statistics and recent projects",
+          caption: "The Dashboard showing active projects, task statistics, and quick start guide",
+        },
       },
       {
         heading: "Statistics Cards",
@@ -231,6 +236,11 @@ const sections: WikiSection[] = [
           "Resources — Manage links, documents, and note attachments.",
           "Properties Panel — Edit project metadata including status, priority, color, lead, due date, members, and total time tracked.",
         ],
+        image: {
+          src: "/wiki/project-detail.png",
+          alt: "Project detail page with tasks, notes, and properties",
+          caption: "The project detail page showing active tasks, notes, resources, and the properties panel",
+        },
       },
       {
         heading: "Project Properties",
@@ -264,6 +274,11 @@ const sections: WikiSection[] = [
         paragraphs: [
           "Notes live within projects and are designed for meeting notes, planning documents, or any text content that relates to your work. Each note uses a rich WYSIWYG editor powered by TipTap.",
         ],
+        image: {
+          src: "/wiki/notes.png",
+          alt: "Note editor with rich text and linked tasks",
+          caption: "A note with rich text formatting, AI task extraction, and linked tasks section",
+        },
       },
       {
         heading: "Creating and Editing Notes",
