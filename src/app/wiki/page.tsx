@@ -332,6 +332,11 @@ const sections: WikiSection[] = [
         paragraphs: [
           "Click the play button on any task to start tracking time. A global timer indicator appears in the header showing the active task name and elapsed time. Only one timer can run at a time — starting a new one will stop the current one.",
         ],
+        image: {
+          src: "/wiki/time-tracking.png",
+          alt: "Project detail showing tracked time in the properties panel",
+          caption: "Time tracked on a project displayed in the properties panel",
+        },
       },
       {
         heading: "Timer Persistence",
@@ -361,6 +366,11 @@ const sections: WikiSection[] = [
           "By Day — Time grouped by date to see daily effort patterns",
           "By Task — Time sorted by individual tasks to see where effort went",
         ],
+        image: {
+          src: "/wiki/time-report.png",
+          alt: "Time report dialog showing daily breakdown of time entries by task",
+          caption: "The Time Report dialog with By Day view showing daily effort and per-task breakdowns",
+        },
       },
       {
         tip: "Click on a task name in the time report to jump directly to that task's details.",
@@ -390,6 +400,11 @@ const sections: WikiSection[] = [
           "Edit, remove, or approve tasks before they're created",
           "Approved tasks are bulk-created and automatically linked to the source note",
         ],
+        image: {
+          src: "/wiki/ai-extraction.png",
+          alt: "AI task extraction review dialog showing extracted tasks with priorities and confidence scores",
+          caption: "The AI extraction review dialog with extracted tasks, confidence scores, priorities, and suggested due dates",
+        },
       },
       {
         heading: "Smart Features",
