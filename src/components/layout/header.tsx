@@ -1,6 +1,6 @@
 "use client";
 
-import { Moon, Sun, Plus, LogOut, LayoutGrid, List, Search, MessageSquarePlus } from "lucide-react";
+import { Moon, Sun, Plus, LogOut, LayoutGrid, List, Search, MessageSquarePlus, Newspaper } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { GlobalTimerIndicator } from "@/components/time";
@@ -134,6 +134,13 @@ export function Header({
                   <MessageSquarePlus className="mr-2 h-4 w-4" />
                   <span>Send Feedback</span>
                 </DropdownMenuItem>
+                <DropdownMenuItem asChild className="cursor-pointer">
+                  <a href="/changelog" target="_blank" rel="noopener noreferrer">
+                    <Newspaper className="mr-2 h-4 w-4" />
+                    <span>Changelog</span>
+                  </a>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={signOut} className="cursor-pointer">
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Log out</span>

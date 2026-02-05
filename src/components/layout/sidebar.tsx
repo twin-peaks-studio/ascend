@@ -8,10 +8,10 @@ import {
   FolderKanban,
   Folder,
   Settings,
-  Keyboard,
   PanelLeftClose,
   PanelLeft,
   MessageSquarePlus,
+  Newspaper,
 } from "lucide-react";
 import { AscendLogo } from "@/components/ascend-logo";
 import { cn } from "@/lib/utils";
@@ -45,7 +45,6 @@ const navItems: NavItem[] = [
 ];
 
 interface SidebarProps {
-  onShowShortcuts?: () => void;
   onShowFeedback?: () => void;
 }
 
@@ -139,7 +138,7 @@ function NavLinks({ pathname, projects, isCollapsed }: NavLinksProps) {
   );
 }
 
-export function Sidebar({ onShowShortcuts, onShowFeedback }: SidebarProps) {
+export function Sidebar({ onShowFeedback }: SidebarProps) {
   const pathname = usePathname();
   const { projects } = useProjects();
   const { isCollapsed, toggleSidebar } = useSidebar();
@@ -167,28 +166,28 @@ export function Sidebar({ onShowShortcuts, onShowFeedback }: SidebarProps) {
 
         {/* Bottom section */}
         <div className="border-t p-4 space-y-2">
-          {onShowShortcuts && !isCollapsed && (
+          {!isCollapsed ? (
             <Button
               variant="ghost"
               className="w-full justify-start gap-3 text-muted-foreground"
-              onClick={onShowShortcuts}
+              asChild
             >
-              <Keyboard className="h-5 w-5" />
-              Shortcuts
-              <kbd className="ml-auto rounded border bg-muted px-1.5 py-0.5 text-xs font-mono">
-                ?
-              </kbd>
+              <a href="/changelog" target="_blank" rel="noopener noreferrer">
+                <Newspaper className="h-5 w-5" />
+                Changelog
+              </a>
             </Button>
-          )}
-          {onShowShortcuts && isCollapsed && (
+          ) : (
             <Button
               variant="ghost"
               size="icon"
               className="w-full text-muted-foreground"
-              onClick={onShowShortcuts}
-              title="Shortcuts"
+              asChild
+              title="Changelog"
             >
-              <Keyboard className="h-5 w-5" />
+              <a href="/changelog" target="_blank" rel="noopener noreferrer">
+                <Newspaper className="h-5 w-5" />
+              </a>
             </Button>
           )}
           {onShowFeedback && !isCollapsed && (
