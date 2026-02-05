@@ -208,10 +208,6 @@ export function AppShell({
     }
   }, [initialized, user, confidence, isRefreshing]);
 
-  const handleShowShortcuts = useCallback(() => {
-    setShowShortcuts(true);
-  }, []);
-
   const handleOpenSearch = useCallback(() => {
     setShowSearch(true);
   }, []);
@@ -223,14 +219,22 @@ export function AppShell({
   // Global keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      const activeEl = document.activeElement;
+      const isInput = activeEl instanceof HTMLInputElement || activeEl instanceof HTMLTextAreaElement;
+
       // Cmd/Ctrl + K to open search (if not already in input)
-      if (e.key === "k" && (e.ctrlKey || e.metaKey)) {
-        const activeEl = document.activeElement;
-        const isInput = activeEl instanceof HTMLInputElement || activeEl instanceof HTMLTextAreaElement;
-        if (!isInput) {
-          e.preventDefault();
-          setShowSearch(true);
-        }
+      if (e.key === "k" && (e.ctrlKey || e.metaKey) && !isInput) {
+        e.preventDefault();
+        setShowSearch(true);
+      }
+
+      // Cmd/Ctrl + / or ? to open shortcuts dialog
+      if (
+        (e.key === "/" && (e.ctrlKey || e.metaKey)) ||
+        (e.key === "?" && !isInput)
+      ) {
+        e.preventDefault();
+        setShowShortcuts(true);
       }
     };
 
@@ -244,7 +248,7 @@ export function AppShell({
     <SearchContext.Provider value={{ openSearch: handleOpenSearch }}>
       <FeedbackContext.Provider value={{ openFeedback: handleOpenFeedback }}>
       <div className="min-h-screen bg-background">
-        <Sidebar onShowShortcuts={handleShowShortcuts} onShowFeedback={handleOpenFeedback} />
+        <Sidebar onShowFeedback={handleOpenFeedback} />
 
         {/* Main content area - offset by sidebar width on desktop (lg), no offset on tablet and below */}
         <main

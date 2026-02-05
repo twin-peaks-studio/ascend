@@ -238,6 +238,20 @@ export function LandingPage() {
               <AscendLogo className="h-6 w-auto" />
               <span className="text-sm font-medium">Ascend</span>
             </div>
+            <div className="flex items-center gap-4">
+              <a
+                href="/changelog"
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Changelog
+              </a>
+              <a
+                href="/wiki"
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Wiki
+              </a>
+            </div>
             <p className="text-sm text-muted-foreground">
               &copy; {new Date().getFullYear()} Ascend. All rights reserved.
             </p>

@@ -27,6 +27,26 @@ This project uses React Query (`@tanstack/react-query`) for data fetching. Key p
 - Query keys are defined in each hook file (e.g., `projectKeys`, `taskKeys`, `noteKeys`)
 - Use `queryClient.invalidateQueries()` after mutations to refresh related data
 
+## Release Process
+
+### Changelog Updates
+**IMPORTANT:** Whenever a new feature is committed, the public changelog must be updated.
+
+1. Open `src/app/changelog/page.tsx`
+2. Add a new entry to the `changelog` array (or update the current version's entry) with:
+   - `date` — The release date (e.g., "February 5, 2026")
+   - `version` — Semantic version string
+   - `title` — A short headline for this release
+   - `description` — One sentence summarizing the release
+   - `features` — Array of feature objects, each with an `icon` (Lucide), `title`, `description`, and `tag` ("new", "improved", or "fix")
+3. If a new feature introduces a core workflow change, also update the wiki at `src/app/wiki/page.tsx` to document how the feature works.
+
+### Wiki Updates
+When adding a major new feature:
+- Add or update the relevant section in the `sections` array in `src/app/wiki/page.tsx`
+- Include headings, paragraphs, lists, and tips that explain how to use the feature
+- Keep the language clear and user-facing (this is public documentation)
+
 ## Tech Debt & Feature Wrap-up Checklist
 
 **IMPORTANT:** When cleaning up tech debt or completing a new feature/architecture change, always verify network efficiency:
