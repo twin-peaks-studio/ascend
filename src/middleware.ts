@@ -1,7 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import {
-  generateNonce,
   buildCSPHeader,
   getCSPMode,
   getCSPHeaderName,
@@ -52,15 +51,11 @@ export async function middleware(request: NextRequest) {
   const cspMode = getCSPMode();
 
   if (cspMode !== 'disabled') {
-    const nonce = generateNonce();
-    const cspHeader = buildCSPHeader(nonce, cspMode);
+    const cspHeader = buildCSPHeader(cspMode);
     const headerName = getCSPHeaderName(cspMode);
 
     // Add CSP header
     supabaseResponse.headers.set(headerName, cspHeader);
-
-    // Pass nonce to the page via custom header (for use in script/style tags)
-    supabaseResponse.headers.set('x-nonce', nonce);
   }
 
   return supabaseResponse;

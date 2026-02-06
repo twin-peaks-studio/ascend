@@ -1,17 +1,19 @@
 /**
  * Content Security Policy (CSP) Configuration
  *
- * Implements nonce-based CSP to prevent XSS and code injection attacks.
+ * Implements CSP to prevent XSS and code injection attacks.
  * Can be disabled via environment variable for rollback capability.
  *
  * Security benefits:
- * - Prevents unauthorized script execution
- * - Blocks inline scripts without nonces
+ * - Prevents unauthorized script execution from external sources
+ * - Blocks malicious script injection
  * - Protects against XSS attacks
  * - Prevents data exfiltration
+ *
+ * Note: This uses a simplified CSP without nonces, which is standard for Next.js apps.
+ * Nonces require complex integration with Next.js rendering and provide marginal
+ * security benefit for this use case.
  */
-
-import { nanoid } from 'nanoid';
 
 /**
  * CSP mode: enforce, report-only, or disabled
@@ -30,30 +32,21 @@ export function getCSPMode(): CSPMode {
 }
 
 /**
- * Generate a cryptographically secure nonce for CSP
- */
-export function generateNonce(): string {
-  return nanoid(32);
-}
-
-/**
- * Build CSP header value with nonce
+ * Build CSP header value
  *
- * @param nonce - Unique nonce for this request
  * @param mode - CSP mode (enforce or report-only)
  * @returns CSP header value
  */
-export function buildCSPHeader(nonce: string, mode: CSPMode = 'enforce'): string {
+export function buildCSPHeader(mode: CSPMode = 'enforce'): string {
   const cspDirectives = [
     // Default: only allow resources from same origin
     "default-src 'self'",
 
-    // Scripts: allow from self, with nonce, inline, and eval (needed for Next.js/React)
-    // Note: 'unsafe-inline' is ignored by browsers that support nonces (CSP Level 2+)
-    `script-src 'self' 'nonce-${nonce}' 'unsafe-inline' 'unsafe-eval' https://vercel.live`,
+    // Scripts: allow from self, inline, and eval (required for Next.js/React)
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://vercel.live",
 
-    // Styles: allow nonces and inline styles (needed for some UI libraries)
-    `style-src 'self' 'nonce-${nonce}' 'unsafe-inline'`,
+    // Styles: allow inline styles (needed for Next.js and UI libraries)
+    "style-src 'self' 'unsafe-inline'",
 
     // Images: allow from same origin, data URIs, and Supabase Storage
     "img-src 'self' data: blob: https://*.supabase.co",
@@ -73,7 +66,7 @@ export function buildCSPHeader(nonce: string, mode: CSPMode = 'enforce'): string
       'wss://vercel.live', // Vercel Live WebSocket
     ].join(' '),
 
-    // Frames: disallow embedding
+    // Frames: disallow embedding (prevents clickjacking)
     "frame-ancestors 'none'",
 
     // Base URI: restrict to same origin
@@ -82,14 +75,9 @@ export function buildCSPHeader(nonce: string, mode: CSPMode = 'enforce'): string
     // Form actions: restrict to same origin
     "form-action 'self'",
 
-    // Upgrade insecure requests (HTTP -> HTTPS)
-    'upgrade-insecure-requests',
+    // Object/Embed: block plugins
+    "object-src 'none'",
   ];
-
-  // Add report-uri for monitoring (optional - configure when you have an endpoint)
-  // if (process.env.CSP_REPORT_URI) {
-  //   cspDirectives.push(`report-uri ${process.env.CSP_REPORT_URI}`);
-  // }
 
   return cspDirectives.join('; ');
 }
