@@ -48,8 +48,9 @@ export function buildCSPHeader(nonce: string, mode: CSPMode = 'enforce'): string
     // Default: only allow resources from same origin
     "default-src 'self'",
 
-    // Scripts: allow from self, with nonce, and eval (needed for Next.js/React)
-    `script-src 'self' 'nonce-${nonce}' 'unsafe-eval' https://vercel.live`,
+    // Scripts: allow from self, with nonce, inline, and eval (needed for Next.js/React)
+    // Note: 'unsafe-inline' is ignored by browsers that support nonces (CSP Level 2+)
+    `script-src 'self' 'nonce-${nonce}' 'unsafe-inline' 'unsafe-eval' https://vercel.live`,
 
     // Styles: allow nonces and inline styles (needed for some UI libraries)
     `style-src 'self' 'nonce-${nonce}' 'unsafe-inline'`,
