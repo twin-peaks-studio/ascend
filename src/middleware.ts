@@ -1,9 +1,16 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import {
+  generateNonce,
+  buildCSPHeader,
+  getCSPMode,
+  getCSPHeaderName,
+} from "@/lib/security/csp";
 
 /**
- * Middleware to refresh Supabase auth session on every request.
- * This ensures the session stays valid and handles token refresh.
+ * Middleware to:
+ * 1. Refresh Supabase auth session
+ * 2. Apply Content Security Policy (CSP) headers
  */
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -40,6 +47,21 @@ export async function middleware(request: NextRequest) {
   // Refresh session if expired - required for Server Components
   // https://supabase.com/docs/guides/auth/server-side/nextjs
   await supabase.auth.getUser();
+
+  // Apply Content Security Policy (CSP)
+  const cspMode = getCSPMode();
+
+  if (cspMode !== 'disabled') {
+    const nonce = generateNonce();
+    const cspHeader = buildCSPHeader(nonce, cspMode);
+    const headerName = getCSPHeaderName(cspMode);
+
+    // Add CSP header
+    supabaseResponse.headers.set(headerName, cspHeader);
+
+    // Pass nonce to the page via custom header (for use in script/style tags)
+    supabaseResponse.headers.set('x-nonce', nonce);
+  }
 
   return supabaseResponse;
 }
