@@ -52,7 +52,7 @@ export async function POST(
       );
     }
 
-    // 2. Check rate limit (20 requests per minute per user)
+    // 2. Check rate limit (5 requests per minute per user)
     const rateLimitCheck = await withRateLimit(
       request,
       user.id,

@@ -6,7 +6,7 @@
  *
  * Usage:
  *   import { rateLimit } from '@/lib/rate-limit/limiter';
- *   const result = await rateLimit.check(`ai:${userId}`, { requests: 20, window: 60 });
+ *   const result = await rateLimit.check(`ai:${userId}`, { requests: 5, window: 60 });
  *   if (!result.success) {
  *     return Response.json({ error: 'Rate limit exceeded' }, { status: 429 });
  *   }
@@ -118,8 +118,8 @@ async function check(
  * Rate limit configurations for different endpoints
  */
 export const rateLimitConfigs = {
-  // AI extraction endpoint: 20 requests per minute
-  aiExtraction: { requests: 20, window: 60 },
+  // AI extraction endpoint: 5 requests per minute (expensive operation)
+  aiExtraction: { requests: 5, window: 60 },
 
   // Email sending: 5 requests per minute
   emailSend: { requests: 5, window: 60 },
