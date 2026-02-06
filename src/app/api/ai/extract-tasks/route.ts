@@ -13,6 +13,10 @@ import {
 } from "@/lib/ai/validate-extraction";
 import { SYSTEM_PROMPT, buildUserPrompt } from "@/lib/ai/prompts";
 import { withTimeoutAndAbort, isTimeoutError } from "@/lib/utils/with-timeout";
+import {
+  withRateLimit,
+  createRateLimitResponse,
+} from "@/lib/rate-limit/middleware";
 import type {
   ExtractTasksSuccessResponse,
   ExtractTasksErrorResponse,
@@ -48,7 +52,18 @@ export async function POST(
       );
     }
 
-    // 2. Parse and validate request body
+    // 2. Check rate limit (20 requests per minute per user)
+    const rateLimitCheck = await withRateLimit(
+      request,
+      user.id,
+      "aiExtraction"
+    );
+
+    if (!rateLimitCheck.allowed) {
+      return createRateLimitResponse(rateLimitCheck);
+    }
+
+    // 3. Parse and validate request body
     const body = await request.json();
     const validated = extractTasksRequestSchema.safeParse(body);
 
@@ -68,7 +83,7 @@ export async function POST(
     const { sourceType, content, projectTitle, existingTaskTitles } =
       validated.data;
 
-    // 3. Check for empty content
+    // 4. Check for empty content
     if (!content.trim()) {
       return NextResponse.json(
         {
@@ -79,7 +94,7 @@ export async function POST(
       );
     }
 
-    // 4. Check for API key
+    // 5. Check for API key
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) {
       console.error("ANTHROPIC_API_KEY not configured");
@@ -95,7 +110,7 @@ export async function POST(
       );
     }
 
-    // 5. Call Claude API with timeout
+    // 6. Call Claude API with timeout
     const userPrompt = buildUserPrompt({
       sourceType,
       content,
@@ -160,7 +175,7 @@ export async function POST(
       );
     }
 
-    // 6. Parse Claude's response
+    // 7. Parse Claude's response
     const contentBlock = aiResponse.content?.[0];
     if (!contentBlock || contentBlock.type !== "text") {
       return NextResponse.json(
@@ -175,7 +190,7 @@ export async function POST(
       );
     }
 
-    // 7. Parse and validate the JSON response
+    // 8. Parse and validate the JSON response
     let parsedTasks;
     try {
       // Extract JSON from the response (Claude might include markdown code blocks)
@@ -199,7 +214,7 @@ export async function POST(
       );
     }
 
-    // 8. Validate the parsed response structure
+    // 9. Validate the parsed response structure
     const validatedResponse = aiExtractionResponseSchema.safeParse(parsedTasks);
     if (!validatedResponse.success) {
       console.error(
@@ -218,7 +233,7 @@ export async function POST(
       );
     }
 
-    // 9. Return successful response
+    // 10. Return successful response
     return NextResponse.json({
       success: true,
       tasks: validatedResponse.data.tasks,
