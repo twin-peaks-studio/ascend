@@ -13,6 +13,7 @@
 import { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { getClient } from "@/lib/supabase/client-manager";
+import { logger } from "@/lib/logger/logger";
 import { useAuth } from "@/hooks/use-auth";
 import { timeEntryKeys } from "@/hooks/use-time-tracking";
 import type { TimeEntry, TimeTrackingEntityType } from "@/types/database";
@@ -44,7 +45,10 @@ export function useTimerRealtime() {
           filter: `user_id=eq.${user.id}`,
         },
         (payload: RealtimePostgresChangesPayload<TimeEntry>) => {
-          console.log("[TimerRealtime] Received change:", payload.eventType);
+          logger.info("Timer realtime change received", {
+            eventType: payload.eventType,
+            userId: user.id
+          });
 
           // Invalidate active timer query - this will trigger a refetch
           queryClient.invalidateQueries({
@@ -69,7 +73,10 @@ export function useTimerRealtime() {
         }
       )
       .subscribe((status) => {
-        console.log("[TimerRealtime] Subscription status:", status);
+        logger.info("Timer realtime subscription status", {
+          status,
+          userId: user.id
+        });
       });
 
     channelRef.current = channel;
