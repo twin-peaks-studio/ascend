@@ -10,6 +10,7 @@
 
 import { useCallback, useEffect, useState, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { logger } from "@/lib/logger/logger";
 import { useAuth } from "@/hooks/use-auth";
 import type { Profile } from "@/types/database";
 
@@ -42,7 +43,10 @@ export function useProjectAssignees(projectId: string | null, allProfiles: Profi
         .eq("project_id", projectId);
 
       if (error) {
-        console.error("Error fetching project members:", error);
+        logger.error("Error fetching project members", {
+          projectId,
+          error
+        });
         setProjectMemberIds(new Set());
         return;
       }

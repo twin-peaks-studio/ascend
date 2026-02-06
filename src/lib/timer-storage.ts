@@ -5,6 +5,7 @@
  * This ensures the timer UI survives page refreshes and mobile backgrounding.
  */
 
+import { logger } from "@/lib/logger/logger";
 import type { TimeTrackingEntityType } from "@/types/database";
 
 const STORAGE_KEY = "active-timer";
@@ -57,9 +58,13 @@ export const timerStorage = {
 
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    } catch {
+    } catch (error) {
       // localStorage might be full or disabled
-      console.warn("Failed to save timer state to localStorage");
+      logger.warn("Failed to save timer state to localStorage", {
+        entityType: state.entityType,
+        entityId: state.entityId,
+        error
+      });
     }
   },
 
