@@ -6,7 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { checkRateLimit, rateLimitConfigs } from "./limiter";
+import { rateLimit, rateLimitConfigs } from "./limiter";
 import { logger } from "@/lib/logger";
 
 /**
@@ -63,7 +63,7 @@ export async function checkRequestRateLimit(
   const rateLimitKey = `${limitType}:${primaryIdentifier}`;
 
   try {
-    const result = await checkRateLimit(rateLimitKey, config);
+    const result = await rateLimit.check(rateLimitKey, config);
 
     if (!result.success) {
       logger.warn("Rate limit exceeded", {
