@@ -3,6 +3,7 @@
 import { useCallback, useState } from "react";
 import { Upload, File as FileIcon, X, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getAllowedFileTypesDescription } from "@/lib/validation/file-types";
 
 interface FileUploadProps {
   onUpload: (file: File) => Promise<unknown>;
@@ -122,6 +123,11 @@ export function FileUpload({
             <p className="text-xs text-muted-foreground mt-1">
               Max file size: {maxSizeMB}MB
             </p>
+            {!accept && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Allowed: {getAllowedFileTypesDescription()}
+              </p>
+            )}
           </div>
         </>
       )}

@@ -4,6 +4,10 @@ import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import type { Attachment, AttachmentInsert } from "@/types";
+import {
+  isAllowedFileType,
+  getFileRejectionReason,
+} from "@/lib/validation/file-types";
 
 type EntityType = "task" | "project";
 
@@ -65,6 +69,13 @@ export function useAttachments(entityType: EntityType, entityId: string | null) 
       // Validate file size
       if (file.size > MAX_FILE_SIZE) {
         toast.error(`File too large. Maximum size is ${MAX_FILE_SIZE / 1024 / 1024}MB`);
+        return null;
+      }
+
+      // Validate file type (security: prevent malicious uploads)
+      if (!isAllowedFileType(file)) {
+        const reason = getFileRejectionReason(file);
+        toast.error(reason);
         return null;
       }
 
