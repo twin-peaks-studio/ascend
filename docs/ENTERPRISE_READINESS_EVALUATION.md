@@ -220,6 +220,82 @@ Cannot enforce limits without usage counters.
 
 ---
 
+## 4a. Team Roles & Permissions
+
+### P1: Only Two Roles (Owner/Member) -- No Granular Permissions
+
+The current permission model is minimal:
+- **Owner:** Can invite/remove members, full edit access
+- **Member:** Can view and edit tasks, notes, time entries
+
+This is insufficient for real team use. Problems:
+
+1. **No view-only access.** You can't add a stakeholder or client who should see progress but not edit. Everyone who can see a project can modify it.
+
+2. **No admin delegation.** The project creator is the only owner. If they leave the company or are unavailable, no one else can manage team membership.
+
+3. **No workspace/organization concept.** Permissions are per-project. A company with 50 projects must manage membership on each one individually. There's no "add this person to all company projects" capability.
+
+4. **No external/guest access.** Clients, contractors, or partners can't be given limited access. They'd need full accounts with the same permissions as employees.
+
+5. **No task-level permissions.** Everyone can edit every task. There's no way to lock down completed tasks, restrict who can delete, or limit who can reassign.
+
+### What's Needed for B2B Sales
+
+| Role | View | Create | Edit | Delete | Manage Members | Billing |
+|------|------|--------|------|--------|----------------|---------|
+| Owner | All | All | All | All | Yes | Yes |
+| Admin | All | All | All | All | Yes | No |
+| Editor | All | All | Own + Assigned | No | No | No |
+| Viewer | All | No | No | No | No | No |
+| Guest (External) | Invited projects only | No | Comments only | No | No | No |
+
+### What's Needed for Workspace/Org Structure
+
+```
+Organization (billing entity)
+├── Workspace Settings (name, logo, default permissions)
+├── Members (org-level roles: Owner, Admin, Member)
+├── Teams (optional groupings)
+│   └── Team Members
+└── Projects
+    ├── Project Members (inherited from org + explicit adds)
+    └── Project-specific role overrides
+```
+
+**Key changes required:**
+
+1. **New tables:**
+   - `organizations` (id, name, slug, logo_url, created_at)
+   - `organization_members` (org_id, user_id, role, invited_at, accepted_at)
+   - `organization_invites` (org_id, email, role, token, expires_at) -- for inviting users who don't have accounts yet
+
+2. **Modified tables:**
+   - `projects` needs `organization_id` foreign key
+   - `project_members` needs expanded `role` enum (owner, admin, editor, viewer, guest)
+
+3. **New RLS policies:**
+   - Org-level policies that cascade to projects
+   - Role-based action policies (viewers can SELECT but not UPDATE/DELETE)
+
+4. **UI changes:**
+   - Organization settings page
+   - Member management at org level
+   - Role selector in invite flow
+   - Permission denied states for restricted actions
+
+### Why This Blocks B2B Growth
+
+Without granular roles:
+- **Enterprise deals require SSO + role management.** IT admins won't approve a tool where every user has the same permissions.
+- **Agencies can't invite clients.** The consulting/agency vertical (recommended in the moat analysis) requires client access to view progress and reports without editing.
+- **Compliance requirements.** SOC 2, ISO 27001, and enterprise security reviews require audit logs of who did what -- which requires knowing who *could* do what (roles).
+- **Churn from team friction.** Teams where junior members accidentally delete or modify the wrong things will blame the tool, not the person.
+
+**Fix:** Implement organization → project hierarchy with role-based permissions. Start with Owner/Admin/Editor/Viewer. Add Guest role for external access. This is a prerequisite for enterprise sales and the consulting vertical positioning.
+
+---
+
 ## 5. Mobile / App Store Readiness
 
 ### P1: No Native App Wrapper
@@ -724,58 +800,195 @@ No mechanisms for:
 
 ---
 
-## Revised Prioritized Action Plan
+## Implementation Roadmap (Ordered by Priority)
 
-### Phase 0: Critical Fixes (Before ANY scaling)
-1. Add RLS policies for `notes`, `note_tasks`, `time_entries`
-2. Add `UNIQUE(user_id) WHERE end_time IS NULL` on `time_entries`
-3. Switch attachment URLs from public to signed
-4. Add `/api/health` endpoint
-5. Integrate Sentry for error monitoring
-6. Set up CI/CD with GitHub Actions
-7. Add initial test suite (validation schemas + auth + RLS)
-8. Fix settings page (create `/settings` route with profile editing + account deletion)
+The following roadmap is sequenced based on **dependencies** (what must exist before other things work), **risk** (security and data integrity first), and **business value** (what enables growth and revenue). Each phase builds on the previous.
 
-### Phase 1: Compliance & Stability
-9. Build account deletion endpoint (GDPR Article 17)
-10. Build data export endpoint (GDPR Article 20)
-11. Add consent management (signup + cookies)
-12. Add rate limiting to API routes
-13. Fix CSP (nonce-based, remove unsafe-inline/eval)
-14. Add file type validation on uploads
-15. Restrict profile visibility to team scope
-16. Add React Error Boundaries
-17. Add audit logging via DB triggers
-18. Replace console.* with structured logging
+---
 
-### Phase 2: Product Foundation
-19. Integrate email service (Resend/SendGrid) -- password reset, invites, welcome
-20. Add user onboarding flow
-21. Add analytics (Mixpanel, Amplitude, or Plausible)
-22. Create marketing landing page
-23. Implement server-side search
-24. Create Supabase RPCs for N+1 queries and batch reorder
-25. Add pagination to data hooks
+### Phase 0: Critical Security & Stability
+**Timeline: Before any additional users**
+**Why first:** These are active security vulnerabilities and data corruption risks. Shipping to more users without these fixes increases liability.
 
-### Phase 3: Monetization
-26. Implement feature flag system + `useEntitlement` hook
-27. Integrate Stripe billing + subscriptions table
-28. Add usage metering
-29. Add notification system (in-app + email + push)
+| # | Item | Why Now | Dependency |
+|---|------|---------|------------|
+| 1 | Add RLS policies for `notes`, `note_tasks`, `time_entries` | Data leakage between users | None |
+| 2 | Add `UNIQUE(user_id) WHERE end_time IS NULL` on `time_entries` | Prevents multiple active timers (data corruption) | None |
+| 3 | Switch attachment URLs from public to signed | Files are publicly accessible | None |
+| 4 | Add `/api/health` endpoint | Enables external monitoring | None |
+| 5 | Integrate Sentry for error monitoring | You won't know when things break | None |
+| 6 | Set up CI/CD with GitHub Actions | Prevents deploying broken code | None |
+| 7 | Add initial test suite (validation schemas + auth + RLS) | Regression prevention | CI/CD (#6) |
+| 8 | Add React Error Boundaries | App crashes show white screen | None |
 
-### Phase 4: Accessibility & App Store
-30. Fix WCAG violations (aria-live, form labels, skip nav, keyboard DnD)
-31. Verify color contrast across all components
-32. Capacitor wrapper for iOS/Android
-33. Offline support + mutation queue
-34. Deep linking
+---
 
-### Phase 5: Resilience
-35. Test backup restoration (and document procedure)
-36. Define RTO/RPO targets
-37. Write disaster recovery runbook
-38. Evaluate multi-region database replica
-39. Implement conflict detection (version column on tasks)
+### Phase 1: Core Product Gaps
+**Timeline: Before onboarding more users**
+**Why second:** These are broken or missing features that will cause immediate user frustration and churn.
+
+| # | Item | Why Now | Dependency |
+|---|------|---------|------------|
+| 9 | Fix settings page (create `/settings` route) | Settings link is a 404; users can't update profile | None |
+| 10 | Integrate email service (Resend/SendGrid) | No password reset, no invite notifications | None |
+| 11 | Add rate limiting to API routes | Protect against abuse and cost overruns (AI endpoint) | None |
+| 12 | Fix CSP (nonce-based, remove unsafe-inline/eval) | XSS protection is nullified | None |
+| 13 | Add file type validation on uploads | Users can upload malicious files | None |
+| 14 | Replace console.* with structured logging | No visibility into production behavior | Sentry (#5) |
+
+---
+
+### Phase 2: Team Roles & Collaboration
+**Timeline: Before B2B sales**
+**Why third:** The current owner/member model blocks agency and enterprise sales. Organizations need role-based access control.
+
+| # | Item | Why Now | Dependency |
+|---|------|---------|------------|
+| 15 | Create `organizations` table and org membership | Enables workspace-level management | None |
+| 16 | Add `organization_id` to projects | Links projects to billing entity | #15 |
+| 17 | Expand `project_members` role enum (owner/admin/editor/viewer) | Granular permissions | #15 |
+| 18 | Update RLS policies for role-based access | Viewers can't edit, editors can't delete | #17 |
+| 19 | Build organization settings UI | Admins can manage org | #15 |
+| 20 | Add Guest role for external access | Clients can view without full accounts | #17 |
+| 21 | Restrict profile visibility to team scope | GDPR + privacy (users shouldn't see all emails) | #15 |
+
+---
+
+### Phase 3: GDPR & Compliance
+**Timeline: Before EU users or enterprise sales**
+**Why fourth:** GDPR is a legal requirement for EU users. SOC 2 and enterprise security reviews require these capabilities.
+
+| # | Item | Why Now | Dependency |
+|---|------|---------|------------|
+| 22 | Build account deletion endpoint (GDPR Article 17) | Right to erasure | Settings page (#9) |
+| 23 | Build data export endpoint (GDPR Article 20) | Right to portability | None |
+| 24 | Add consent management (signup + cookies) | Cookie consent required | None |
+| 25 | Add audit logging via DB triggers | Who did what, when | Role system (#17) |
+| 26 | Document data processing records (Article 30) | Required for compliance | None |
+
+---
+
+### Phase 4: Monetization
+**Timeline: When ready to charge**
+**Why fifth:** These enable revenue. Depends on having a stable product with team support.
+
+| # | Item | Why Now | Dependency |
+|---|------|---------|------------|
+| 27 | Implement feature flag system + `useEntitlement` hook | Gate features by plan | None |
+| 28 | Integrate Stripe billing + `subscriptions` table | Payment processing | Org structure (#15) |
+| 29 | Add usage metering | Enforce limits (projects, AI calls, storage) | #27 |
+| 30 | Build pricing/upgrade UI | Users can upgrade | #28 |
+| 31 | Add in-app notification system | Upgrade prompts, limit warnings | #27 |
+
+---
+
+### Phase 5: Vertical Features (Consulting/Agency)
+**Timeline: To differentiate and build moat**
+**Why sixth:** These are the features that make Ascend uniquely valuable for the consulting/agency vertical identified in the moat analysis.
+
+| # | Item | Why Now | Dependency |
+|---|------|---------|------------|
+| 32 | Add billable/non-billable flag to time entries | Core to service business workflow | None |
+| 33 | Add hourly rate to projects/tasks | Calculate billable amounts | #32 |
+| 34 | Build client-facing time/progress reports | Agencies need to show clients | Guest role (#20), #32 |
+| 35 | Add report export (PDF/CSV) | Clients need artifacts | #34 |
+| 36 | Integrate with QuickBooks/Xero (optional) | Time → Invoice automation | #33 |
+
+---
+
+### Phase 6: Performance & Scale
+**Timeline: Before thousands of users**
+**Why seventh:** Current architecture works for hundreds of users. These changes prepare for thousands.
+
+| # | Item | Why Now | Dependency |
+|---|------|---------|------------|
+| 37 | Create Supabase RPC for task fetching (fix N+1) | 3 queries → 1 query | None |
+| 38 | Create Supabase RPC for batch reorder | 50 requests → 1 request | None |
+| 39 | Implement server-side search | Client-side won't scale | None |
+| 40 | Add pagination to task/project queries | Fetch-all won't scale | None |
+| 41 | Implement conflict detection (version column) | Concurrent edits overwrite each other | None |
+
+---
+
+### Phase 7: Product Polish & Growth
+**Timeline: When focused on acquisition and retention**
+**Why eighth:** These improve activation and retention but aren't blockers for core functionality.
+
+| # | Item | Why Now | Dependency |
+|---|------|---------|------------|
+| 42 | Add user onboarding flow | Empty state loses users | None |
+| 43 | Add analytics (Mixpanel/Amplitude/Plausible) | Can't improve what you can't measure | None |
+| 44 | Create marketing landing page | Users can't discover you | None |
+| 45 | Add email notifications (due dates, assignments) | Users forget to check the app | Email service (#10) |
+| 46 | Add push notifications (web) | Real-time engagement | #45 |
+
+---
+
+### Phase 8: Accessibility (ADA Compliance)
+**Timeline: Before significant US user base**
+**Why ninth:** ADA lawsuits are increasing. These are legal requirements, not nice-to-haves.
+
+| # | Item | Why Now | Dependency |
+|---|------|---------|------------|
+| 47 | Add `aria-live` regions for dynamic updates | Screen readers can't see changes | None |
+| 48 | Fix form label associations | Screen readers can't navigate forms | None |
+| 49 | Add skip navigation link | Keyboard users stuck in sidebar | None |
+| 50 | Add keyboard support to Kanban drag-drop | Primary feature is mouse-only | None |
+| 51 | Verify color contrast across all components | WCAG 4.5:1 requirement | None |
+| 52 | Add screen reader announcements to Kanban | Task moves are silent | #50 |
+
+---
+
+### Phase 9: Mobile App
+**Timeline: When mobile is a strategic priority**
+**Why tenth:** Mobile is valuable but not essential for the consulting/agency vertical (desk work). Web-first is correct.
+
+| # | Item | Why Now | Dependency |
+|---|------|---------|------------|
+| 53 | Set up Expo project with Expo Router | Foundation for mobile app | None |
+| 54 | Implement token-based auth for mobile | Cookies don't work in native | None |
+| 55 | Build core screens (projects, tasks, timer) | MVP mobile experience | #53, #54 |
+| 56 | Notes as read-only on mobile (v1) | TipTap doesn't exist in RN | #55 |
+| 57 | Add push notifications (native) | Mobile users expect this | #55 |
+| 58 | Add offline support + mutation queue | Mobile often loses connection | #55 |
+| 59 | Submit to App Store / Play Store | Distribution | #55-58 |
+
+---
+
+### Phase 10: Enterprise & Resilience
+**Timeline: When pursuing enterprise deals**
+**Why last:** These are requirements for large enterprise sales but not for SMB or mid-market.
+
+| # | Item | Why Now | Dependency |
+|---|------|---------|------------|
+| 60 | Implement SSO/SAML | Enterprise IT requirement | Org structure (#15) |
+| 61 | Test backup restoration (and document) | Verify backups actually work | None |
+| 62 | Define RTO/RPO targets | SLA for enterprise contracts | None |
+| 63 | Write disaster recovery runbook | Required for enterprise security review | #61, #62 |
+| 64 | Evaluate multi-region database | High availability for enterprise | #63 |
+
+---
+
+### Summary: First 14 Items (Do These First)
+
+If you can only focus on one phase at a time, here's what matters most:
+
+1. **RLS policies for notes/time_entries** -- Active data leakage risk
+2. **Unique constraint on time_entries** -- Active data corruption risk
+3. **Signed URLs for attachments** -- Files publicly exposed
+4. **Health endpoint + Sentry** -- You need to know when things break
+5. **CI/CD + basic tests** -- Stop deploying untested code
+6. **Error boundaries** -- Crashes shouldn't white-screen the app
+7. **Settings page** -- Currently a 404
+8. **Email service** -- Users can't reset passwords
+9. **Rate limiting** -- Protect against abuse
+10. **CSP fix** -- XSS protection is disabled
+11. **File type validation** -- Block malicious uploads
+12. **Structured logging** -- Replace console.log
+13. **Organizations table** -- Foundation for teams
+14. **Role-based permissions** -- Unlocks B2B sales
+
+Everything after item 14 can be prioritized based on your go-to-market strategy (vertical focus vs. horizontal, SMB vs. enterprise, web-first vs. mobile-first).
 
 ---
 
