@@ -7,7 +7,7 @@
  * Uses React Query for caching and automatic refetching.
  */
 
-import { useQuery, useMutation, useQueryClient } from "@tantml/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useCallback } from "react";
 import { getClient } from "@/lib/supabase/client-manager";
 import { withTimeout, TIMEOUTS } from "@/lib/utils/with-timeout";
