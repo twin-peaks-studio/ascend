@@ -16,6 +16,7 @@ import { createBrowserClient } from "@supabase/ssr";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
 import { withTimeout, TIMEOUTS, isTimeoutError } from "@/lib/utils/with-timeout";
+import { logger } from "@/lib/logger/logger";
 
 type HealthCallback = (healthy: boolean) => void;
 
@@ -122,7 +123,10 @@ export async function checkHealth(): Promise<boolean> {
     setHealthStatus(true);
     return true;
   } catch (error) {
-    console.warn("[ClientManager] Health check failed:", error);
+    logger.warn("Supabase health check failed", {
+      feature: "client-manager",
+      error
+    });
     setHealthStatus(false);
     return false;
   }
@@ -142,15 +146,17 @@ export async function checkHealthWithReset(): Promise<boolean> {
   }
 
   // First check failed, reset client and try again
-  console.log("[ClientManager] First health check failed, resetting client...");
+  logger.info("First health check failed, resetting client", {
+    feature: "client-manager"
+  });
   resetClient();
 
   const secondCheck = await checkHealth();
 
   if (!secondCheck) {
-    console.warn(
-      "[ClientManager] Health check failed after client reset - connection may be unavailable"
-    );
+    logger.warn("Health check failed after client reset - connection may be unavailable", {
+      feature: "client-manager"
+    });
   }
 
   return secondCheck;
