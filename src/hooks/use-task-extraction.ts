@@ -104,6 +104,23 @@ export function useTaskExtraction(): UseTaskExtractionReturn {
         if (!data.success) {
           setError(data.error);
           setStatus("error");
+
+          // Show user-friendly error messages
+          if (data.error.type === "rate_limit") {
+            const retryAfter = data.error.retryAfter || 60;
+            const retryMinutes = Math.ceil(retryAfter / 60);
+            toast.error(
+              `Rate limit exceeded. Please try again in ${retryMinutes} minute${retryMinutes !== 1 ? "s" : ""}.`,
+              { duration: 5000 }
+            );
+          } else if (data.error.type === "timeout") {
+            toast.error("Request timed out. Please try again.");
+          } else if (data.error.type === "empty_content") {
+            toast.error("Note content is empty");
+          } else {
+            toast.error(data.error.message || "Failed to extract tasks");
+          }
+
           return;
         }
 
