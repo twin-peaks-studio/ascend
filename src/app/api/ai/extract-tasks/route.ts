@@ -60,7 +60,7 @@ export async function POST(
     );
 
     if (!rateLimitCheck.allowed) {
-      return createRateLimitResponse(rateLimitCheck);
+      return createRateLimitResponse(rateLimitCheck) as NextResponse<ExtractTasksErrorResponse>;
     }
 
     // 3. Parse and validate request body
