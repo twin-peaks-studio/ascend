@@ -13,6 +13,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { getClient } from "@/lib/supabase/client-manager";
 import { withTimeout, TIMEOUTS } from "@/lib/utils/with-timeout";
+import { logger } from "@/lib/logger/logger";
 import { useAuth } from "@/hooks/use-auth";
 import type { Profile } from "@/types";
 
@@ -100,7 +101,12 @@ async function fetchTeamProfiles(userId: string): Promise<Profile[]> {
   );
 
   if (profilesResult.error) {
-    console.error("Error fetching team profiles:", profilesResult.error);
+    logger.error("Error fetching team profiles", {
+      userId,
+      userIdCount: allUserIds.length,
+      projectCount: allProjectIds.length,
+      error: profilesResult.error
+    });
     throw profilesResult.error;
   }
 

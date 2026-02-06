@@ -12,6 +12,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
 import { getClient } from "@/lib/supabase/client-manager";
 import { withTimeout, TIMEOUTS } from "@/lib/utils/with-timeout";
+import { logger } from "@/lib/logger/logger";
 import { useAuth } from "@/hooks/use-auth";
 import type { Note, NoteWithRelations, Task } from "@/types";
 import type { NoteInsert, NoteUpdate, NoteTaskInsert } from "@/types/database";
@@ -221,7 +222,11 @@ export function useNoteMutations() {
         toast.success("Note created successfully");
         return data as Note;
       } catch (err) {
-        console.error("Error creating note:", err);
+        logger.error("Error creating note", {
+          userId: user.id,
+          projectId: input.project_id,
+          error: err
+        });
         toast.error("Failed to create note");
         return null;
       } finally {
@@ -262,7 +267,11 @@ export function useNoteMutations() {
 
         return data as Note;
       } catch (err) {
-        console.error("Error updating note:", err);
+        logger.error("Error updating note", {
+          noteId,
+          projectId,
+          error: err
+        });
         toast.error("Failed to update note");
         return null;
       } finally {
@@ -294,7 +303,11 @@ export function useNoteMutations() {
         toast.success("Note deleted successfully");
         return true;
       } catch (err) {
-        console.error("Error deleting note:", err);
+        logger.error("Error deleting note", {
+          noteId,
+          projectId,
+          error: err
+        });
         toast.error("Failed to delete note");
         return false;
       } finally {
@@ -368,7 +381,13 @@ export function useNoteMutations() {
         toast.success("Task created");
         return task;
       } catch (err) {
-        console.error("Error creating task from note:", err);
+        logger.error("Error creating task from note", {
+          userId: user.id,
+          noteId,
+          projectId,
+          taskTitle: taskData.title,
+          error: err
+        });
         toast.error("Failed to create task");
         return null;
       } finally {
@@ -400,7 +419,11 @@ export function useNoteMutations() {
         toast.success("Task linked to note");
         return true;
       } catch (err) {
-        console.error("Error linking task to note:", err);
+        logger.error("Error linking task to note", {
+          noteId,
+          taskId,
+          error: err
+        });
         toast.error("Failed to link task");
         return false;
       } finally {
@@ -433,7 +456,11 @@ export function useNoteMutations() {
         toast.success("Task unlinked from note");
         return true;
       } catch (err) {
-        console.error("Error unlinking task:", err);
+        logger.error("Error unlinking task", {
+          noteId,
+          taskId,
+          error: err
+        });
         toast.error("Failed to unlink task");
         return false;
       } finally {

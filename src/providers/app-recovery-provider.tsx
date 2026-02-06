@@ -21,6 +21,7 @@ import {
   useCallback,
   type ReactNode,
 } from "react";
+import { logger } from "@/lib/logger/logger";
 
 /**
  * Recovery status - simplified to just two states
@@ -114,7 +115,7 @@ export function AppRecoveryProvider({ children }: AppRecoveryProviderProps) {
         const confidence = await authRefreshHandler.current();
         setState((prev) => ({ ...prev, authConfidence: confidence }));
       } catch (error) {
-        console.warn("[AppRecovery] Auth refresh failed:", error);
+        logger.warn("Auth refresh failed", { error });
         setState((prev) => ({ ...prev, authConfidence: "cached" }));
       }
     }
@@ -141,12 +142,14 @@ export function AppRecoveryProvider({ children }: AppRecoveryProviderProps) {
    * Emit data refresh signal to all subscribers
    */
   const emitRefreshSignal = useCallback(() => {
-    console.log(`[AppRecovery] Emitting refresh signal to ${refreshSubscribers.current.size} subscribers`);
+    logger.info("Emitting refresh signal to subscribers", {
+      subscriberCount: refreshSubscribers.current.size
+    });
     refreshSubscribers.current.forEach((callback) => {
       try {
         callback();
       } catch (error) {
-        console.error("[AppRecovery] Refresh subscriber error:", error);
+        logger.error("Refresh subscriber error", { error });
       }
     });
   }, []);
@@ -155,7 +158,7 @@ export function AppRecoveryProvider({ children }: AppRecoveryProviderProps) {
    * Trigger a refresh after backgrounding
    */
   const triggerRefresh = useCallback(async () => {
-    console.log("[AppRecovery] Triggering refresh after backgrounding");
+    logger.info("Triggering refresh after backgrounding");
     setState((prev) => ({ ...prev, isRefreshing: true }));
 
     try {
@@ -172,7 +175,7 @@ export function AppRecoveryProvider({ children }: AppRecoveryProviderProps) {
         isRefreshing: false,
       }));
     } catch (error) {
-      console.error("[AppRecovery] Refresh failed:", error);
+      logger.error("Refresh failed", { error });
       setState((prev) => ({ ...prev, isRefreshing: false }));
     }
   }, [requestAuthRefresh, emitRefreshSignal]);
@@ -205,7 +208,9 @@ export function AppRecoveryProvider({ children }: AppRecoveryProviderProps) {
 
         if (hiddenAt) {
           const backgroundDuration = Date.now() - hiddenAt;
-          console.log(`[AppRecovery] Returned after ${backgroundDuration}ms`);
+          logger.info("Returned after backgrounding", {
+            durationMs: backgroundDuration
+          });
 
           // Only trigger auth refresh for longer backgrounds
           // React Query handles data refetching via refetchOnWindowFocus
