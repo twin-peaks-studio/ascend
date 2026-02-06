@@ -7,10 +7,11 @@
  * Uses React Query for caching and automatic refetching.
  */
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tantml/react-query";
 import { useMemo, useCallback } from "react";
 import { getClient } from "@/lib/supabase/client-manager";
 import { withTimeout, TIMEOUTS } from "@/lib/utils/with-timeout";
+import { logger } from "@/lib/logger/logger";
 import { useAuth } from "@/hooks/use-auth";
 import { timerStorage } from "@/lib/timer-storage";
 import type {
@@ -250,7 +251,12 @@ export function useTimeTracking(
         toast.error("Another timer is already running. Stop it first.");
       } else {
         toast.error("Failed to start timer");
-        console.error("Start timer error:", error);
+        logger.error("Start timer error", {
+          userId: user?.id,
+          entityType,
+          entityId,
+          error
+        });
       }
     },
   });
@@ -299,7 +305,13 @@ export function useTimeTracking(
     },
     onError: (error: Error) => {
       toast.error("Failed to stop timer");
-      console.error("Stop timer error:", error);
+      logger.error("Stop timer error", {
+        userId: user?.id,
+        entityType,
+        entityId,
+        activeTimerId: activeTimer?.id,
+        error
+      });
     },
   });
 
@@ -357,7 +369,11 @@ export function useTimeTracking(
     },
     onError: (error: Error) => {
       toast.error(error.message || "Failed to update time entry");
-      console.error("Update entry error:", error);
+      logger.error("Update entry error", {
+        entityType,
+        entityId,
+        error
+      });
     },
   });
 
@@ -381,7 +397,11 @@ export function useTimeTracking(
     },
     onError: (error: Error) => {
       toast.error("Failed to delete time entry");
-      console.error("Delete entry error:", error);
+      logger.error("Delete entry error", {
+        entityType,
+        entityId,
+        error
+      });
     },
   });
 
