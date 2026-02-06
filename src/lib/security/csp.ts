@@ -64,9 +64,12 @@ export function buildCSPHeader(nonce: string, mode: CSPMode = 'enforce'): string
     [
       "connect-src 'self'",
       'https://*.supabase.co',
+      'wss://*.supabase.co', // WebSocket for Supabase Realtime
+      'https://r.supabase.co', // Supabase CDN
       'https://api.anthropic.com',
       'https://qstash.upstash.io',
       'https://vercel.live',
+      'wss://vercel.live', // Vercel Live WebSocket
     ].join(' '),
 
     // Frames: disallow embedding
