@@ -227,10 +227,16 @@ export function useUpdateProfile() {
       return result.data as Profile;
     },
     onSuccess: (updatedProfile) => {
+      console.log("🟢 Profile update successful:", updatedProfile);
+      console.log("🟢 Updating cache with key:", profileKeys.detail(updatedProfile.id));
+
       // Update the detail cache
       queryClient.setQueryData(profileKeys.detail(updatedProfile.id), updatedProfile);
+
       // Invalidate team list to pick up changes
       queryClient.invalidateQueries({ queryKey: profileKeys.teamList(user!.id) });
+
+      console.log("🟢 Cache updated and queries invalidated");
     },
   });
 }

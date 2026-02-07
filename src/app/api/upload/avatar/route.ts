@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { avatarUploadSchema } from "@/lib/validation/settings";
 import { logger } from "@/lib/logger/logger";
+import { generateAvatarSizes, AVATAR_SIZES } from "@/lib/utils/image-resize";
 
 const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
@@ -38,58 +39,107 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get current profile to find old avatar
+    // Convert file to buffer
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    // Generate all avatar sizes
+    logger.info("Generating avatar sizes", { userId: user.id });
+    const sizes = await generateAvatarSizes(buffer);
+
+    // Get current profile to find old avatars
     const { data: profile } = await supabase
       .from("profiles")
       .select("avatar_url")
       .eq("id", user.id)
       .single();
 
-    // Delete old avatar if exists
+    // Delete old avatar files if they exist
     if (profile?.avatar_url) {
       try {
-        const oldPath = profile.avatar_url.split("/").pop();
-        if (oldPath) {
-          await supabase.storage.from("avatars").remove([`${user.id}/${oldPath}`]);
-        }
+        // Extract old file base name
+        const oldUrlParts = profile.avatar_url.split("/");
+        const oldFileName = oldUrlParts[oldUrlParts.length - 1];
+        const oldBaseName = oldFileName.replace(/-\d+\.webp$/, "");
+
+        // Delete all old sizes
+        const oldFiles = [
+          `${user.id}/${oldBaseName}-40.webp`,
+          `${user.id}/${oldBaseName}-80.webp`,
+          `${user.id}/${oldBaseName}-160.webp`,
+          `${user.id}/${oldBaseName}-320.webp`,
+        ];
+
+        await supabase.storage.from("avatars").remove(oldFiles);
+        logger.info("Deleted old avatar files", { userId: user.id, count: oldFiles.length });
       } catch (error) {
-        logger.warn("Failed to delete old avatar", { userId: user.id, error });
+        logger.warn("Failed to delete old avatars", { userId: user.id, error });
       }
     }
 
-    // Generate unique filename
-    const fileExt = file.name.split(".").pop();
-    const fileName = `${Date.now()}.${fileExt}`;
-    const filePath = `${user.id}/${fileName}`;
+    // Generate unique base filename (timestamp)
+    const timestamp = Date.now();
+    const baseName = `avatar-${timestamp}`;
 
-    // Upload to Supabase Storage
-    const { error: uploadError } = await supabase.storage
-      .from("avatars")
-      .upload(filePath, file, {
-        contentType: file.type,
-        upsert: false,
-      });
+    // Upload all sizes
+    const uploads = await Promise.all([
+      supabase.storage.from("avatars").upload(
+        `${user.id}/${baseName}-${AVATAR_SIZES.small}.webp`,
+        sizes.small,
+        { contentType: "image/webp", upsert: false }
+      ),
+      supabase.storage.from("avatars").upload(
+        `${user.id}/${baseName}-${AVATAR_SIZES.medium}.webp`,
+        sizes.medium,
+        { contentType: "image/webp", upsert: false }
+      ),
+      supabase.storage.from("avatars").upload(
+        `${user.id}/${baseName}-${AVATAR_SIZES.large}.webp`,
+        sizes.large,
+        { contentType: "image/webp", upsert: false }
+      ),
+      supabase.storage.from("avatars").upload(
+        `${user.id}/${baseName}-${AVATAR_SIZES.xlarge}.webp`,
+        sizes.xlarge,
+        { contentType: "image/webp", upsert: false }
+      ),
+    ]);
 
-    if (uploadError) {
+    // Check for upload errors
+    const uploadError = uploads.find((result) => result.error);
+    if (uploadError?.error) {
       logger.error("Avatar upload error", {
         userId: user.id,
-        error: uploadError,
+        error: uploadError.error,
       });
       return NextResponse.json({ error: "Failed to upload avatar" }, { status: 500 });
     }
 
-    // Get public URL
+    // Get public URL for the medium size (used as base URL)
     const {
       data: { publicUrl },
-    } = supabase.storage.from("avatars").getPublicUrl(filePath);
+    } = supabase.storage.from("avatars").getPublicUrl(`${user.id}/${baseName}-${AVATAR_SIZES.medium}.webp`);
 
-    logger.info("Avatar uploaded", {
+    // Return base URL (client will append size suffix as needed)
+    const baseUrl = publicUrl.replace(`-${AVATAR_SIZES.medium}.webp`, "");
+
+    logger.info("Avatar uploaded successfully", {
       userId: user.id,
-      filePath,
+      baseName,
+      sizes: Object.keys(sizes),
+      baseUrl,
+    });
+
+    console.log("🟢 Avatar upload complete:", {
+      userId: user.id,
+      baseName,
+      baseUrl,
+      originalSize: file.size,
+      generatedSizes: Object.keys(sizes),
     });
 
     return NextResponse.json({
-      url: publicUrl,
+      url: `${baseUrl}-${AVATAR_SIZES.medium}.webp`, // Return medium size as default
     });
   } catch (error) {
     logger.error("Avatar upload error", { error });

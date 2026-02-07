@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useProfile, useUpdateProfile } from "@/hooks/use-profiles";
 import { Button } from "@/components/ui/button";
@@ -10,11 +10,35 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import { Loader2, Upload, User, X } from "lucide-react";
 import { profileUpdateSchema, avatarUploadSchema } from "@/lib/validation/settings";
+import { getAvatarUrl } from "@/lib/utils/gravatar";
 
 export function ProfileSection() {
   const { user } = useAuth();
   const { profile, loading: profileLoading } = useProfile(user?.id ?? null);
   const updateProfile = useUpdateProfile();
+
+  // Get avatar URL with Gravatar fallback
+  const avatarUrl = getAvatarUrl(profile?.avatar_url, user?.email ?? "", 160);
+
+  // Debug: Log profile changes
+  useEffect(() => {
+    console.log("🔵 Profile data updated:", {
+      avatar_url: profile?.avatar_url,
+      display_name: profile?.display_name,
+      userId: user?.id
+    });
+  }, [profile, user]);
+
+  // Debug: Test if avatar URL is accessible
+  useEffect(() => {
+    if (profile?.avatar_url) {
+      console.log("🔵 Testing avatar URL:", profile.avatar_url);
+      const img = new Image();
+      img.onload = () => console.log("✅ Avatar image loaded successfully!");
+      img.onerror = (e) => console.error("❌ Avatar image failed to load:", e);
+      img.src = profile.avatar_url;
+    }
+  }, [profile?.avatar_url]);
 
   const [displayName, setDisplayName] = useState("");
   const [isEditingName, setIsEditingName] = useState(false);
@@ -45,12 +69,14 @@ export function ProfileSection() {
     if (!file) return;
 
     try {
+      console.log("🔵 Starting avatar upload:", { fileName: file.name, fileSize: file.size });
       avatarUploadSchema.parse({ file });
       setUploadingAvatar(true);
 
       const formData = new FormData();
       formData.append("file", file);
 
+      console.log("🔵 Sending upload request to API...");
       const response = await fetch("/api/upload/avatar", {
         method: "POST",
         body: formData,
@@ -58,14 +84,21 @@ export function ProfileSection() {
 
       if (!response.ok) {
         const error = await response.json();
+        console.error("❌ Upload failed:", error);
         throw new Error(error.error || "Upload failed");
       }
 
       const { url } = await response.json();
+      console.log("🔵 Upload successful! URL received:", url);
+      console.log("🔵 Current profile before update:", profile);
+
       await updateProfile.mutateAsync({ avatar_url: url });
+      console.log("🔵 Profile update mutation completed");
+
       toast.success("Avatar updated");
     } catch (error) {
       if (error instanceof Error) {
+        console.error("❌ Avatar upload error:", error.message);
         toast.error(error.message);
       }
     } finally {
@@ -97,8 +130,11 @@ export function ProfileSection() {
       <div className="rounded-lg border p-6">
         <h3 className="text-lg font-semibold mb-4">Profile Picture</h3>
         <div className="flex items-center gap-6">
-          <Avatar className="h-20 w-20">
-            <AvatarImage src={profile?.avatar_url ?? undefined} />
+          <Avatar className="h-20 w-20" key={avatarUrl}>
+            <AvatarImage
+              src={avatarUrl}
+              alt="Profile avatar"
+            />
             <AvatarFallback>
               <User className="h-8 w-8" />
             </AvatarFallback>
