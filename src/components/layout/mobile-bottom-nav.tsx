@@ -16,6 +16,7 @@ import {
   X,
   Filter,
   ArrowUpDown,
+  Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -55,6 +56,11 @@ const navItems: NavItem[] = [
     href: "/projects",
     label: "Projects",
     icon: FolderKanban,
+  },
+  {
+    href: "/settings",
+    label: "Settings",
+    icon: Settings,
   },
 ];
 
