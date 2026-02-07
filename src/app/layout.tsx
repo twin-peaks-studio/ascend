@@ -28,6 +28,7 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
+// Sprint 3: Testing deployment pipeline
 export default function RootLayout({
   children,
 }: Readonly<{
