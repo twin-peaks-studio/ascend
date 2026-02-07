@@ -34,23 +34,55 @@ export async function DELETE(request: NextRequest) {
       logger.warn("Failed to delete avatar during account deletion", { userId: user.id, error });
     }
 
-    // Step 2: Delete all attachments from storage
+    // Step 2: Delete attachments from storage for user's tasks and projects
     try {
-      const { data: attachments } = await supabase
-        .from("attachments")
-        .select("storage_path")
-        .eq("uploaded_by", user.id);
+      // Get all tasks owned by or assigned to user
+      const { data: tasks } = await supabase
+        .from("tasks")
+        .select("id")
+        .or(`created_by.eq.${user.id},assigned_to.eq.${user.id}`);
 
-      if (attachments && attachments.length > 0) {
-        const paths = attachments.map((a: { storage_path: string }) => a.storage_path);
-        await supabase.storage.from("attachments").remove(paths);
+      // Get all projects owned by user
+      const { data: projects } = await supabase
+        .from("projects")
+        .select("id")
+        .eq("created_by", user.id);
+
+      const taskIds = tasks?.map((t) => t.id) || [];
+      const projectIds = projects?.map((p) => p.id) || [];
+
+      // Get all attachments for these entities
+      if (taskIds.length > 0) {
+        const { data: taskAttachments } = await supabase
+          .from("attachments")
+          .select("file_path")
+          .eq("entity_type", "task")
+          .in("entity_id", taskIds);
+
+        if (taskAttachments && taskAttachments.length > 0) {
+          const paths = taskAttachments.map((a: { file_path: string }) => a.file_path);
+          await supabase.storage.from("attachments").remove(paths);
+        }
+      }
+
+      if (projectIds.length > 0) {
+        const { data: projectAttachments } = await supabase
+          .from("attachments")
+          .select("file_path")
+          .eq("entity_type", "project")
+          .in("entity_id", projectIds);
+
+        if (projectAttachments && projectAttachments.length > 0) {
+          const paths = projectAttachments.map((a: { file_path: string }) => a.file_path);
+          await supabase.storage.from("attachments").remove(paths);
+        }
       }
     } catch (error) {
       logger.warn("Failed to delete attachments during account deletion", { userId: user.id, error });
     }
 
     // Step 3: Delete database records (in order to respect foreign keys)
-    // Note: Many will cascade delete, but we're explicit for clarity
+    // Many of these will cascade, but we're explicit for safety
 
     // Delete project memberships
     await supabase.from("project_members").delete().eq("user_id", user.id);
@@ -65,11 +97,8 @@ export async function DELETE(request: NextRequest) {
     await supabase.from("tasks").delete().eq("created_by", user.id);
     await supabase.from("tasks").delete().eq("assigned_to", user.id);
 
-    // Delete projects owned by user (will cascade to related tasks/members)
+    // Delete projects owned by user (attachments will cascade delete from DB)
     await supabase.from("projects").delete().eq("created_by", user.id);
-
-    // Delete attachments metadata
-    await supabase.from("attachments").delete().eq("uploaded_by", user.id);
 
     // Delete profile
     await supabase.from("profiles").delete().eq("id", user.id);
