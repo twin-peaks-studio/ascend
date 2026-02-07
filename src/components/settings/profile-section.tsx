@@ -25,6 +25,17 @@ export function ProfileSection() {
     });
   }, [profile, user]);
 
+  // Debug: Test if avatar URL is accessible
+  useEffect(() => {
+    if (profile?.avatar_url) {
+      console.log("🔵 Testing avatar URL:", profile.avatar_url);
+      const img = new Image();
+      img.onload = () => console.log("✅ Avatar image loaded successfully!");
+      img.onerror = (e) => console.error("❌ Avatar image failed to load:", e);
+      img.src = profile.avatar_url;
+    }
+  }, [profile?.avatar_url]);
+
   const [displayName, setDisplayName] = useState("");
   const [isEditingName, setIsEditingName] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -115,8 +126,11 @@ export function ProfileSection() {
       <div className="rounded-lg border p-6">
         <h3 className="text-lg font-semibold mb-4">Profile Picture</h3>
         <div className="flex items-center gap-6">
-          <Avatar className="h-20 w-20">
-            <AvatarImage src={profile?.avatar_url ?? undefined} />
+          <Avatar className="h-20 w-20" key={profile?.avatar_url || 'no-avatar'}>
+            <AvatarImage
+              src={profile?.avatar_url ?? undefined}
+              alt="Profile avatar"
+            />
             <AvatarFallback>
               <User className="h-8 w-8" />
             </AvatarFallback>
