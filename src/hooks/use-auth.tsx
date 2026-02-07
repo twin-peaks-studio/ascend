@@ -42,6 +42,7 @@ import {
 } from "react";
 import { getClient } from "@/lib/supabase/client-manager";
 import { withTimeout, TIMEOUTS, isTimeoutError } from "@/lib/utils/with-timeout";
+import { logger } from "@/lib/logger/logger";
 import type { User, Session, AuthError } from "@supabase/supabase-js";
 import type { Profile } from "@/types/database";
 import type { AuthConfidence } from "@/providers/app-recovery-provider";
@@ -129,16 +130,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         );
 
         if (result.error) {
-          console.error("Error fetching profile:", result.error);
+          logger.error("Error fetching profile", {
+            userId,
+            error: result.error,
+            isInitialLoad
+          });
           return null;
         }
 
         return result.data as Profile;
       } catch (error) {
         if (isTimeoutError(error)) {
-          console.warn("[Auth] Profile fetch timed out, continuing with null profile");
+          logger.warn("Profile fetch timed out, continuing with null profile", {
+            userId,
+            isInitialLoad,
+            timeout: isInitialLoad ? TIMEOUTS.DATA_QUERY_INITIAL : TIMEOUTS.DATA_QUERY
+          });
         } else {
-          console.error("Error fetching profile:", error);
+          logger.error("Error fetching profile", {
+            userId,
+            error,
+            isInitialLoad
+          });
         }
         return null;
       }
@@ -151,7 +164,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    * CRITICAL: Does NOT clear user on timeout - only on explicit auth failure
    */
   const recoveryRefreshAuth = useCallback(async (): Promise<AuthConfidence> => {
-    console.log("[Auth] Recovery refresh requested");
+    logger.info("Recovery refresh requested");
 
     try {
       const supabase = getClient();
@@ -165,7 +178,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (sessionResult.error) {
         // Explicit auth error - this is a real logout
-        console.log("[Auth] Explicit auth error during recovery:", sessionResult.error.message);
+        logger.info("Explicit auth error during recovery", {
+          errorMessage: sessionResult.error.message
+        });
         setState((prev) => ({
           ...prev,
           user: null,
@@ -201,7 +216,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       if (isTimeoutError(error)) {
         // CRITICAL: On timeout, keep cached auth state, don't clear user
-        console.warn("[Auth] Session check timed out, keeping cached auth state");
+        logger.warn("Session check timed out, keeping cached auth state", {
+          timeout: TIMEOUTS.AUTH_SESSION
+        });
         setState((prev) => ({
           ...prev,
           confidence: "cached",
@@ -210,7 +227,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       // Unknown error - keep cached state
-      console.error("[Auth] Recovery refresh error:", error);
+      logger.error("Recovery refresh error", { error });
       setState((prev) => ({
         ...prev,
         confidence: "cached",
@@ -234,7 +251,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         );
 
         if (initResult.error) {
-          console.error("Auth error during init:", initResult.error);
+          logger.error("Auth error during init", { error: initResult.error });
           setState({
             user: null,
             profile: null,
@@ -278,7 +295,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } catch (error) {
         if (isTimeoutError(error)) {
           // Initial timeout - mark as unknown confidence
-          console.warn("[Auth] Initial auth check timed out");
+          logger.warn("Initial auth check timed out", {
+            timeout: TIMEOUTS.AUTH_SESSION_INITIAL
+          });
           setState((prev) => ({
             ...prev,
             loading: false,
@@ -286,7 +305,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             confidence: "unknown",
           }));
         } else {
-          console.error("Error initializing auth:", error);
+          logger.error("Error initializing auth", { error });
           setState((prev) => ({
             ...prev,
             loading: false,
@@ -304,7 +323,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event: string, session: Session | null) => {
-      console.log("[Auth] Auth state change:", event);
+      logger.info("Auth state change", {
+        event,
+        hasSession: !!session,
+        userId: session?.user?.id
+      });
 
       if (event === "SIGNED_IN" && session?.user) {
         // CRITICAL: Set user immediately so data hooks can start fetching
@@ -360,7 +383,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (recoveryContext?.registerAuthRefreshHandler) {
       recoveryContext.registerAuthRefreshHandler(recoveryRefreshAuth);
       hasRegisteredHandler.current = true;
-      console.log("[Auth] Registered auth refresh handler with recovery system");
+      logger.info("Registered auth refresh handler with recovery system");
     }
   }, [recoveryRefreshAuth]);
 
@@ -412,7 +435,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           );
 
           if (profileError) {
-            console.error("Error creating profile:", profileError);
+            logger.error("Error creating profile", {
+              userId: authData.user.id,
+              email: data.email,
+              error: profileError
+            });
           }
         }
 
@@ -496,11 +523,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     } catch (error) {
       if (isTimeoutError(error)) {
-        console.warn("[Auth] Session refresh timed out");
+        logger.warn("Session refresh timed out", {
+          timeout: TIMEOUTS.AUTH_REFRESH
+        });
         // Keep existing session, mark as cached
         setState((prev) => ({ ...prev, confidence: "cached" }));
       } else {
-        console.error("[Auth] Session refresh error:", error);
+        logger.error("Session refresh error", { error });
       }
     }
   }, []);

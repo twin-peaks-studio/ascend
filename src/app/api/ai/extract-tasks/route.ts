@@ -21,6 +21,7 @@ import type {
   ExtractTasksSuccessResponse,
   ExtractTasksErrorResponse,
 } from "@/lib/ai/types";
+import { logger } from "@/lib/logger/logger";
 
 const CLAUDE_API_URL = "https://api.anthropic.com/v1/messages";
 const CLAUDE_MODEL = "claude-sonnet-4-20250514";
@@ -97,7 +98,10 @@ export async function POST(
     // 5. Check for API key
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) {
-      console.error("ANTHROPIC_API_KEY not configured");
+      logger.error("ANTHROPIC_API_KEY not configured", {
+        feature: "ai-task-extraction",
+        userId: user.id
+      });
       return NextResponse.json(
         {
           success: false,
@@ -217,10 +221,11 @@ export async function POST(
     // 9. Validate the parsed response structure
     const validatedResponse = aiExtractionResponseSchema.safeParse(parsedTasks);
     if (!validatedResponse.success) {
-      console.error(
-        "AI response validation failed:",
-        validatedResponse.error.issues
-      );
+      logger.error("AI response validation failed", {
+        feature: "ai-task-extraction",
+        userId: user.id,
+        validationIssues: validatedResponse.error.issues
+      });
       return NextResponse.json(
         {
           success: false,
@@ -241,7 +246,10 @@ export async function POST(
       extractedAt: new Date().toISOString(),
     } as ExtractTasksSuccessResponse);
   } catch (error) {
-    console.error("Task extraction error:", error);
+    logger.error("Task extraction error", {
+      feature: "ai-task-extraction",
+      error
+    });
 
     // Handle timeout errors
     if (isTimeoutError(error)) {

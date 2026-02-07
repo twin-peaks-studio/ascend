@@ -10,6 +10,7 @@
 
 import { useCallback, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { logger } from "@/lib/logger/logger";
 import { useAuth } from "@/hooks/use-auth";
 import type { TaskWithProject, Project } from "@/types";
 
@@ -106,7 +107,11 @@ export function useSearch() {
           projects: (projectData as Project[]) || [],
         });
       } catch (err) {
-        console.error("Search error:", err);
+        logger.error("Search error", {
+          userId: user?.id,
+          query,
+          error: err
+        });
         setError(err instanceof Error ? err : new Error("Search failed"));
         setResults({ tasks: [], projects: [] });
       } finally {

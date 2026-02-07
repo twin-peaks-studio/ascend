@@ -8,6 +8,8 @@
  * to no-op (Supabase Realtime still provides synchronization).
  */
 
+import { logger } from "@/lib/logger/logger";
+
 const CHANNEL_NAME = "timer-sync-local";
 
 type SyncCallback = () => void;
@@ -21,7 +23,9 @@ class CrossTabSync {
 
     // Check for BroadcastChannel support (96%+ of browsers as of 2025)
     if (!("BroadcastChannel" in window)) {
-      console.log("[CrossTabSync] BroadcastChannel not supported, using Realtime only");
+      logger.info("BroadcastChannel not supported, using Realtime only", {
+        feature: "cross-tab-sync"
+      });
       return;
     }
 
@@ -33,13 +37,19 @@ class CrossTabSync {
           try {
             callback();
           } catch (error) {
-            console.error("[CrossTabSync] Callback error:", error);
+            logger.error("Cross-tab sync callback error", {
+              feature: "cross-tab-sync",
+              error
+            });
           }
         });
       };
     } catch (error) {
       // BroadcastChannel may fail in some contexts (e.g., file:// protocol)
-      console.warn("[CrossTabSync] Failed to create channel:", error);
+      logger.warn("Failed to create BroadcastChannel", {
+        feature: "cross-tab-sync",
+        error
+      });
     }
   }
 

@@ -12,6 +12,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
 import { getClient } from "@/lib/supabase/client-manager";
 import { withTimeout, TIMEOUTS } from "@/lib/utils/with-timeout";
+import { logger } from "@/lib/logger/logger";
 import { useAuth } from "@/hooks/use-auth";
 import type { Task, TaskWithProject, TaskStatus } from "@/types";
 import type { TaskInsert, TaskUpdate } from "@/types/database";
@@ -44,7 +45,10 @@ async function fetchTasksForUser(userId: string): Promise<TaskWithProject[]> {
   );
 
   if (memberResult.error) {
-    console.error("Error fetching member projects:", memberResult.error);
+    logger.error("Error fetching member projects", {
+      userId,
+      error: memberResult.error
+    });
   }
 
   const memberProjectIds = memberResult.data?.map((m: { project_id: string }) => m.project_id) || [];
@@ -57,7 +61,10 @@ async function fetchTasksForUser(userId: string): Promise<TaskWithProject[]> {
   );
 
   if (ownedResult.error) {
-    console.error("Error fetching owned projects:", ownedResult.error);
+    logger.error("Error fetching owned projects", {
+      userId,
+      error: ownedResult.error
+    });
   }
 
   const ownedProjectIds = ownedResult.data?.map((p: { id: string }) => p.id) || [];
@@ -96,7 +103,11 @@ async function fetchTasksForUser(userId: string): Promise<TaskWithProject[]> {
   );
 
   if (tasksResult.error) {
-    console.error("Supabase error details:", tasksResult.error);
+    logger.error("Error fetching tasks", {
+      userId,
+      error: tasksResult.error,
+      accessibleProjectCount: accessibleProjectIds.length
+    });
     throw tasksResult.error;
   }
 
@@ -229,12 +240,15 @@ export function useTaskMutations() {
           details?: string;
           hint?: string;
         };
-        console.error("Error creating task:", {
-          message: supabaseError.message,
-          code: supabaseError.code,
-          details: supabaseError.details,
-          hint: supabaseError.hint,
-          raw: err,
+        logger.error("Error creating task", {
+          userId: user.id,
+          projectId: input.project_id,
+          error: {
+            message: supabaseError.message,
+            code: supabaseError.code,
+            details: supabaseError.details,
+            hint: supabaseError.hint,
+          },
         });
         toast.error(supabaseError.message || "Failed to create task");
         return null;
@@ -277,12 +291,14 @@ export function useTaskMutations() {
           details?: string;
           hint?: string;
         };
-        console.error("Error updating task:", {
-          message: supabaseError.message,
-          code: supabaseError.code,
-          details: supabaseError.details,
-          hint: supabaseError.hint,
-          raw: err,
+        logger.error("Error updating task", {
+          taskId,
+          error: {
+            message: supabaseError.message,
+            code: supabaseError.code,
+            details: supabaseError.details,
+            hint: supabaseError.hint,
+          },
         });
         toast.error(supabaseError.message || "Failed to update task");
         return null;
@@ -318,7 +334,12 @@ export function useTaskMutations() {
         if (updateResult.error) throw updateResult.error;
         return true;
       } catch (err) {
-        console.error("Error updating task position:", err);
+        logger.error("Error updating task position", {
+          taskId,
+          newStatus,
+          newPosition,
+          error: err
+        });
         toast.error("Failed to move task");
         return false;
       }
@@ -351,7 +372,10 @@ export function useTaskMutations() {
         await Promise.all(updates);
         return true;
       } catch (err) {
-        console.error("Error reordering tasks:", err);
+        logger.error("Error reordering tasks", {
+          taskCount: tasksToUpdate.length,
+          error: err
+        });
         toast.error("Failed to reorder tasks");
         return false;
       }
@@ -378,7 +402,10 @@ export function useTaskMutations() {
         toast.success("Task deleted successfully");
         return true;
       } catch (err) {
-        console.error("Error deleting task:", err);
+        logger.error("Error deleting task", {
+          taskId,
+          error: err
+        });
         toast.error("Failed to delete task");
         return false;
       } finally {
@@ -414,7 +441,10 @@ export function useTaskMutations() {
         toast.success("Task archived successfully");
         return true;
       } catch (err) {
-        console.error("Error archiving task:", err);
+        logger.error("Error archiving task", {
+          taskId,
+          error: err
+        });
         toast.error("Failed to archive task");
         return false;
       } finally {
@@ -452,7 +482,11 @@ export function useTaskMutations() {
         );
         return true;
       } catch (err) {
-        console.error("Error updating duplicate status:", err);
+        logger.error("Error updating duplicate status", {
+          taskId,
+          isDuplicate,
+          error: err
+        });
         toast.error("Failed to update task");
         return false;
       } finally {

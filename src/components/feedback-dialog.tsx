@@ -16,6 +16,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
 import { CheckCircle2, Loader2 } from "lucide-react";
+import { logger } from "@/lib/logger/logger";
 
 interface FeedbackDialogProps {
   open: boolean;
@@ -74,7 +75,11 @@ export function FeedbackDialog({ open, onOpenChange }: FeedbackDialogProps) {
         .single();
 
       if (projectError || !projectData) {
-        console.error("Error finding Ascend project:", projectError);
+        logger.error("Error finding Ascend project for feedback", {
+          userId: user.id,
+          projectName: ASCEND_PROJECT_NAME,
+          error: projectError
+        });
         toast.error("Unable to submit feedback. Please try again later.");
         return;
       }
@@ -88,7 +93,11 @@ export function FeedbackDialog({ open, onOpenChange }: FeedbackDialogProps) {
         .single();
 
       if (assigneeError || !assigneeData) {
-        console.error("Error finding assignee:", assigneeError);
+        logger.error("Error finding feedback assignee", {
+          userId: user.id,
+          assigneeEmail: FEEDBACK_ASSIGNEE_EMAIL,
+          error: assigneeError
+        });
         toast.error("Unable to submit feedback. Please try again later.");
         return;
       }
@@ -116,7 +125,11 @@ export function FeedbackDialog({ open, onOpenChange }: FeedbackDialogProps) {
       });
 
       if (insertError) {
-        console.error("Error creating feedback task:", insertError);
+        logger.error("Error creating feedback task", {
+          userId: user.id,
+          feedbackTitle: title,
+          error: insertError
+        });
         toast.error("Failed to submit feedback. Please try again.");
         return;
       }
@@ -124,7 +137,11 @@ export function FeedbackDialog({ open, onOpenChange }: FeedbackDialogProps) {
       // Show success state
       setIsSubmitted(true);
     } catch (error) {
-      console.error("Unexpected error submitting feedback:", error);
+      logger.error("Unexpected error submitting feedback", {
+        userId: user.id,
+        feedbackTitle: title,
+        error
+      });
       toast.error("An unexpected error occurred. Please try again.");
     } finally {
       setIsSubmitting(false);

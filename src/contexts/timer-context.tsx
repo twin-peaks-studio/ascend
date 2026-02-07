@@ -22,6 +22,7 @@ import { useActiveTimer, timeEntryKeys, formatDuration } from "@/hooks/use-time-
 import { useTimerRealtime } from "@/hooks/use-timer-realtime";
 import { timerStorage, type ActiveTimerState } from "@/lib/timer-storage";
 import { crossTabSync } from "@/lib/cross-tab-sync";
+import { logger } from "@/lib/logger/logger";
 import { useAuth } from "@/hooks/use-auth";
 import { getClient } from "@/lib/supabase/client-manager";
 import { withTimeout, TIMEOUTS } from "@/lib/utils/with-timeout";
@@ -172,7 +173,11 @@ export function TimerProvider({ children }: { children: ReactNode }) {
 
       toast.success("Timer stopped");
     } catch (error) {
-      console.error("Failed to stop timer:", error);
+      logger.error("Failed to stop timer", {
+        userId: user.id,
+        activeTimerId: activeTimer.id,
+        error
+      });
       toast.error("Failed to stop timer");
     } finally {
       setIsMutating(false);
@@ -247,11 +252,15 @@ export function TimerProvider({ children }: { children: ReactNode }) {
         toast.success("Timer started");
       } catch (error) {
         const supabaseError = error as { message?: string; code?: string; details?: string };
-        console.error("Failed to start timer:", {
-          message: supabaseError.message,
-          code: supabaseError.code,
-          details: supabaseError.details,
-          raw: error,
+        logger.error("Failed to start timer", {
+          userId: user.id,
+          entityType,
+          entityId,
+          error: {
+            message: supabaseError.message,
+            code: supabaseError.code,
+            details: supabaseError.details,
+          },
         });
         toast.error(supabaseError.message || "Failed to start timer");
       } finally {

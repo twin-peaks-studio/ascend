@@ -8,6 +8,7 @@ import {
   isAllowedFileType,
   getFileRejectionReason,
 } from "@/lib/validation/file-types";
+import { logger } from "@/lib/logger/logger";
 
 type EntityType = "task" | "project";
 
@@ -42,7 +43,11 @@ export function useAttachments(entityType: EntityType, entityId: string | null) 
       .order("created_at", { ascending: false });
 
     if (fetchError) {
-      console.error("Error fetching attachments:", fetchError);
+      logger.error("Error fetching attachments", {
+        entityType,
+        entityId,
+        error: fetchError
+      });
       setError(fetchError.message);
       setAttachments([]);
     } else {
@@ -130,7 +135,13 @@ export function useAttachments(entityType: EntityType, entityId: string | null) 
         return typedAttachment;
       } catch (err) {
         const message = err instanceof Error ? err.message : "Upload failed";
-        console.error("Upload error:", err);
+        logger.error("Attachment upload error", {
+          entityType,
+          entityId,
+          filename: file.name,
+          fileSize: file.size,
+          error: err
+        });
         setError(message);
         toast.error(message);
         return null;
@@ -161,7 +172,11 @@ export function useAttachments(entityType: EntityType, entityId: string | null) 
           .remove([attachment.file_path]);
 
         if (storageError) {
-          console.warn("Storage delete error:", storageError);
+          logger.warn("Storage delete error", {
+            attachmentId,
+            filePath: attachment.file_path,
+            error: storageError
+          });
           // Continue to delete DB record even if storage fails
         }
 
@@ -180,7 +195,11 @@ export function useAttachments(entityType: EntityType, entityId: string | null) 
         return true;
       } catch (err) {
         const message = err instanceof Error ? err.message : "Delete failed";
-        console.error("Delete error:", err);
+        logger.error("Attachment delete error", {
+          attachmentId,
+          filename: attachment.filename,
+          error: err
+        });
         toast.error(message);
         return false;
       }

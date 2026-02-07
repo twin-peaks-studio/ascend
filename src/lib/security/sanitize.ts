@@ -10,6 +10,8 @@
  * 4. Normalize whitespace
  */
 
+import { logger } from "@/lib/logger/logger";
+
 /**
  * Characters that are potentially dangerous in certain contexts
  */
@@ -110,7 +112,11 @@ export function sanitizeUrl(url: string | null | undefined): string | null {
     lowerUrl.startsWith("vbscript:") ||
     lowerUrl.startsWith("file:")
   ) {
-    console.warn(`Blocked dangerous URL protocol: ${trimmedUrl}`);
+    logger.warn("Blocked dangerous URL protocol", {
+      feature: "url-sanitization",
+      url: trimmedUrl,
+      securityEvent: "dangerous-protocol-blocked"
+    });
     return null;
   }
 
@@ -120,7 +126,12 @@ export function sanitizeUrl(url: string | null | undefined): string | null {
 
     // Only allow http and https protocols
     if (!["http:", "https:"].includes(parsed.protocol)) {
-      console.warn(`Blocked non-HTTP URL protocol: ${parsed.protocol}`);
+      logger.warn("Blocked non-HTTP URL protocol", {
+        feature: "url-sanitization",
+        url: trimmedUrl,
+        protocol: parsed.protocol,
+        securityEvent: "non-http-protocol-blocked"
+      });
       return null;
     }
 
@@ -135,12 +146,19 @@ export function sanitizeUrl(url: string | null | undefined): string | null {
         const parsed = new URL(withProtocol);
         return parsed.href;
       } catch {
-        console.warn(`Invalid URL: ${trimmedUrl}`);
+        logger.warn("Invalid URL after adding protocol", {
+          feature: "url-sanitization",
+          url: trimmedUrl,
+          attemptedUrl: `https://${trimmedUrl}`
+        });
         return null;
       }
     }
 
-    console.warn(`Invalid URL: ${trimmedUrl}`);
+    logger.warn("Invalid URL", {
+      feature: "url-sanitization",
+      url: trimmedUrl
+    });
     return null;
   }
 }

@@ -16,6 +16,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { noteKeys } from "@/hooks/use-notes";
 import { taskKeys } from "@/hooks/use-tasks";
 import { toast } from "sonner";
+import { logger } from "@/lib/logger/logger";
 import type {
   ExtractedTask,
   RawExtractedTask,
@@ -133,7 +134,12 @@ export function useTaskExtraction(): UseTaskExtractionReturn {
         setExtractedTasks(toClientTasks(data.tasks));
         setStatus("reviewing");
       } catch (err) {
-        console.error("Task extraction failed:", err);
+        logger.error("Task extraction failed", {
+          userId: user.id,
+          noteId,
+          projectId,
+          error: err
+        });
         setError({
           type: "api_error",
           message: "Failed to connect to AI service",
@@ -223,7 +229,12 @@ export function useTaskExtraction(): UseTaskExtractionReturn {
           .single();
 
         if (taskError) {
-          console.error("Failed to create task:", taskError);
+          logger.error("Failed to create task from extraction", {
+            userId: user.id,
+            projectId: sourceProjectId,
+            taskTitle: task.title,
+            error: taskError
+          });
           continue;
         }
 
@@ -239,14 +250,24 @@ export function useTaskExtraction(): UseTaskExtractionReturn {
           });
 
         if (linkError) {
-          console.error("Failed to link task to note:", linkError);
+          logger.error("Failed to link task to note", {
+            userId: user.id,
+            noteId: sourceNoteId,
+            taskId: createdTask.id,
+            error: linkError
+          });
           // Task was created but not linked - still count as partial success
         }
 
         successCount++;
         setCreatedCount(successCount);
       } catch (err) {
-        console.error("Error creating task:", err);
+        logger.error("Error creating task from extraction", {
+          userId: user.id,
+          projectId: sourceProjectId,
+          taskTitle: task.title,
+          error: err
+        });
       }
     }
 

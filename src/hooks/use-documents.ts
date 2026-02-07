@@ -11,6 +11,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
 import { getClient } from "@/lib/supabase/client-manager";
 import { withTimeout, TIMEOUTS } from "@/lib/utils/with-timeout";
+import { logger } from "@/lib/logger/logger";
 import type { ProjectDocument } from "@/types";
 import type { ProjectDocumentInsert } from "@/types/database";
 import {
@@ -116,7 +117,11 @@ export function useDocumentMutations() {
         toast.success(`${typeLabel} added successfully`);
         return data as ProjectDocument;
       } catch (err) {
-        console.error("Error creating document:", err);
+        logger.error("Error creating document", {
+          projectId: input.project_id,
+          documentType: input.type,
+          error: err
+        });
         toast.error("Failed to add document");
         return null;
       } finally {
@@ -145,7 +150,11 @@ export function useDocumentMutations() {
         toast.success("Document removed successfully");
         return true;
       } catch (err) {
-        console.error("Error deleting document:", err);
+        logger.error("Error deleting document", {
+          documentId,
+          projectId,
+          error: err
+        });
         toast.error("Failed to remove document");
         return false;
       } finally {

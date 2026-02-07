@@ -12,6 +12,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
 import { getClient } from "@/lib/supabase/client-manager";
 import { withTimeout, TIMEOUTS } from "@/lib/utils/with-timeout";
+import { logger } from "@/lib/logger/logger";
 import { useAuth } from "@/hooks/use-auth";
 import type { Project, ProjectWithRelations } from "@/types";
 import type { ProjectInsert, ProjectUpdate } from "@/types/database";
@@ -46,7 +47,10 @@ async function fetchProjectsForUser(userId: string): Promise<ProjectWithRelation
   );
 
   if (memberResult.error) {
-    console.error("Error fetching member projects:", memberResult.error);
+    logger.error("Error fetching member projects", {
+      userId,
+      error: memberResult.error
+    });
   }
 
   const memberProjectIds = memberResult.data?.map((m: { project_id: string }) => m.project_id) || [];
@@ -76,7 +80,11 @@ async function fetchProjectsForUser(userId: string): Promise<ProjectWithRelation
   );
 
   if (projectsResult.error) {
-    console.error("Supabase error details:", projectsResult.error);
+    logger.error("Error fetching projects", {
+      userId,
+      error: projectsResult.error,
+      memberProjectCount: memberProjectIds.length
+    });
     throw projectsResult.error;
   }
 
@@ -250,7 +258,11 @@ export function useProjectMutations() {
         toast.success("Project created successfully");
         return project;
       } catch (err) {
-        console.error("Error creating project:", err);
+        logger.error("Error creating project", {
+          userId: user.id,
+          title: input.title,
+          error: err
+        });
         toast.error("Failed to create project");
         return null;
       } finally {
@@ -300,12 +312,14 @@ export function useProjectMutations() {
           details?: string;
           hint?: string;
         };
-        console.error("Error updating project:", {
-          message: supabaseError.message,
-          code: supabaseError.code,
-          details: supabaseError.details,
-          hint: supabaseError.hint,
-          raw: err,
+        logger.error("Error updating project", {
+          projectId,
+          error: {
+            message: supabaseError.message,
+            code: supabaseError.code,
+            details: supabaseError.details,
+            hint: supabaseError.hint,
+          },
         });
         toast.error(supabaseError.message || "Failed to update project");
         return null;
@@ -335,7 +349,10 @@ export function useProjectMutations() {
         toast.success("Project deleted successfully");
         return true;
       } catch (err) {
-        console.error("Error deleting project:", err);
+        logger.error("Error deleting project", {
+          projectId,
+          error: err
+        });
         toast.error("Failed to delete project");
         return false;
       } finally {

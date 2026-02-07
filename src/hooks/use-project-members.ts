@@ -11,6 +11,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
 import { getClient } from "@/lib/supabase/client-manager";
 import { withTimeout, TIMEOUTS } from "@/lib/utils/with-timeout";
+import { logger } from "@/lib/logger/logger";
 import { useAuth } from "@/hooks/use-auth";
 import type { ProjectMember, Profile } from "@/types/database";
 import { toast } from "sonner";
@@ -213,7 +214,12 @@ export function useProjectMemberMutations() {
         toast.success(`${profile.display_name || profile.email} has been added to the project`);
         return { success: true };
       } catch (err) {
-        console.error("Error inviting user:", err);
+        logger.error("Error inviting user", {
+          projectId,
+          email,
+          invitedBy: user.id,
+          error: err
+        });
         return {
           success: false,
           error: "Failed to invite user. Please try again.",
@@ -302,7 +308,12 @@ export function useProjectMemberMutations() {
         toast.success("Member removed from project");
         return { success: true };
       } catch (err) {
-        console.error("Error removing member:", err);
+        logger.error("Error removing member", {
+          projectId,
+          memberId,
+          removedBy: user.id,
+          error: err
+        });
         return {
           success: false,
           error: "Failed to remove member. Please try again.",
