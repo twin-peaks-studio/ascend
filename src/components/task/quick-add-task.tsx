@@ -465,6 +465,22 @@ export function QuickAddTask({
   defaultAssigneeId,
   defaultProjectId,
 }: QuickAddTaskProps) {
+  // Prevent body scroll when drawer is open (like Todoist)
+  useEffect(() => {
+    if (open) {
+      // Store original overflow
+      const originalOverflow = document.body.style.overflow;
+
+      // Prevent body scroll
+      document.body.style.overflow = 'hidden';
+
+      // Cleanup on close
+      return () => {
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+  }, [open]);
+
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
       <DrawerContent>
