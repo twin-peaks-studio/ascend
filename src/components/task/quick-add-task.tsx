@@ -466,27 +466,20 @@ export function QuickAddTask({
   defaultProjectId,
 }: QuickAddTaskProps) {
   return (
-    <Drawer
-      open={open}
-      onOpenChange={onOpenChange}
-      repositionInputs={true}
-      modal={true}
-    >
-      <DrawerContent className="max-h-[400px] flex flex-col">
+    <Drawer open={open} onOpenChange={onOpenChange} repositionInputs={false}>
+      <DrawerContent className="max-h-[90vh]">
         <DrawerTitle className="sr-only">Add task</DrawerTitle>
         {/* Only render form when drawer is open - unmounts on close which resets state */}
         {open && (
-          <div className="overflow-y-auto flex-1">
-            <QuickAddTaskForm
-              onSubmit={onSubmit}
-              onClose={() => onOpenChange(false)}
-              projects={projects}
-              profiles={profiles}
-              loading={loading}
-              defaultAssigneeId={defaultAssigneeId}
-              defaultProjectId={defaultProjectId}
-            />
-          </div>
+          <QuickAddTaskForm
+            onSubmit={onSubmit}
+            onClose={() => onOpenChange(false)}
+            projects={projects}
+            profiles={profiles}
+            loading={loading}
+            defaultAssigneeId={defaultAssigneeId}
+            defaultProjectId={defaultProjectId}
+          />
         )}
       </DrawerContent>
     </Drawer>
