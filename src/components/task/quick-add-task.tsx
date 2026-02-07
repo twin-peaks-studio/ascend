@@ -187,7 +187,7 @@ function QuickAddTaskForm({
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Description"
-            className="border-0 p-0 min-h-[24px] resize-none text-sm text-muted-foreground placeholder:text-muted-foreground/50 focus-visible:ring-0 shadow-none bg-transparent"
+            className="border-0 p-0 min-h-[24px] resize-none text-muted-foreground placeholder:text-muted-foreground/50 focus-visible:ring-0 shadow-none bg-transparent"
             rows={1}
             maxLength={5000}
           />
