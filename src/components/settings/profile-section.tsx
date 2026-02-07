@@ -10,11 +10,15 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import { Loader2, Upload, User, X } from "lucide-react";
 import { profileUpdateSchema, avatarUploadSchema } from "@/lib/validation/settings";
+import { getAvatarUrl } from "@/lib/utils/gravatar";
 
 export function ProfileSection() {
   const { user } = useAuth();
   const { profile, loading: profileLoading } = useProfile(user?.id ?? null);
   const updateProfile = useUpdateProfile();
+
+  // Get avatar URL with Gravatar fallback
+  const avatarUrl = getAvatarUrl(profile?.avatar_url, user?.email ?? "", 160);
 
   // Debug: Log profile changes
   useEffect(() => {
@@ -126,9 +130,9 @@ export function ProfileSection() {
       <div className="rounded-lg border p-6">
         <h3 className="text-lg font-semibold mb-4">Profile Picture</h3>
         <div className="flex items-center gap-6">
-          <Avatar className="h-20 w-20" key={profile?.avatar_url || 'no-avatar'}>
+          <Avatar className="h-20 w-20" key={avatarUrl}>
             <AvatarImage
-              src={profile?.avatar_url ?? undefined}
+              src={avatarUrl}
               alt="Profile avatar"
             />
             <AvatarFallback>
