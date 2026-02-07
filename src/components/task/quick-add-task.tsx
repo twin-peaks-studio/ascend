@@ -467,7 +467,7 @@ export function QuickAddTask({
 }: QuickAddTaskProps) {
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
-      <DrawerContent className="max-h-[85vh]">
+      <DrawerContent>
         <DrawerTitle className="sr-only">Add task</DrawerTitle>
         {/* Only render form when drawer is open - unmounts on close which resets state */}
         {open && (
