@@ -47,9 +47,7 @@ export const passwordChangeSchema = z
   });
 
 export const accountDeletionSchema = z.object({
-  confirmation: z.literal("delete my account", {
-    errorMap: () => ({ message: 'You must type "delete my account" to confirm' }),
-  }),
+  confirmation: z.literal("delete my account"),
 });
 
 export type ProfileUpdate = z.infer<typeof profileUpdateSchema>;
