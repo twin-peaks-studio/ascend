@@ -10,7 +10,7 @@
  * members of projects the current user has access to. This scales properly.
  */
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getClient } from "@/lib/supabase/client-manager";
 import { withTimeout, TIMEOUTS } from "@/lib/utils/with-timeout";
 import { logger } from "@/lib/logger/logger";
@@ -188,4 +188,49 @@ export function useProfile(profileId: string | null) {
     error: error instanceof Error ? error.message : null,
     refetch,
   };
+}
+
+/**
+ * Hook to update the current user's profile
+ */
+export function useUpdateProfile() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (updates: { display_name?: string; avatar_url?: string | null }) => {
+      if (!user) throw new Error("Not authenticated");
+
+      const supabase = getClient();
+      const result = await withTimeout(
+        supabase
+          .from("profiles")
+          .update({
+            ...updates,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", user.id)
+          .select()
+          .single(),
+        TIMEOUTS.MUTATION,
+        "Profile update timed out"
+      );
+
+      if (result.error) {
+        logger.error("Profile update error", {
+          userId: user.id,
+          error: result.error,
+        });
+        throw result.error;
+      }
+
+      return result.data as Profile;
+    },
+    onSuccess: (updatedProfile) => {
+      // Update the detail cache
+      queryClient.setQueryData(profileKeys.detail(updatedProfile.id), updatedProfile);
+      // Invalidate team list to pick up changes
+      queryClient.invalidateQueries({ queryKey: profileKeys.teamList(user!.id) });
+    },
+  });
 }
