@@ -1,12 +1,11 @@
 "use client";
 
-import { MessageSquare, Loader2 } from "lucide-react";
+import { useState } from "react";
+import { MessageSquare, Loader2, ChevronDown, ChevronRight } from "lucide-react";
 import { CommentForm } from "./comment-form";
 import { CommentItem } from "./comment-item";
 import { useCommentMutations, useTaskComments, useProjectComments } from "@/hooks/use-comments";
 import { useRealtimeCommentsForTask, useRealtimeCommentsForProject } from "@/hooks/use-realtime-comments";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 
 interface CommentListProps {
   taskId?: string | null;
@@ -14,6 +13,8 @@ interface CommentListProps {
 }
 
 export function CommentList({ taskId, projectId }: CommentListProps) {
+  const [isExpanded, setIsExpanded] = useState(false);
+
   // Fetch comments based on whether this is for a task or project
   const { data: taskCommentsData, isLoading: isLoadingTaskComments } = useTaskComments(taskId || null);
   const { data: projectCommentsData, isLoading: isLoadingProjectComments } = useProjectComments(projectId || null);
@@ -28,6 +29,17 @@ export function CommentList({ taskId, projectId }: CommentListProps) {
   // Determine which data to use
   const comments = taskId ? taskCommentsData : projectCommentsData;
   const isLoading = taskId ? isLoadingTaskComments : isLoadingProjectComments;
+
+  // Auto-expand when comments exist (render-time check)
+  const [hasCheckedComments, setHasCheckedComments] = useState(false);
+  if (comments && comments.length > 0 && !hasCheckedComments) {
+    setHasCheckedComments(true);
+    setIsExpanded(true);
+  }
+  // Reset the check when all comments are deleted
+  if (comments && comments.length === 0 && hasCheckedComments) {
+    setHasCheckedComments(false);
+  }
 
   const handleCreateComment = async (input: Parameters<typeof createComment>[0]) => {
     await createComment(input);
@@ -46,55 +58,61 @@ export function CommentList({ taskId, projectId }: CommentListProps) {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <MessageSquare className="h-5 w-5" />
-          Comments
-          {comments && comments.length > 0 && (
-            <span className="text-sm font-normal text-muted-foreground">
-              ({comments.length})
-            </span>
-          )}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Comment Form */}
-        <CommentForm
-          taskId={taskId}
-          projectId={projectId}
-          onSubmit={handleCreateComment}
-          isSubmitting={isCreating}
-        />
-
-        <Separator />
-
-        {/* Comments List */}
-        {isLoading ? (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-          </div>
-        ) : comments && comments.length > 0 ? (
-          <div className="space-y-4">
-            {comments.map((comment) => (
-              <CommentItem
-                key={comment.id}
-                comment={comment}
-                onUpdate={handleUpdateComment}
-                onDelete={handleDeleteComment}
-                isUpdating={isUpdating}
-                isDeleting={isDeleting}
-              />
-            ))}
-          </div>
+    <div>
+      {/* Collapsible Header */}
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors w-full"
+      >
+        {isExpanded ? (
+          <ChevronDown className="h-4 w-4" />
         ) : (
-          <div className="text-center py-8 text-muted-foreground">
-            <MessageSquare className="h-12 w-12 mx-auto mb-3 opacity-20" />
-            <p className="text-sm">No comments yet</p>
-            <p className="text-xs mt-1">Be the first to share your thoughts</p>
-          </div>
+          <ChevronRight className="h-4 w-4" />
         )}
-      </CardContent>
-    </Card>
+        <MessageSquare className="h-4 w-4" />
+        <span>
+          Comments{" "}
+          {comments && comments.length > 0 && `(${comments.length})`}
+        </span>
+      </button>
+
+      {/* Expanded Content */}
+      {isExpanded && (
+        <div className="mt-4 space-y-4">
+          {/* Comments List */}
+          {isLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : comments && comments.length > 0 ? (
+            <div className="space-y-4">
+              {comments.map((comment) => (
+                <CommentItem
+                  key={comment.id}
+                  comment={comment}
+                  onUpdate={handleUpdateComment}
+                  onDelete={handleDeleteComment}
+                  isUpdating={isUpdating}
+                  isDeleting={isDeleting}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-6 text-muted-foreground">
+              <MessageSquare className="h-10 w-10 mx-auto mb-2 opacity-20" />
+              <p className="text-xs">No comments yet</p>
+            </div>
+          )}
+
+          {/* Comment Form - at the bottom */}
+          <CommentForm
+            taskId={taskId}
+            projectId={projectId}
+            onSubmit={handleCreateComment}
+            isSubmitting={isCreating}
+          />
+        </div>
+      )}
+    </div>
   );
 }
