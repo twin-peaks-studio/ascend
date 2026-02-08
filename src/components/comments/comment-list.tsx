@@ -79,32 +79,34 @@ export function CommentList({ taskId, projectId }: CommentListProps) {
       {/* Expanded Content */}
       {isExpanded && (
         <div className="mt-4 space-y-4">
-          {/* Comments List */}
-          {isLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            </div>
-          ) : comments && comments.length > 0 ? (
-            <div className="space-y-4">
-              {comments.map((comment) => (
-                <CommentItem
-                  key={comment.id}
-                  comment={comment}
-                  onUpdate={handleUpdateComment}
-                  onDelete={handleDeleteComment}
-                  isUpdating={isUpdating}
-                  isDeleting={isDeleting}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-6 text-muted-foreground">
-              <MessageSquare className="h-10 w-10 mx-auto mb-2 opacity-20" />
-              <p className="text-xs">No comments yet</p>
-            </div>
-          )}
+          {/* Comments List - Scrollable with max height */}
+          <div className="max-h-[400px] overflow-y-auto pr-2 -mr-2">
+            {isLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : comments && comments.length > 0 ? (
+              <div className="space-y-4">
+                {comments.map((comment) => (
+                  <CommentItem
+                    key={comment.id}
+                    comment={comment}
+                    onUpdate={handleUpdateComment}
+                    onDelete={handleDeleteComment}
+                    isUpdating={isUpdating}
+                    isDeleting={isDeleting}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-6 text-muted-foreground">
+                <MessageSquare className="h-10 w-10 mx-auto mb-2 opacity-20" />
+                <p className="text-xs">No comments yet</p>
+              </div>
+            )}
+          </div>
 
-          {/* Comment Form - at the bottom */}
+          {/* Comment Form - Fixed at bottom, outside scrollable area */}
           <CommentForm
             taskId={taskId}
             projectId={projectId}
