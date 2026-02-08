@@ -17,17 +17,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { RichTextEditor } from "@/components/shared";
 import { DeleteConfirmationDialog } from "@/components/ui/delete-confirmation-dialog";
-import { TaskDetailsResponsive } from "@/components/task";
 import { useProject } from "@/hooks/use-projects";
-import { useProfiles } from "@/hooks/use-profiles";
 import { useNote, useNoteMutations } from "@/hooks/use-notes";
 import { useTaskMutations } from "@/hooks/use-tasks";
 import { QuickAddNoteTask } from "@/components/note";
 import { TaskExtractionDialog } from "@/components/ai";
 import { useTaskExtraction } from "@/hooks/use-task-extraction";
 import { cn } from "@/lib/utils";
-import type { Task, TaskStatus, TaskWithProject } from "@/types";
-import type { UpdateTaskInput } from "@/lib/validation";
+import type { Task, TaskStatus } from "@/types";
 import { PRIORITY_DISPLAY_SHORT } from "@/types";
 
 export default function NoteDetailPage() {
@@ -38,7 +35,6 @@ export default function NoteDetailPage() {
 
   const { project, loading: projectLoading } = useProject(projectId);
   const { note, setNote, loading: noteLoading } = useNote(noteId);
-  const { profiles } = useProfiles();
   const {
     updateNote,
     deleteNote,
@@ -58,9 +54,7 @@ export default function NoteDetailPage() {
   const [showTasks, setShowTasks] = useState(true);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
 
-  // Task details dialog state
-  const [showTaskDetails, setShowTaskDetails] = useState(false);
-  const [selectedTask, setSelectedTask] = useState<TaskWithProject | null>(null);
+  // Task delete confirmation state
   const [deleteTaskConfirm, setDeleteTaskConfirm] = useState<string | null>(null);
 
   // Task extraction dialog state
@@ -196,46 +190,12 @@ export default function NoteDetailPage() {
     [noteId, unlinkTaskFromNote, setNote, content, title]
   );
 
-  // Handle opening task details dialog
+  // Handle opening task details - navigate to task page
   const handleOpenTaskDetails = useCallback(
     (task: Task) => {
-      // Convert Task to TaskWithProject for the dialog
-      const taskWithProject: TaskWithProject = {
-        ...task,
-        project: project || null,
-      };
-      setSelectedTask(taskWithProject);
-      setShowTaskDetails(true);
+      router.push(`/tasks/${task.id}`);
     },
-    [project]
-  );
-
-  // Handle task update from details dialog
-  const handleTaskDetailsUpdate = useCallback(
-    async (data: UpdateTaskInput) => {
-      if (!selectedTask) return;
-
-      const result = await updateTask(selectedTask.id, data);
-      if (result) {
-        // Optimistically update the task in local state, preserving current content/title
-        setNote((prev) => {
-          if (!prev) return prev;
-          return {
-            ...prev,
-            content: content,
-            title: title,
-            tasks: prev.tasks.map((t) =>
-              t.id === selectedTask.id ? { ...t, ...data } : t
-            ),
-          };
-        });
-        // Also update selectedTask so dialog reflects changes
-        setSelectedTask((prev) =>
-          prev ? { ...prev, ...data } : prev
-        );
-      }
-    },
-    [selectedTask, updateTask, setNote, content, title]
+    [router]
   );
 
   // Handle task delete confirmation
@@ -510,28 +470,6 @@ export default function NoteDetailPage() {
         title="Delete Note"
         description={`Are you sure you want to delete "${note.title}"? This action cannot be undone. Tasks linked to this note will remain but will be unlinked.`}
       />
-
-      {/* Task Details Dialog */}
-      {selectedTask && (
-        <TaskDetailsResponsive
-          task={selectedTask}
-          profiles={profiles}
-          projects={project ? [project] : []}
-          open={showTaskDetails}
-          onOpenChange={(open) => {
-            setShowTaskDetails(open);
-            if (!open) {
-              setSelectedTask(null);
-            }
-          }}
-          onUpdate={handleTaskDetailsUpdate}
-          onDelete={(taskId) => {
-            setShowTaskDetails(false);
-            setSelectedTask(null);
-            setDeleteTaskConfirm(taskId);
-          }}
-        />
-      )}
 
       {/* Delete Task Confirmation */}
       <DeleteConfirmationDialog
