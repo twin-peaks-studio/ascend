@@ -10,10 +10,15 @@ import { useRealtimeCommentsForTask, useRealtimeCommentsForProject } from "@/hoo
 interface CommentListProps {
   taskId?: string | null;
   projectId?: string | null;
+  collapsible?: boolean;
 }
 
-export function CommentList({ taskId, projectId }: CommentListProps) {
-  const [isExpanded, setIsExpanded] = useState(false);
+export function CommentList({
+  taskId,
+  projectId,
+  collapsible = true
+}: CommentListProps) {
+  const [isExpanded, setIsExpanded] = useState(!collapsible);
 
   // Fetch comments based on whether this is for a task or project
   const { data: taskCommentsData, isLoading: isLoadingTaskComments } = useTaskComments(taskId || null);
@@ -59,28 +64,38 @@ export function CommentList({ taskId, projectId }: CommentListProps) {
 
   return (
     <div>
-      {/* Collapsible Header */}
-      <button
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors w-full"
-      >
-        {isExpanded ? (
-          <ChevronDown className="h-4 w-4" />
-        ) : (
-          <ChevronRight className="h-4 w-4" />
-        )}
-        <MessageSquare className="h-4 w-4" />
-        <span>
-          Comments{" "}
-          {comments && comments.length > 0 && `(${comments.length})`}
-        </span>
-      </button>
+      {/* Header - Collapsible or Static */}
+      {collapsible ? (
+        <button
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors w-full"
+        >
+          {isExpanded ? (
+            <ChevronDown className="h-4 w-4" />
+          ) : (
+            <ChevronRight className="h-4 w-4" />
+          )}
+          <MessageSquare className="h-4 w-4" />
+          <span>
+            Comments{" "}
+            {comments && comments.length > 0 && `(${comments.length})`}
+          </span>
+        </button>
+      ) : (
+        <div className="flex items-center gap-2 text-sm font-semibold mb-4">
+          <MessageSquare className="h-4 w-4" />
+          <span>
+            Comments{" "}
+            {comments && comments.length > 0 && `(${comments.length})`}
+          </span>
+        </div>
+      )}
 
-      {/* Expanded Content */}
-      {isExpanded && (
+      {/* Content - Always shown if not collapsible */}
+      {(isExpanded || !collapsible) && (
         <div className="mt-4 space-y-4">
-          {/* Comments List - Scrollable with max height */}
-          <div className="max-h-[250px] overflow-y-scroll overscroll-contain pr-2">
+          {/* Comments List - Scrollable only if collapsible */}
+          <div className={collapsible ? "max-h-[250px] overflow-y-scroll overscroll-contain pr-2" : ""}>
             {isLoading ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
