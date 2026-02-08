@@ -6,6 +6,10 @@ import { CommentForm } from "./comment-form";
 import { CommentItem } from "./comment-item";
 import { useCommentMutations, useTaskComments, useProjectComments } from "@/hooks/use-comments";
 import { useRealtimeCommentsForTask, useRealtimeCommentsForProject } from "@/hooks/use-realtime-comments";
+import { useProfiles } from "@/hooks/use-profiles";
+import { useAuth } from "@/hooks/use-auth";
+import { useCreateNotification, createNotificationMessage } from "@/hooks/use-notifications";
+import { getMentionedUserIds } from "@/lib/utils/mentions";
 
 interface CommentListProps {
   taskId?: string | null;
@@ -31,6 +35,11 @@ export function CommentList({
   // Comment mutations
   const { createComment, updateComment, deleteComment, isCreating, isUpdating, isDeleting } = useCommentMutations();
 
+  // For @mention notifications
+  const { profiles } = useProfiles();
+  const { user } = useAuth();
+  const { mutate: createNotification } = useCreateNotification();
+
   // Determine which data to use
   const comments = taskId ? taskCommentsData : projectCommentsData;
   const isLoading = taskId ? isLoadingTaskComments : isLoadingProjectComments;
@@ -47,7 +56,31 @@ export function CommentList({
   }
 
   const handleCreateComment = async (input: Parameters<typeof createComment>[0]) => {
-    await createComment(input);
+    // Create the comment
+    const newComment = await createComment(input);
+
+    // If comment was created successfully, check for @mentions
+    if (newComment && user) {
+      const mentionedUserIds = getMentionedUserIds(input.content, profiles);
+
+      // Create notifications for each mentioned user (except the author)
+      for (const mentionedUserId of mentionedUserIds) {
+        if (mentionedUserId === user.id) continue; // Don't notify yourself
+
+        const entityType = taskId ? "task" : "project";
+        const entityId = taskId || projectId || "";
+        const actorName = user.user_metadata?.display_name || user.email || "Someone";
+
+        createNotification({
+          user_id: mentionedUserId,
+          type: "mention",
+          entity_type: entityType as "task" | "project",
+          entity_id: entityId,
+          actor_id: user.id,
+          message: createNotificationMessage("mention", actorName, "a comment"),
+        });
+      }
+    }
   };
 
   const handleUpdateComment = async (id: string, updates: Parameters<typeof updateComment>[0]["updates"]) => {

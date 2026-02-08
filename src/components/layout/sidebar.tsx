@@ -14,6 +14,7 @@ import {
   Newspaper,
 } from "lucide-react";
 import { AscendLogo } from "@/components/ascend-logo";
+import { NotificationBell } from "@/components/notifications";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useProjects } from "@/hooks/use-projects";
@@ -152,13 +153,16 @@ export function Sidebar({ onShowFeedback }: SidebarProps) {
           isCollapsed ? "w-16" : "w-64"
         )}
       >
-        {/* Logo */}
+        {/* Logo and Notifications */}
         <div className={cn(
-          "flex h-16 items-center gap-2 border-b",
-          isCollapsed ? "justify-center px-2" : "px-6"
+          "flex h-16 items-center border-b",
+          isCollapsed ? "flex-col gap-2 justify-center px-2" : "gap-2 justify-between px-6"
         )}>
-          <AscendLogo className="h-8 w-auto shrink-0" />
-          {!isCollapsed && <span className="text-lg font-semibold">Ascend</span>}
+          <div className="flex items-center gap-2">
+            <AscendLogo className="h-8 w-auto shrink-0" />
+            {!isCollapsed && <span className="text-lg font-semibold">Ascend</span>}
+          </div>
+          <NotificationBell mode={isCollapsed ? "icon" : "icon"} />
         </div>
 
         {/* Navigation */}

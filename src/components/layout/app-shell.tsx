@@ -14,6 +14,7 @@ import { useRecoveryState } from "@/hooks/use-recovery";
 import { useTasks, useTaskMutations } from "@/hooks/use-tasks";
 import { useProfiles } from "@/hooks/use-profiles";
 import { useProjects } from "@/hooks/use-projects";
+import { useRealtimeNotifications } from "@/hooks/use-realtime-notifications";
 import { TaskDetailsResponsive } from "@/components/task/task-details-responsive";
 import { cn } from "@/lib/utils";
 import type { ViewMode } from "./header";
@@ -150,6 +151,9 @@ export function AppShell({
   const { isCollapsed } = useSidebar();
   const { user, initialized, confidence } = useAuth();
   const { isRefreshing } = useRecoveryState();
+
+  // Enable real-time notifications for the current user
+  useRealtimeNotifications(user?.id ?? null);
 
   // Initialize theme from localStorage or system preference
   useIsomorphicLayoutEffect(() => {

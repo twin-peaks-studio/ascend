@@ -473,6 +473,60 @@ export type Database = {
           }
         ];
       };
+      notifications: {
+        Row: {
+          id: string;
+          user_id: string;
+          type: "mention" | "comment" | "task_assigned" | "task_completed" | "project_update";
+          entity_type: "task" | "project" | "comment" | "note";
+          entity_id: string;
+          actor_id: string | null;
+          message: string;
+          read: boolean;
+          created_at: string;
+          read_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          type: "mention" | "comment" | "task_assigned" | "task_completed" | "project_update";
+          entity_type: "task" | "project" | "comment" | "note";
+          entity_id: string;
+          actor_id?: string | null;
+          message: string;
+          read?: boolean;
+          created_at?: string;
+          read_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          type?: "mention" | "comment" | "task_assigned" | "task_completed" | "project_update";
+          entity_type?: "task" | "project" | "comment" | "note";
+          entity_id?: string;
+          actor_id?: string | null;
+          message?: string;
+          read?: boolean;
+          created_at?: string;
+          read_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "notifications_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "notifications_actor_id_fkey";
+            columns: ["actor_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
