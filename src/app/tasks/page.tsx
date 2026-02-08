@@ -8,6 +8,7 @@ import { TaskDialog, TaskDetailsResponsive, QuickAddTask, TaskListView, TaskSort
 import { parseSortOptionKey, type TaskSortField, type TaskSortDirection } from "@/lib/task-sort";
 import { ProjectFilter } from "@/components/filters";
 import { useTasksByStatus, useTaskMutations } from "@/hooks/use-tasks";
+import { useRealtimeTasksGlobal } from "@/hooks/use-realtime-tasks";
 import { useProjects } from "@/hooks/use-projects";
 import { useProfiles } from "@/hooks/use-profiles";
 import { useIsMobile } from "@/hooks/use-media-query";
@@ -31,6 +32,9 @@ export default function TasksPage() {
     markAsDuplicate,
     loading: mutationLoading,
   } = useTaskMutations();
+
+  // Enable real-time task updates globally
+  useRealtimeTasksGlobal(user?.id ?? null);
 
   // View mode state (board or list) - persisted in localStorage
   const [viewMode, setViewMode] = useState<ViewMode>(() => {

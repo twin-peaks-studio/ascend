@@ -12,6 +12,7 @@ import { parseSortOptionKey, type TaskSortField, type TaskSortDirection } from "
 import { Button } from "@/components/ui/button";
 import { useProject } from "@/hooks/use-projects";
 import { useTaskMutations } from "@/hooks/use-tasks";
+import { useRealtimeTasksForProject } from "@/hooks/use-realtime-tasks";
 import { useProfiles } from "@/hooks/use-profiles";
 import { useIsMobile } from "@/hooks/use-media-query";
 import { useAuth } from "@/hooks/use-auth";
@@ -36,6 +37,9 @@ export default function ProjectTasksPage() {
     markAsDuplicate,
     loading: mutationLoading,
   } = useTaskMutations();
+
+  // Enable real-time task updates for this project
+  useRealtimeTasksForProject(projectId, user?.id ?? null);
 
   // View mode state (board or list) - persisted in localStorage
   const [viewMode, setViewMode] = useState<ViewMode>("list");
