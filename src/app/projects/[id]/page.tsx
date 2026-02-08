@@ -88,7 +88,7 @@ export default function ProjectDetailPage() {
     );
     // Default sort by priority (highest first) for the project overview
     return sortTasks(filtered, "priority", "desc");
-  }, [project?.tasks]);
+  }, [project]);
 
   // Inline editing state - use project values directly as initial values
   // Use projectId as key to reset state when navigating between projects
@@ -161,7 +161,7 @@ export default function ProjectDetailPage() {
       setTitle(project?.title ?? "");
     }
     setIsEditingTitle(false);
-  }, [title, project?.title, projectId, updateProject]);
+  }, [title, project, projectId, updateProject]);
 
   // Handle description save
   const handleDescriptionSave = useCallback(async () => {
@@ -174,7 +174,7 @@ export default function ProjectDetailPage() {
       setDescription(project?.description ?? "");
     }
     setIsEditingDescription(false);
-  }, [description, project?.description, projectId, updateProject]);
+  }, [description, project, projectId, updateProject]);
 
   // Handle status change
   const handleStatusChange = useCallback(async (status: string) => {

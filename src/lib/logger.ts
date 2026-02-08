@@ -75,7 +75,7 @@ class Logger {
 
     // Production: Structured JSON for parsing
     if (!this.isDevelopment) {
-      // eslint-disable-next-line no-console
+       
       console.log(JSON.stringify(logData));
       return;
     }
@@ -90,7 +90,7 @@ class Logger {
 
     const consoleMethod = level === 'debug' ? 'log' : level;
 
-    // eslint-disable-next-line no-console
+     
     console[consoleMethod](
       `${emoji} [${level.toUpperCase()}] ${message}`,
       context ? JSON.stringify(context, null, 2) : ''

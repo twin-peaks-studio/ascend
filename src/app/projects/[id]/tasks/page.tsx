@@ -56,18 +56,22 @@ export default function ProjectTasksPage() {
   }, []);
 
   // Sort state - persisted in localStorage
-  const [sortField, setSortField] = useState<TaskSortField>("position");
-  const [sortDirection, setSortDirection] = useState<TaskSortDirection>("asc");
-
-  // Load sort preference from localStorage
-  useEffect(() => {
+  const [sortField, setSortField] = useState<TaskSortField>(() => {
     const stored = localStorage.getItem("project-tasks-sort");
     if (stored) {
-      const { field, direction } = parseSortOptionKey(stored);
-      setSortField(field);
-      setSortDirection(direction);
+      const { field } = parseSortOptionKey(stored);
+      return field;
     }
-  }, []);
+    return "position";
+  });
+  const [sortDirection, setSortDirection] = useState<TaskSortDirection>(() => {
+    const stored = localStorage.getItem("project-tasks-sort");
+    if (stored) {
+      const { direction } = parseSortOptionKey(stored);
+      return direction;
+    }
+    return "asc";
+  });
 
   // Handle sort change
   const handleSortChange = useCallback((field: TaskSortField, direction: TaskSortDirection) => {

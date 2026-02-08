@@ -68,8 +68,10 @@ export function TaskForm({
   const { assignableProfiles, canAssign } = useProjectAssignees(effectiveProjectId, profiles);
 
   // Clear assignee if project changes and current assignee is not in the new project's members
+  // Valid use: data consistency when project changes
   useEffect(() => {
     if (assigneeId && !canAssign(assigneeId)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setAssigneeId(null);
     }
   }, [assigneeId, canAssign]);

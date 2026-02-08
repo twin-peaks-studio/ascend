@@ -74,6 +74,8 @@ export function RichTextEditor({
   if (!editor) return null;
 
   const addLink = () => {
+    // TODO: Replace with a proper dialog component (see Definition of Done: no-alert rule)
+    // eslint-disable-next-line no-alert
     const url = window.prompt("Enter URL:");
     if (url) {
       editor.chain().focus().setLink({ href: url }).run();
