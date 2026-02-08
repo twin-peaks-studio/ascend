@@ -57,6 +57,7 @@ export default function ProjectTasksPage() {
 
   // Sort state - persisted in localStorage
   const [sortField, setSortField] = useState<TaskSortField>(() => {
+    if (typeof window === 'undefined') return "position";
     const stored = localStorage.getItem("project-tasks-sort");
     if (stored) {
       const { field } = parseSortOptionKey(stored);
@@ -65,6 +66,7 @@ export default function ProjectTasksPage() {
     return "position";
   });
   const [sortDirection, setSortDirection] = useState<TaskSortDirection>(() => {
+    if (typeof window === 'undefined') return "asc";
     const stored = localStorage.getItem("project-tasks-sort");
     if (stored) {
       const { direction } = parseSortOptionKey(stored);

@@ -34,6 +34,7 @@ export default function TasksPage() {
 
   // View mode state (board or list) - persisted in localStorage
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    if (typeof window === 'undefined') return "list";
     const stored = localStorage.getItem("tasks-view-mode");
     if (stored === "board" || stored === "list") {
       return stored;
@@ -49,6 +50,7 @@ export default function TasksPage() {
 
   // Sort state - persisted in localStorage
   const [sortField, setSortField] = useState<TaskSortField>(() => {
+    if (typeof window === 'undefined') return "position";
     const stored = localStorage.getItem("tasks-sort");
     if (stored) {
       const { field } = parseSortOptionKey(stored);
@@ -57,6 +59,7 @@ export default function TasksPage() {
     return "position";
   });
   const [sortDirection, setSortDirection] = useState<TaskSortDirection>(() => {
+    if (typeof window === 'undefined') return "asc";
     const stored = localStorage.getItem("tasks-sort");
     if (stored) {
       const { direction } = parseSortOptionKey(stored);
