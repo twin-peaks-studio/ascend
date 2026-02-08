@@ -14,6 +14,7 @@ import { getClient } from "@/lib/supabase/client-manager";
 import { withTimeout, TIMEOUTS } from "@/lib/utils/with-timeout";
 import { logger } from "@/lib/logger/logger";
 import { useAuth } from "@/hooks/use-auth";
+import { singleTaskKeys } from "@/hooks/use-task";
 import type { Task, TaskWithProject, TaskStatus } from "@/types";
 import type { TaskInsert, TaskUpdate } from "@/types/database";
 import {
@@ -280,8 +281,9 @@ export function useTaskMutations() {
 
         if (updateResult.error) throw updateResult.error;
 
-        // Invalidate tasks list
+        // Invalidate tasks list and single task cache
         queryClient.invalidateQueries({ queryKey: taskKeys.lists() });
+        queryClient.invalidateQueries({ queryKey: singleTaskKeys.detail(taskId) });
 
         return updateResult.data as Task;
       } catch (err: unknown) {
@@ -396,8 +398,9 @@ export function useTaskMutations() {
 
         if (deleteResult.error) throw deleteResult.error;
 
-        // Invalidate tasks list
+        // Invalidate tasks list and single task cache
         queryClient.invalidateQueries({ queryKey: taskKeys.lists() });
+        queryClient.invalidateQueries({ queryKey: singleTaskKeys.detail(taskId) });
 
         toast.success("Task deleted successfully");
         return true;
