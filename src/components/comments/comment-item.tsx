@@ -71,54 +71,50 @@ export function CommentItem({
         <AvatarFallback className="text-xs">{authorInitials}</AvatarFallback>
       </Avatar>
 
-      <div className="flex-1 min-w-0">
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-baseline gap-2 flex-wrap">
-              <span className="font-medium text-sm">
-                {comment.author.display_name || comment.author.email}
-              </span>
-              <span className="text-xs text-muted-foreground">
-                {formatDistanceToNow(new Date(comment.created_at), {
-                  addSuffix: true,
-                })}
-                {comment.updated_at !== comment.created_at && " (edited)"}
-              </span>
-            </div>
-          </div>
-
-          {isAuthor && !isEditing && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                >
-                  <MoreVertical className="h-4 w-4" />
-                  <span className="sr-only">Comment options</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem
-                  onClick={() => setIsEditing(true)}
-                  disabled={isUpdating || isDeleting}
-                >
-                  <Edit2 className="mr-2 h-4 w-4" />
-                  Edit
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => setShowDeleteDialog(true)}
-                  disabled={isUpdating || isDeleting}
-                  className="text-destructive focus:text-destructive"
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
+      <div className="flex-1 min-w-0 relative">
+        <div className="flex items-baseline gap-2 flex-wrap">
+          <span className="font-medium text-sm">
+            {comment.author.display_name || comment.author.email}
+          </span>
+          <span className="text-xs text-muted-foreground">
+            {formatDistanceToNow(new Date(comment.created_at), {
+              addSuffix: true,
+            })}
+            {comment.updated_at !== comment.created_at && " (edited)"}
+          </span>
         </div>
+
+        {isAuthor && !isEditing && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="absolute top-0 right-0 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                <MoreVertical className="h-4 w-4" />
+                <span className="sr-only">Comment options</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                onClick={() => setIsEditing(true)}
+                disabled={isUpdating || isDeleting}
+              >
+                <Edit2 className="mr-2 h-4 w-4" />
+                Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => setShowDeleteDialog(true)}
+                disabled={isUpdating || isDeleting}
+                className="text-destructive focus:text-destructive"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
 
         {isEditing ? (
           <div className="mt-2 space-y-2">
