@@ -48,6 +48,7 @@ import { Button } from "@/components/ui/button";
 import { FileUpload } from "@/components/shared/file-upload";
 import { AttachmentsList } from "@/components/shared/attachments-list";
 import { TimerButton, TimeEntryList } from "@/components/time";
+import { CommentList } from "@/components/comments/comment-list";
 import { useAttachments } from "@/hooks/use-attachments";
 import { useProjectAssignees } from "@/hooks/use-project-assignees";
 import { useTimeTracking } from "@/hooks/use-time-tracking";
@@ -680,6 +681,11 @@ export function TaskEditMobile({
               )}
             </div>
           )}
+
+          {/* Comments */}
+          <div className="py-3 border-t border-border/40">
+            <CommentList taskId={task.id} />
+          </div>
 
           {/* Created by info */}
           {task.created_at && (
