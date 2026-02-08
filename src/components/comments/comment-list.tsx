@@ -80,13 +80,13 @@ export function CommentList({ taskId, projectId }: CommentListProps) {
       {isExpanded && (
         <div className="mt-4 space-y-4">
           {/* Comments List - Scrollable with max height */}
-          <div className="max-h-[400px] overflow-y-auto pr-2 -mr-2">
+          <div className="max-h-[250px] overflow-y-scroll overscroll-contain pr-2">
             {isLoading ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
             ) : comments && comments.length > 0 ? (
-              <div className="space-y-4">
+              <div className="space-y-4 pb-2">
                 {comments.map((comment) => (
                   <CommentItem
                     key={comment.id}
