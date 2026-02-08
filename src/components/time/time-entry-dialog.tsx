@@ -50,19 +50,26 @@ export function TimeEntryDialog({
   const [error, setError] = useState<string | null>(null);
 
   // Initialize form when entry changes
+  // Valid use: syncing form state with entry prop for editing
   useEffect(() => {
     if (entry) {
       const start = new Date(entry.start_time);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setStartDate(format(start, "yyyy-MM-dd"));
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setStartTime(format(start, "HH:mm"));
 
       if (entry.end_time) {
         const end = new Date(entry.end_time);
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setEndDate(format(end, "yyyy-MM-dd"));
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setEndTime(format(end, "HH:mm"));
       }
 
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setDescription(entry.description || "");
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setError(null);
     }
   }, [entry]);

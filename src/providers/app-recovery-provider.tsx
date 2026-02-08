@@ -237,11 +237,6 @@ export function AppRecoveryProvider({ children }: AppRecoveryProviderProps) {
     };
   }, [triggerRefresh]);
 
-  // Set initial state to healthy
-  useEffect(() => {
-    setState((prev) => ({ ...prev, status: "healthy" }));
-  }, []);
-
   return (
     <RecoveryContext.Provider
       value={{

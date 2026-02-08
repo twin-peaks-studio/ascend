@@ -77,7 +77,10 @@ export default function NoteDetailPage() {
   useEffect(() => {
     if (note && note.id !== initializedNoteIdRef.current) {
       initializedNoteIdRef.current = note.id;
+      // Valid use: syncing local state when note changes (prevents cursor position loss)
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setTitle(note.title);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setContent(note.content || "");
     }
   }, [note]);

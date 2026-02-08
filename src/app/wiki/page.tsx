@@ -667,9 +667,11 @@ export default function WikiPage() {
   }, []);
 
   // Handle hash on initial load
+  // Valid use: reading browser state (window.location) on mount
   useEffect(() => {
     const hash = window.location.hash.slice(1);
     if (hash && sections.some((s) => s.id === hash)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setActiveSection(hash);
       setTimeout(() => {
         sectionRefs.current[hash]?.scrollIntoView({ behavior: "smooth", block: "start" });

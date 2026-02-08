@@ -4,6 +4,7 @@ import { useCallback, useState } from "react";
 import { Upload, File as FileIcon, X, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getAllowedFileTypesDescription } from "@/lib/validation/file-types";
+import { toast } from "sonner";
 
 interface FileUploadProps {
   onUpload: (file: File) => Promise<unknown>;
@@ -30,7 +31,7 @@ export function FileUpload({
       // Validate file size
       const maxSize = maxSizeMB * 1024 * 1024;
       if (file.size > maxSize) {
-        alert(`File too large. Maximum size is ${maxSizeMB}MB`);
+        toast.error(`File too large. Maximum size is ${maxSizeMB}MB`);
         return;
       }
 
@@ -172,7 +173,7 @@ export function FileUploadButton({
         const file = files[0];
         const maxSize = maxSizeMB * 1024 * 1024;
         if (file.size > maxSize) {
-          alert(`File too large. Maximum size is ${maxSizeMB}MB`);
+          toast.error(`File too large. Maximum size is ${maxSizeMB}MB`);
           return;
         }
         await onUpload(file);

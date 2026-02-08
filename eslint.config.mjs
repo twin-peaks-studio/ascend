@@ -13,6 +13,22 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
   ]),
+  // Custom rules
+  {
+    rules: {
+      // No console statements in production code (use logger utility instead)
+      "no-console": "error",
+      "no-debugger": "error",
+      "no-alert": "error",
+    },
+  },
+  // Allow console in logger files (they need console to output)
+  {
+    files: ["**/lib/logger/**/*.ts", "**/lib/logger.ts"],
+    rules: {
+      "no-console": "off",
+    },
+  },
 ]);
 
 export default eslintConfig;

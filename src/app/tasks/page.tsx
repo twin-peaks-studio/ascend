@@ -33,15 +33,14 @@ export default function TasksPage() {
   } = useTaskMutations();
 
   // View mode state (board or list) - persisted in localStorage
-  const [viewMode, setViewMode] = useState<ViewMode>("list");
-
-  // Load view mode preference from localStorage
-  useEffect(() => {
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    if (typeof window === 'undefined') return "list";
     const stored = localStorage.getItem("tasks-view-mode");
     if (stored === "board" || stored === "list") {
-      setViewMode(stored);
+      return stored;
     }
-  }, []);
+    return "list";
+  });
 
   // Handle view mode change
   const handleViewModeChange = useCallback((mode: ViewMode) => {
@@ -50,18 +49,24 @@ export default function TasksPage() {
   }, []);
 
   // Sort state - persisted in localStorage
-  const [sortField, setSortField] = useState<TaskSortField>("position");
-  const [sortDirection, setSortDirection] = useState<TaskSortDirection>("asc");
-
-  // Load sort preference from localStorage
-  useEffect(() => {
+  const [sortField, setSortField] = useState<TaskSortField>(() => {
+    if (typeof window === 'undefined') return "position";
     const stored = localStorage.getItem("tasks-sort");
     if (stored) {
-      const { field, direction } = parseSortOptionKey(stored);
-      setSortField(field);
-      setSortDirection(direction);
+      const { field } = parseSortOptionKey(stored);
+      return field;
     }
-  }, []);
+    return "position";
+  });
+  const [sortDirection, setSortDirection] = useState<TaskSortDirection>(() => {
+    if (typeof window === 'undefined') return "asc";
+    const stored = localStorage.getItem("tasks-sort");
+    if (stored) {
+      const { direction } = parseSortOptionKey(stored);
+      return direction;
+    }
+    return "asc";
+  });
 
   // Handle sort change
   const handleSortChange = useCallback((field: TaskSortField, direction: TaskSortDirection) => {

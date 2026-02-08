@@ -130,7 +130,7 @@ export async function POST(request: NextRequest) {
       baseUrl,
     });
 
-    console.log("🟢 Avatar upload complete:", {
+    logger.info("Avatar upload complete", {
       userId: user.id,
       baseName,
       baseUrl,

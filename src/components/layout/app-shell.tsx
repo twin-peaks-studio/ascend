@@ -189,6 +189,7 @@ export function AppShell({
 
   // Show auth dialog ONLY when we're confident the user is logged out
   // Don't show during refresh or when auth state is uncertain (cached/unknown)
+  // Valid use: syncing UI state with auth state (external system)
   useEffect(() => {
     // Only show login modal when:
     // 1. Auth is initialized
@@ -202,8 +203,10 @@ export function AppShell({
       !isRefreshing;
 
     if (shouldShowAuth) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setShowAuthDialog(true);
     } else if (user) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setShowAuthDialog(false);
     }
   }, [initialized, user, confidence, isRefreshing]);

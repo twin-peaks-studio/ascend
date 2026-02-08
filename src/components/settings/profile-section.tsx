@@ -20,26 +20,6 @@ export function ProfileSection() {
   // Get avatar URL with Gravatar fallback
   const avatarUrl = getAvatarUrl(profile?.avatar_url, user?.email ?? "", 160);
 
-  // Debug: Log profile changes
-  useEffect(() => {
-    console.log("🔵 Profile data updated:", {
-      avatar_url: profile?.avatar_url,
-      display_name: profile?.display_name,
-      userId: user?.id
-    });
-  }, [profile, user]);
-
-  // Debug: Test if avatar URL is accessible
-  useEffect(() => {
-    if (profile?.avatar_url) {
-      console.log("🔵 Testing avatar URL:", profile.avatar_url);
-      const img = new Image();
-      img.onload = () => console.log("✅ Avatar image loaded successfully!");
-      img.onerror = (e) => console.error("❌ Avatar image failed to load:", e);
-      img.src = profile.avatar_url;
-    }
-  }, [profile?.avatar_url]);
-
   const [displayName, setDisplayName] = useState("");
   const [isEditingName, setIsEditingName] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -69,14 +49,12 @@ export function ProfileSection() {
     if (!file) return;
 
     try {
-      console.log("🔵 Starting avatar upload:", { fileName: file.name, fileSize: file.size });
       avatarUploadSchema.parse({ file });
       setUploadingAvatar(true);
 
       const formData = new FormData();
       formData.append("file", file);
 
-      console.log("🔵 Sending upload request to API...");
       const response = await fetch("/api/upload/avatar", {
         method: "POST",
         body: formData,
@@ -84,21 +62,16 @@ export function ProfileSection() {
 
       if (!response.ok) {
         const error = await response.json();
-        console.error("❌ Upload failed:", error);
         throw new Error(error.error || "Upload failed");
       }
 
       const { url } = await response.json();
-      console.log("🔵 Upload successful! URL received:", url);
-      console.log("🔵 Current profile before update:", profile);
 
       await updateProfile.mutateAsync({ avatar_url: url });
-      console.log("🔵 Profile update mutation completed");
 
       toast.success("Avatar updated");
     } catch (error) {
       if (error instanceof Error) {
-        console.error("❌ Avatar upload error:", error.message);
         toast.error(error.message);
       }
     } finally {

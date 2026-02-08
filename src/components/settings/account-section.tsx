@@ -155,7 +155,7 @@ export function AccountSection() {
                 Verification pending
               </p>
               <p className="text-blue-700 dark:text-blue-300">
-                We've sent a verification email. Please check your inbox and click the
+                We&apos;ve sent a verification email. Please check your inbox and click the
                 confirmation link to complete the email change.
               </p>
             </div>
@@ -183,7 +183,7 @@ export function AccountSection() {
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">
-              You'll receive a verification email at your new address.
+              You&apos;ll receive a verification email at your new address.
             </p>
           </div>
         </div>

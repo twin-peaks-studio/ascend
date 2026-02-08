@@ -85,12 +85,16 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 /**
  * Try to access recovery context - returns null if not available
  * (e.g., during initial render before AppRecoveryProvider mounts)
+ *
+ * Note: This function intentionally violates rules-of-hooks to handle circular dependencies
+ * eslint-disable-next-line react-hooks/rules-of-hooks
  */
-function tryUseRecoveryContext() {
+function useTryRecoveryContext() {
   try {
     // Dynamic import to avoid circular dependency
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    // eslint-disable-next-line @typescript-eslint/no-require-imports, react-hooks/rules-of-hooks
     const { useRecoveryContext } = require("@/providers/app-recovery-provider");
+    // eslint-disable-next-line react-hooks/rules-of-hooks
     return useRecoveryContext();
   } catch {
     return null;
@@ -109,6 +113,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Track if we've registered the auth refresh handler
   const hasRegisteredHandler = useRef(false);
+
+  // Try to get recovery context (called at top level to satisfy hooks rules)
+  const recoveryContext = useTryRecoveryContext();
 
   // Track if this is the initial auth load (for longer timeout on cold start)
   const isInitialLoadRef = useRef(true);
@@ -378,8 +385,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (hasRegisteredHandler.current) return;
 
-    // Try to get recovery context and register handler
-    const recoveryContext = tryUseRecoveryContext();
+    // Register handler if recovery context is available
     if (recoveryContext?.registerAuthRefreshHandler) {
       recoveryContext.registerAuthRefreshHandler(recoveryRefreshAuth);
       hasRegisteredHandler.current = true;

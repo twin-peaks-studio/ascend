@@ -18,6 +18,8 @@ export function AscendLogo({ className, variant }: AscendLogoProps) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    // Valid use of setState in effect: client-side hydration pattern
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
     const check = () =>
       setIsDark(document.documentElement.classList.contains("dark"));
