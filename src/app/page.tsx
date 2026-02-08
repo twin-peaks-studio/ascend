@@ -9,6 +9,7 @@ import {
   CheckCircle2,
   ArrowRight,
   Plus,
+  Bell,
 } from "lucide-react";
 import { AppShell, Header } from "@/components/layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,7 +22,10 @@ import { useProjects, useProjectMutations } from "@/hooks/use-projects";
 import { useTasks, useTaskMutations } from "@/hooks/use-tasks";
 import { useProfiles } from "@/hooks/use-profiles";
 import { useIsMobile } from "@/hooks/use-media-query";
+import { useNotifications, useMarkNotificationAsRead } from "@/hooks/use-notifications";
 import type { CreateProjectInput, UpdateProjectInput, CreateTaskInput } from "@/lib/validation";
+import { formatDistanceToNow } from "date-fns";
+import { useRouter } from "next/navigation";
 
 interface StatCardProps {
   title: string;
@@ -66,9 +70,12 @@ export default function HomePage() {
 }
 
 function Dashboard() {
+  const router = useRouter();
   const { projects, loading: projectsLoading, refetch: refetchProjects } = useProjects();
   const { tasks, loading: tasksLoading, refetch: refetchTasks } = useTasks();
   const { profiles } = useProfiles();
+  const { notifications, loading: notificationsLoading } = useNotifications();
+  const { mutate: markAsRead } = useMarkNotificationAsRead();
   const isMobile = useIsMobile();
   const { createProject, loading: mutationLoading } = useProjectMutations();
   const { createTask, loading: taskMutationLoading } = useTaskMutations();
@@ -110,6 +117,16 @@ function Dashboard() {
       setShowProjectDialog(true);
     }
   }, [isMobile]);
+
+  // Handle notification click
+  const handleNotificationClick = useCallback((notificationId: string, entityType: string, entityId: string) => {
+    // Mark as read
+    markAsRead(notificationId);
+
+    // Navigate to entity
+    const url = entityType === "task" ? `/tasks/${entityId}` : `/projects/${entityId}`;
+    router.push(url);
+  }, [markAsRead, router]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -229,55 +246,80 @@ function Dashboard() {
             </CardContent>
           </Card>
 
-          {/* Quick start guide */}
+          {/* Notifications */}
           <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Quick Start</CardTitle>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Bell className="h-4 w-4" />
+                Notifications
+              </CardTitle>
+              {notifications.length > 0 && (
+                <span className="text-xs text-muted-foreground">
+                  {notifications.filter(n => !n.read).length} unread
+                </span>
+              )}
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-start gap-3">
-                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-medium">
-                  1
+            <CardContent>
+              {notificationsLoading ? (
+                <div className="space-y-3">
+                  {[1, 2, 3].map((i) => (
+                    <div
+                      key={i}
+                      className="h-16 animate-pulse rounded-lg bg-muted"
+                    />
+                  ))}
                 </div>
-                <div>
-                  <p className="font-medium text-sm">Create a project</p>
-                  <p className="text-xs text-muted-foreground">
-                    Projects contain a single task with docs and links
+              ) : notifications.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-8 text-center">
+                  <Bell className="h-10 w-10 text-muted-foreground/50 mb-2" />
+                  <p className="text-sm text-muted-foreground">
+                    No notifications yet
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    You&apos;ll see mentions and updates here
                   </p>
                 </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-medium">
-                  2
+              ) : (
+                <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                  {notifications.slice(0, 5).map((notification) => (
+                    <button
+                      key={notification.id}
+                      onClick={() => handleNotificationClick(
+                        notification.id,
+                        notification.entity_type,
+                        notification.entity_id
+                      )}
+                      className={`w-full flex items-start gap-3 rounded-lg p-3 text-left transition-colors hover:bg-muted ${
+                        !notification.read ? "bg-primary/5" : ""
+                      }`}
+                    >
+                      <Bell className={`h-4 w-4 mt-0.5 shrink-0 ${
+                        notification.read ? "text-muted-foreground" : "text-primary"
+                      }`} />
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-sm ${
+                          notification.read ? "text-muted-foreground" : "font-medium"
+                        }`}>
+                          {notification.message}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {formatDistanceToNow(new Date(notification.created_at), {
+                            addSuffix: true,
+                          })}
+                        </p>
+                      </div>
+                      {!notification.read && (
+                        <div className="h-2 w-2 rounded-full bg-primary shrink-0 mt-1.5" />
+                      )}
+                    </button>
+                  ))}
+                  {notifications.length > 5 && (
+                    <p className="text-xs text-center text-muted-foreground pt-2">
+                      + {notifications.length - 5} more notifications
+                    </p>
+                  )}
                 </div>
-                <div>
-                  <p className="font-medium text-sm">Add a task</p>
-                  <p className="text-xs text-muted-foreground">
-                    Each project has one task you can track on the Kanban board
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-medium">
-                  3
-                </div>
-                <div>
-                  <p className="font-medium text-sm">Track progress</p>
-                  <p className="text-xs text-muted-foreground">
-                    Drag tasks between columns to update their status
-                  </p>
-                </div>
-              </div>
-
-              <div className="pt-2">
-                <p className="text-xs text-muted-foreground">
-                  <strong>Tip:</strong> Press{" "}
-                  <kbd className="rounded border bg-muted px-1 font-mono text-xs">
-                    ?
-                  </kbd>{" "}
-                  to see keyboard shortcuts
-                </p>
-              </div>
+              )}
             </CardContent>
           </Card>
         </div>
