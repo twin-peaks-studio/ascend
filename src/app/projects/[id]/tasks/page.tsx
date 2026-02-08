@@ -1,17 +1,18 @@
 "use client";
 
 import { useEffect, useState, useCallback, useMemo } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { AppShell, Header } from "@/components/layout";
 import type { ViewMode } from "@/components/layout";
 import { KanbanBoard } from "@/components/board";
-import { TaskDialog, TaskDetailsResponsive, QuickAddTask, TaskListView, TaskSortSelect } from "@/components/task";
+import { TaskDialog, QuickAddTask, TaskListView, TaskSortSelect } from "@/components/task";
 import { parseSortOptionKey, type TaskSortField, type TaskSortDirection } from "@/lib/task-sort";
 import { Button } from "@/components/ui/button";
 import { useProject } from "@/hooks/use-projects";
 import { useTaskMutations } from "@/hooks/use-tasks";
+import { useRealtimeTasksForProject } from "@/hooks/use-realtime-tasks";
 import { useProfiles } from "@/hooks/use-profiles";
 import { useIsMobile } from "@/hooks/use-media-query";
 import { useAuth } from "@/hooks/use-auth";
@@ -21,6 +22,7 @@ import { DeleteConfirmationDialog } from "@/components/ui/delete-confirmation-di
 
 export default function ProjectTasksPage() {
   const params = useParams();
+  const router = useRouter();
   const projectId = params.id as string;
 
   const { project, setProject, loading, refetch } = useProject(projectId);
@@ -36,6 +38,9 @@ export default function ProjectTasksPage() {
     markAsDuplicate,
     loading: mutationLoading,
   } = useTaskMutations();
+
+  // Enable real-time task updates for this project
+  useRealtimeTasksForProject(projectId, user?.id ?? null);
 
   // View mode state (board or list) - persisted in localStorage
   const [viewMode, setViewMode] = useState<ViewMode>("list");
@@ -94,9 +99,7 @@ export default function ProjectTasksPage() {
   // Dialog states
   const [showTaskDialog, setShowTaskDialog] = useState(false);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
-  const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [editingTask, setEditingTask] = useState<TaskWithProject | null>(null);
-  const [selectedTask, setSelectedTask] = useState<TaskWithProject | null>(null);
   const [defaultStatus, setDefaultStatus] = useState<TaskStatus>("todo");
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
@@ -275,41 +278,10 @@ export default function ProjectTasksPage() {
     setShowTaskDialog(true);
   }, []);
 
-  // Handle open task details (click on card)
+  // Handle open task details (click on card) - navigate to task page
   const handleOpenDetails = useCallback((task: TaskWithProject | Task) => {
-    // Ensure we have TaskWithProject format
-    const taskWithProject: TaskWithProject = 'project' in task
-      ? task
-      : { ...task, project: project as Project };
-    setSelectedTask(taskWithProject);
-    setShowDetailsDialog(true);
-  }, [project]);
-
-  // Handle task update from details dialog
-  const handleDetailsUpdate = useCallback(
-    async (data: UpdateTaskInput) => {
-      if (!selectedTask) return;
-      const result = await updateTask(selectedTask.id, data);
-      if (result) {
-        const updatedTask = { ...selectedTask, ...data } as TaskWithProject;
-
-        // Update selectedTask so the dialog shows correct values
-        setSelectedTask(updatedTask);
-
-        // Optimistically update the project's tasks list
-        setProject((prev) => {
-          if (!prev) return prev;
-          return {
-            ...prev,
-            tasks: prev.tasks.map((t) =>
-              t.id === selectedTask.id ? { ...t, ...data } : t
-            ),
-          };
-        });
-      }
-    },
-    [selectedTask, updateTask, setProject]
-  );
+    router.push(`/tasks/${task.id}`);
+  }, [router]);
 
   // Handle quick add task (from mobile + button)
   const handleQuickAddSubmit = useCallback(
@@ -482,23 +454,6 @@ export default function ProjectTasksPage() {
         loading={mutationLoading}
         defaultAssigneeId={user?.id ?? null}
         defaultProjectId={projectId}
-      />
-
-      {/* Task details dialog/drawer (responsive) */}
-      <TaskDetailsResponsive
-        open={showDetailsDialog}
-        onOpenChange={(open) => {
-          setShowDetailsDialog(open);
-          if (!open) setSelectedTask(null);
-        }}
-        task={selectedTask}
-        profiles={profiles}
-        projects={[project as Project]}
-        onUpdate={handleDetailsUpdate}
-        onDelete={(taskId) => {
-          setShowDetailsDialog(false);
-          setDeleteConfirm(taskId);
-        }}
       />
 
       {/* Delete confirmation dialog */}

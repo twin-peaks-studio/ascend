@@ -27,7 +27,6 @@ export function GlobalTimerIndicator({ className }: GlobalTimerIndicatorProps) {
     formattedElapsedTime,
     stopTimer,
     isMutating,
-    onOpenTask,
   } = useTimerContext();
 
   if (!isTimerRunning || !activeTimer) {
@@ -38,8 +37,8 @@ export function GlobalTimerIndicator({ className }: GlobalTimerIndicatorProps) {
 
   const handleClick = () => {
     if (activeTimer.entity_type === "task") {
-      // Open the task details dialog (stays on current page)
-      onOpenTask(activeTimer.entity_id);
+      // Navigate to task detail page
+      router.push(`/tasks/${activeTimer.entity_id}`);
     } else if (activeTimer.entity_type === "project") {
       router.push(`/projects/${activeTimer.entity_id}`);
     } else if (activeTimer.entity_type === "note") {

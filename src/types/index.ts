@@ -28,6 +28,9 @@ export type {
   NoteTask,
   NoteTaskInsert,
   NoteTaskUpdate,
+  Comment,
+  CommentInsert,
+  CommentUpdate,
 } from "./database";
 
 import type {
@@ -37,6 +40,7 @@ import type {
   Profile as DBProfile,
   Attachment as DBAttachment,
   Note as DBNote,
+  Comment as DBComment,
 } from "./database";
 
 /**
@@ -69,6 +73,13 @@ export interface NoteWithProject extends DBNote {
 export interface NoteWithRelations extends DBNote {
   project: DBProject | null;
   tasks: DBTask[];
+}
+
+/**
+ * Comment with author profile loaded
+ */
+export interface CommentWithAuthor extends DBComment {
+  author: DBProfile;
 }
 
 /**

@@ -41,6 +41,7 @@ import { Button } from "@/components/ui/button";
 import { FileUpload } from "@/components/shared/file-upload";
 import { AttachmentsList } from "@/components/shared/attachments-list";
 import { TimerButton, TimeEntryList } from "@/components/time";
+import { CommentList } from "@/components/comments/comment-list";
 import { useAttachments } from "@/hooks/use-attachments";
 import { useTimeTracking } from "@/hooks/use-time-tracking";
 import { useProjectAssignees } from "@/hooks/use-project-assignees";
@@ -402,6 +403,11 @@ export function TaskDetailsDialog({
                   />
                 </div>
               )}
+            </div>
+
+            {/* Comments */}
+            <div className="border-t border-border/40 pt-4 mt-6">
+              <CommentList taskId={task.id} />
             </div>
           </div>
 

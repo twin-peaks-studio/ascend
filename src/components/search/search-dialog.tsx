@@ -9,16 +9,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { DeleteConfirmationDialog } from "@/components/ui/delete-confirmation-dialog";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useSearch } from "@/hooks/use-search";
-import { useProfiles } from "@/hooks/use-profiles";
-import { useProjects } from "@/hooks/use-projects";
-import { TaskDetailsResponsive } from "@/components/task";
-import { useTaskMutations } from "@/hooks/use-tasks";
 import type { TaskWithProject, Project } from "@/types";
-import type { UpdateTaskInput } from "@/lib/validation";
 import { PRIORITY_DISPLAY_SHORT, STATUS_CONFIG } from "@/types";
 
 interface SearchDialogProps {
@@ -30,14 +24,6 @@ export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const { results, loading, search, clearResults } = useSearch();
-  const { profiles } = useProfiles();
-  const { projects } = useProjects();
-  const { updateTask, deleteTask } = useTaskMutations();
-
-  // Task details state
-  const [selectedTask, setSelectedTask] = useState<TaskWithProject | null>(null);
-  const [showTaskDetails, setShowTaskDetails] = useState(false);
-  const [deleteTaskConfirm, setDeleteTaskConfirm] = useState<string | null>(null);
 
   // Debounced search
   useEffect(() => {
@@ -63,51 +49,17 @@ export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
     onOpenChange(newOpen);
   }, [onOpenChange, clearResults]);
 
-  // Handle task click - open task details
+  // Handle task click - navigate to task page
   const handleTaskClick = useCallback((task: TaskWithProject) => {
-    setSelectedTask(task);
-    setShowTaskDetails(true);
     handleOpenChange(false);
-  }, [handleOpenChange]);
+    router.push(`/tasks/${task.id}`);
+  }, [router, handleOpenChange]);
 
   // Handle project click - navigate to project page
   const handleProjectClick = useCallback((project: Project) => {
     handleOpenChange(false);
     router.push(`/projects/${project.id}`);
   }, [router, handleOpenChange]);
-
-  // Handle task update from details dialog
-  const handleTaskUpdate = useCallback(
-    async (data: UpdateTaskInput) => {
-      if (!selectedTask) return;
-      const result = await updateTask(selectedTask.id, data);
-      if (result) {
-        // Update the project reference if needed
-        let updatedProject = selectedTask.project;
-        if ("project_id" in data) {
-          if (data.project_id === null) {
-            updatedProject = null;
-          } else {
-            updatedProject = projects.find((p) => p.id === data.project_id) || null;
-          }
-        }
-        setSelectedTask({
-          ...selectedTask,
-          ...data,
-          project: updatedProject,
-        } as TaskWithProject);
-      }
-    },
-    [selectedTask, updateTask, projects]
-  );
-
-  // Handle task delete confirmation
-  const handleDeleteTaskConfirm = useCallback(async () => {
-    if (!deleteTaskConfirm) return;
-    await deleteTask(deleteTaskConfirm);
-    setDeleteTaskConfirm(null);
-    setSelectedTask(null);
-  }, [deleteTaskConfirm, deleteTask]);
 
   const hasResults = results.tasks.length > 0 || results.projects.length > 0;
   const showNoResults = query.trim() && !loading && !hasResults;
@@ -223,32 +175,6 @@ export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
           </div>
         </DialogContent>
       </Dialog>
-
-      {/* Task Details Dialog */}
-      <TaskDetailsResponsive
-        open={showTaskDetails}
-        onOpenChange={(open) => {
-          setShowTaskDetails(open);
-          if (!open) setSelectedTask(null);
-        }}
-        task={selectedTask}
-        profiles={profiles}
-        projects={projects}
-        onUpdate={handleTaskUpdate}
-        onDelete={(taskId) => {
-          setShowTaskDetails(false);
-          setDeleteTaskConfirm(taskId);
-        }}
-      />
-
-      {/* Delete task confirmation */}
-      <DeleteConfirmationDialog
-        open={!!deleteTaskConfirm}
-        onOpenChange={(open) => !open && setDeleteTaskConfirm(null)}
-        onConfirm={handleDeleteTaskConfirm}
-        title="Delete Task"
-        description="Are you sure you want to delete this task? This action cannot be undone."
-      />
     </>
   );
 }

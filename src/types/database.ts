@@ -140,6 +140,58 @@ export type Database = {
           }
         ];
       };
+      comments: {
+        Row: {
+          id: string;
+          task_id: string | null;
+          project_id: string | null;
+          author_id: string;
+          content: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          task_id?: string | null;
+          project_id?: string | null;
+          author_id: string;
+          content: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          task_id?: string | null;
+          project_id?: string | null;
+          author_id?: string;
+          content?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "comments_task_id_fkey";
+            columns: ["task_id"];
+            isOneToOne: false;
+            referencedRelation: "tasks";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "comments_project_id_fkey";
+            columns: ["project_id"];
+            isOneToOne: false;
+            referencedRelation: "projects";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "comments_author_id_fkey";
+            columns: ["author_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
       project_documents: {
         Row: {
           id: string;
@@ -449,6 +501,10 @@ export type TaskUpdate = UpdateTables<"tasks">;
 export type ProjectDocument = Tables<"project_documents">;
 export type ProjectDocumentInsert = InsertTables<"project_documents">;
 export type ProjectDocumentUpdate = UpdateTables<"project_documents">;
+
+export type Comment = Tables<"comments">;
+export type CommentInsert = InsertTables<"comments">;
+export type CommentUpdate = UpdateTables<"comments">;
 
 export type Profile = Tables<"profiles">;
 export type ProfileInsert = InsertTables<"profiles">;

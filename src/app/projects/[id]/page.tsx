@@ -19,7 +19,7 @@ import {
   Settings2,
 } from "lucide-react";
 import { AppShell } from "@/components/layout";
-import { TaskDialog, TaskDetailsResponsive, TaskListItem } from "@/components/task";
+import { TaskDialog, TaskListItem } from "@/components/task";
 import { sortTasks } from "@/lib/task-sort";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -127,9 +127,6 @@ export default function ProjectDetailPage() {
   const [showMembersDialog, setShowMembersDialog] = useState(false);
   const [deleteProjectConfirm, setDeleteProjectConfirm] = useState(false);
   const [deleteDocumentId, setDeleteDocumentId] = useState<string | null>(null);
-  const [deleteTaskConfirm, setDeleteTaskConfirm] = useState<string | null>(null);
-  const [showTaskDetails, setShowTaskDetails] = useState(false);
-  const [selectedTask, setSelectedTask] = useState<TaskWithProject | null>(null);
 
   // Properties panel state
   const [showProperties, setShowProperties] = useState(true);
@@ -232,71 +229,15 @@ export default function ProjectDetailPage() {
     [createTask, refetch]
   );
 
-  // Handle opening task details
+  // Handle opening task details - navigate to task page
   const handleOpenTaskDetails = useCallback((task: Task) => {
-    // Convert Task to TaskWithProject
-    const taskWithProject: TaskWithProject = {
-      ...task,
-      project: project || null,
-    };
-    setSelectedTask(taskWithProject);
-    setShowTaskDetails(true);
-  }, [project]);
+    router.push(`/tasks/${task.id}`);
+  }, [router]);
 
-  // Handle opening task details by ID (for time report)
+  // Handle opening task details by ID (for time report) - navigate to task page
   const handleOpenTaskDetailsById = useCallback((taskId: string) => {
-    const task = project?.tasks.find((t) => t.id === taskId);
-    if (task) {
-      const taskWithProject: TaskWithProject = {
-        ...task,
-        project: project || null,
-      };
-      setSelectedTask(taskWithProject);
-      setShowTaskDetails(true);
-    }
-  }, [project]);
-
-  // Handle task update from details dialog
-  const handleTaskDetailsUpdate = useCallback(
-    async (data: UpdateTaskInput) => {
-      if (!selectedTask || !project) return;
-      const result = await updateTask(selectedTask.id, data);
-      if (result) {
-        // Update selectedTask so the dialog shows correct values
-        const updatedTask = { ...selectedTask, ...data } as TaskWithProject;
-        setSelectedTask(updatedTask);
-
-        // Optimistically update the project's tasks list (no refetch needed)
-        setProject((prev) => {
-          if (!prev) return prev;
-          return {
-            ...prev,
-            tasks: prev.tasks.map((t) =>
-              t.id === selectedTask.id ? { ...t, ...data } : t
-            ),
-          };
-        });
-      }
-    },
-    [selectedTask, project, updateTask, setProject]
-  );
-
-  // Handle task delete confirmation
-  const handleDeleteTaskConfirm = useCallback(async () => {
-    if (!deleteTaskConfirm) return;
-    const success = await deleteTask(deleteTaskConfirm);
-    if (success) {
-      // Optimistically remove from project's tasks list
-      setProject((prev) => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          tasks: prev.tasks.filter((t) => t.id !== deleteTaskConfirm),
-        };
-      });
-    }
-    setDeleteTaskConfirm(null);
-  }, [deleteTaskConfirm, deleteTask, setProject]);
+    router.push(`/tasks/${taskId}`);
+  }, [router]);
 
   // Handle task status toggle (for list view)
   const handleTaskStatusToggle = useCallback(
@@ -841,23 +782,6 @@ export default function ProjectDetailPage() {
         loading={taskMutationLoading}
       />
 
-      {/* Task details dialog */}
-      <TaskDetailsResponsive
-        open={showTaskDetails}
-        onOpenChange={(open) => {
-          setShowTaskDetails(open);
-          if (!open) setSelectedTask(null);
-        }}
-        task={selectedTask}
-        profiles={profiles}
-        projects={[project as Project]}
-        onUpdate={handleTaskDetailsUpdate}
-        onDelete={(taskId) => {
-          setShowTaskDetails(false);
-          setDeleteTaskConfirm(taskId);
-        }}
-      />
-
       {/* Document create dialog */}
       <Dialog open={showDocumentDialog} onOpenChange={setShowDocumentDialog}>
         <DialogContent className="sm:max-w-md">
@@ -963,15 +887,6 @@ export default function ProjectDetailPage() {
         onConfirm={handleDeleteDocument}
         title="Delete Document"
         description="Are you sure you want to delete this document? This action cannot be undone."
-      />
-
-      {/* Delete task confirmation */}
-      <DeleteConfirmationDialog
-        open={!!deleteTaskConfirm}
-        onOpenChange={(open) => !open && setDeleteTaskConfirm(null)}
-        onConfirm={handleDeleteTaskConfirm}
-        title="Delete Task"
-        description="Are you sure you want to delete this task? This action cannot be undone."
       />
 
       {/* Invite member dialog */}
