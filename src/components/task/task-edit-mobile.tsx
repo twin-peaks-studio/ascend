@@ -45,6 +45,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { TimePicker } from "@/components/ui/time-picker";
 import { Button } from "@/components/ui/button";
 import { FileUpload } from "@/components/shared/file-upload";
 import { AttachmentsList } from "@/components/shared/attachments-list";
@@ -148,6 +149,9 @@ export function TaskEditMobile({
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [assigneeSelectOpen, setAssigneeSelectOpen] = useState(false);
   const [prioritySelectOpen, setPrioritySelectOpen] = useState(false);
+  const [pendingDueDate, setPendingDueDate] = useState<Date | null>(
+    task?.due_date ? new Date(task.due_date) : null
+  );
 
   // Refs for focus management
   const titleInputRef = useRef<HTMLInputElement>(null);
@@ -166,6 +170,16 @@ export function TaskEditMobile({
     setDatePickerOpen(false);
     setAssigneeSelectOpen(false);
     setPrioritySelectOpen(false);
+    setPendingDueDate(task.due_date ? new Date(task.due_date) : null);
+  }
+
+  // Sync pending date when task.due_date changes externally
+  const [prevDueDate, setPrevDueDate] = useState<string | null>(task?.due_date ?? null);
+  if (task && task.due_date !== prevDueDate) {
+    setPrevDueDate(task.due_date);
+    if (!datePickerOpen) {
+      setPendingDueDate(task.due_date ? new Date(task.due_date) : null);
+    }
   }
 
   // Attachments
@@ -241,8 +255,34 @@ export function TaskEditMobile({
     setIsEditingDescription(false);
   };
 
-  const handleDueDateChange = async (date: Date | undefined) => {
-    await onUpdate({ due_date: date?.toISOString() || null });
+  const handleDueDateSelect = (date: Date | undefined) => {
+    if (!date) {
+      setPendingDueDate(null);
+      return;
+    }
+    if (pendingDueDate) {
+      date.setHours(pendingDueDate.getHours(), pendingDueDate.getMinutes(), 0, 0);
+    }
+    setPendingDueDate(date);
+  };
+
+  const handleDueTimeChange = (date: Date) => {
+    setPendingDueDate(date);
+  };
+
+  const handleDatePickerOpenChange = async (open: boolean) => {
+    if (!open && datePickerOpen) {
+      const newValue = pendingDueDate?.toISOString() || null;
+      if (newValue !== (task.due_date || null)) {
+        await onUpdate({ due_date: newValue });
+      }
+    }
+    setDatePickerOpen(open);
+  };
+
+  const handleClearDueDate = async () => {
+    setPendingDueDate(null);
+    await onUpdate({ due_date: null });
     setDatePickerOpen(false);
   };
 
@@ -390,7 +430,7 @@ export function TaskEditMobile({
 
           {/* Due Date - if set */}
           {hasDueDate && (
-            <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+            <Popover open={datePickerOpen} onOpenChange={handleDatePickerOpenChange}>
               <PopoverTrigger asChild>
                 <PropertyRow icon={Calendar}>
                   <span className={cn("text-sm", isTaskOverdue && !isCompleted && "text-red-500")}>
@@ -401,16 +441,22 @@ export function TaskEditMobile({
               <PopoverContent className="w-auto p-0" align="start">
                 <CalendarComponent
                   mode="single"
-                  selected={task.due_date ? new Date(task.due_date) : undefined}
-                  onSelect={handleDueDateChange}
+                  selected={pendingDueDate || undefined}
+                  onSelect={handleDueDateSelect}
                   initialFocus
                 />
+                {pendingDueDate && (
+                  <>
+                    <div className="border-t" />
+                    <TimePicker value={pendingDueDate} onChange={handleDueTimeChange} />
+                  </>
+                )}
                 <div className="p-2 border-t">
                   <Button
                     variant="ghost"
                     size="sm"
                     className="w-full"
-                    onClick={() => handleDueDateChange(undefined)}
+                    onClick={handleClearDueDate}
                   >
                     Clear date
                   </Button>
@@ -553,7 +599,7 @@ export function TaskEditMobile({
                 ))}
                 {/* Date chip with Popover - rendered separately for proper positioning */}
                 {!hasDueDate && (
-                  <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+                  <Popover open={datePickerOpen} onOpenChange={handleDatePickerOpenChange}>
                     <PopoverTrigger asChild>
                       <button
                         type="button"
@@ -566,10 +612,16 @@ export function TaskEditMobile({
                     <PopoverContent className="w-auto p-0" side="top" align="start">
                       <CalendarComponent
                         mode="single"
-                        selected={undefined}
-                        onSelect={handleDueDateChange}
+                        selected={pendingDueDate || undefined}
+                        onSelect={handleDueDateSelect}
                         initialFocus
                       />
+                      {pendingDueDate && (
+                        <>
+                          <div className="border-t" />
+                          <TimePicker value={pendingDueDate} onChange={handleDueTimeChange} />
+                        </>
+                      )}
                     </PopoverContent>
                   </Popover>
                 )}
