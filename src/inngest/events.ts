@@ -44,4 +44,42 @@ export type Events = {
       taskId: string;
     };
   };
+
+  /** Fired when a project's due date is set or changed. */
+  "project/due-date.set": {
+    data: {
+      projectId: string;
+      dueDate: string; // ISO 8601
+      leadId: string;
+      projectTitle: string;
+    };
+  };
+
+  /** Fired when a project's due date changes. Cancels the previous sleeping reminder. */
+  "project/due-date.updated": {
+    data: {
+      projectId: string;
+    };
+  };
+
+  /** Fired when a project's due date is cleared. Cancels the sleeping reminder. */
+  "project/due-date.removed": {
+    data: {
+      projectId: string;
+    };
+  };
+
+  /** Fired when a project is completed or archived. Cancels the sleeping reminder. */
+  "project/completed": {
+    data: {
+      projectId: string;
+    };
+  };
+
+  /** Fired when a project is deleted. Cancels the sleeping reminder. */
+  "project/deleted": {
+    data: {
+      projectId: string;
+    };
+  };
 };

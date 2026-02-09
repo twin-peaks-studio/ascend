@@ -51,6 +51,8 @@ function getNotificationMessage(type: string): string {
       return "removed you as project lead";
     case "task_due":
       return "is due in less than 1 hour";
+    case "project_due":
+      return "is due in less than 1 hour";
     default:
       return "sent you a notification";
   }
@@ -71,7 +73,7 @@ function NotificationItem({
   onMarkAsRead: (id: string) => void;
   onNavigate: (path: string) => void;
 }) {
-  const isSystemNotification = notification.type === "task_due";
+  const isSystemNotification = notification.type === "task_due" || notification.type === "project_due";
   const actorName =
     notification.actor?.display_name ||
     notification.actor?.email ||
@@ -112,7 +114,7 @@ function NotificationItem({
         <p className="truncate">
           {isSystemNotification ? (
             <>
-              <span className="font-medium">Your task</span>
+              <span className="font-medium">{notification.type === "project_due" ? "Your project" : "Your task"}</span>
               {" "}{getNotificationMessage(notification.type)}
             </>
           ) : (

@@ -22,6 +22,7 @@ import {
   type CreateProjectInput,
   type UpdateProjectInput,
 } from "@/lib/validation";
+import { sendInngestEvents } from "@/lib/inngest/send-events";
 import { toast } from "sonner";
 
 // Query keys for cache management
@@ -299,12 +300,42 @@ export function useProjectMutations() {
 
         if (updateResult.error) throw updateResult.error;
 
+        const updatedProject = updateResult.data as Project;
+
+        // Handle due date changes for Inngest reminders
+        if ("due_date" in validated) {
+          const inngestEvents: Array<{ name: string; data: Record<string, unknown> }> = [
+            // Always cancel the existing reminder first
+            { name: "project/due-date.updated", data: { projectId } },
+          ];
+
+          // Schedule a new reminder if there's a new due date and a lead
+          if (validated.due_date && updatedProject.lead_id) {
+            inngestEvents.push({
+              name: "project/due-date.set",
+              data: {
+                projectId,
+                dueDate: validated.due_date,
+                leadId: updatedProject.lead_id,
+                projectTitle: updatedProject.title,
+              },
+            });
+          }
+
+          sendInngestEvents(inngestEvents);
+        }
+
+        // Cancel reminder when project is completed or archived
+        if (validated.status === "completed" || validated.status === "archived") {
+          sendInngestEvents([{ name: "project/completed", data: { projectId } }]);
+        }
+
         // Invalidate both the list and the specific project
         queryClient.invalidateQueries({ queryKey: projectKeys.lists() });
         queryClient.invalidateQueries({ queryKey: projectKeys.detail(projectId) });
 
         toast.success("Project updated successfully");
-        return updateResult.data as Project;
+        return updatedProject;
       } catch (err: unknown) {
         const supabaseError = err as {
           message?: string;
@@ -342,6 +373,9 @@ export function useProjectMutations() {
         );
 
         if (deleteResult.error) throw deleteResult.error;
+
+        // Cancel any pending due date reminder
+        sendInngestEvents([{ name: "project/deleted", data: { projectId } }]);
 
         // Invalidate projects list
         queryClient.invalidateQueries({ queryKey: projectKeys.lists() });

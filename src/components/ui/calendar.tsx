@@ -67,64 +67,66 @@ function Calendar({
   }, []);
 
   return (
-    <div>
-      <div
-        ref={scrollRef}
-        onWheel={handleWheel}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        className="max-h-[200px] overflow-y-scroll overscroll-contain"
-        style={{
-          WebkitOverflowScrolling: 'touch',
-          touchAction: 'pan-y',
-          scrollbarWidth: 'thin',
+    <div
+      ref={scrollRef}
+      onWheel={handleWheel}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      className={cn("max-h-[200px] overflow-y-scroll overscroll-contain", calendarFooter && "max-h-[240px]")}
+      style={{
+        WebkitOverflowScrolling: 'touch',
+        touchAction: 'pan-y',
+        scrollbarWidth: 'thin',
+      }}
+    >
+      <DayPicker
+        showOutsideDays={showOutsideDays}
+        numberOfMonths={numberOfMonths}
+        defaultMonth={defaultMonth}
+        startMonth={startMonth}
+        endMonth={endMonth}
+        hideNavigation
+        className={cn("p-3", calendarFooter && "pb-12", className)}
+        classNames={{
+          months: "flex flex-col",
+          month: "",
+          month_caption: "flex justify-start pt-4 pb-1 items-center",
+          caption_label: "text-sm font-semibold",
+          month_grid: "w-full border-collapse",
+          weekdays: "flex",
+          weekday:
+            "text-muted-foreground rounded-md w-7 font-normal text-xs",
+          week: "flex w-full",
+          day: cn(
+            "relative p-0 text-center text-sm focus-within:relative focus-within:z-20 [&:has([aria-selected])]:bg-accent [&:has([aria-selected].day-outside)]:bg-accent/50 [&:has([aria-selected].day-range-end)]:rounded-r-md",
+            props.mode === "range"
+              ? "[&:has(>.day-range-end)]:rounded-r-md [&:has(>.day-range-start)]:rounded-l-md first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md"
+              : "[&:has([aria-selected])]:rounded-md"
+          ),
+          day_button: cn(
+            buttonVariants({ variant: "ghost" }),
+            "h-7 w-7 p-0 font-normal text-sm aria-selected:opacity-100 touch-pan-y"
+          ),
+          range_start: "day-range-start",
+          range_end: "day-range-end",
+          selected:
+            "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
+          today: "bg-accent text-accent-foreground",
+          outside:
+            "day-outside text-muted-foreground aria-selected:bg-accent/50 aria-selected:text-muted-foreground",
+          disabled: "text-muted-foreground opacity-50",
+          range_middle:
+            "aria-selected:bg-accent aria-selected:text-accent-foreground",
+          hidden: "invisible",
+          ...classNames,
         }}
-      >
-        <DayPicker
-          showOutsideDays={showOutsideDays}
-          numberOfMonths={numberOfMonths}
-          defaultMonth={defaultMonth}
-          startMonth={startMonth}
-          endMonth={endMonth}
-          hideNavigation
-          className={cn("p-3", className)}
-          classNames={{
-            months: "flex flex-col",
-            month: "",
-            month_caption: "flex justify-start pt-4 pb-1 items-center",
-            caption_label: "text-sm font-semibold",
-            month_grid: "w-full border-collapse",
-            weekdays: "flex",
-            weekday:
-              "text-muted-foreground rounded-md w-7 font-normal text-xs",
-            week: "flex w-full",
-            day: cn(
-              "relative p-0 text-center text-sm focus-within:relative focus-within:z-20 [&:has([aria-selected])]:bg-accent [&:has([aria-selected].day-outside)]:bg-accent/50 [&:has([aria-selected].day-range-end)]:rounded-r-md",
-              props.mode === "range"
-                ? "[&:has(>.day-range-end)]:rounded-r-md [&:has(>.day-range-start)]:rounded-l-md first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md"
-                : "[&:has([aria-selected])]:rounded-md"
-            ),
-            day_button: cn(
-              buttonVariants({ variant: "ghost" }),
-              "h-7 w-7 p-0 font-normal text-sm aria-selected:opacity-100 touch-pan-y"
-            ),
-            range_start: "day-range-start",
-            range_end: "day-range-end",
-            selected:
-              "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
-            today: "bg-accent text-accent-foreground",
-            outside:
-              "day-outside text-muted-foreground aria-selected:bg-accent/50 aria-selected:text-muted-foreground",
-            disabled: "text-muted-foreground opacity-50",
-            range_middle:
-              "aria-selected:bg-accent aria-selected:text-accent-foreground",
-            hidden: "invisible",
-            ...classNames,
-          }}
-          {...props}
-        />
-      </div>
-      {calendarFooter}
+        {...props}
+      />
+      {calendarFooter && (
+        <div className="sticky bottom-0 bg-popover">
+          {calendarFooter}
+        </div>
+      )}
     </div>
   );
 }
