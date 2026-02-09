@@ -50,15 +50,29 @@ const changelog: ChangelogEntry[] = [
   {
     date: "February 9, 2026",
     version: "0.9.1",
-    title: "Task Editing Fix",
+    title: "Rich Text Editing & Fixes",
     description:
-      "Fixed a bug where editing task title or description on the task detail page had no effect.",
+      "WYSIWYG rich-text editor for task descriptions, plus editing bug fixes and cleaner list previews.",
     features: [
+      {
+        icon: FileText,
+        title: "WYSIWYG Description Editor",
+        description:
+          "Task descriptions now use a rich-text editor powered by Tiptap. Bullets, numbered lists, bold, and italic render in real time while you type — no more raw markdown syntax.",
+        tag: "new",
+      },
+      {
+        icon: List,
+        title: "Clean Task List Previews",
+        description:
+          "Task list and card previews now strip formatting instead of showing raw markdown or HTML characters.",
+        tag: "improved",
+      },
       {
         icon: CheckCircle2,
         title: "Task Edit Bug Fix",
         description:
-          "Fixed an issue where typing in the title or description fields on the task detail page would immediately revert changes. The render-time state sync was overwriting user input on every keystroke.",
+          "Fixed an issue where typing in the title or description fields on the task detail page would immediately revert changes.",
         tag: "fix",
       },
     ],

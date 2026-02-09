@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { MarkdownEditor } from "@/components/shared";
+import { RichTextEditor } from "@/components/shared";
 import {
   Select,
   SelectContent,
@@ -122,12 +122,11 @@ export function TaskForm({
       {/* Description */}
       <div className="space-y-2">
         <Label htmlFor="description">Description</Label>
-        <MarkdownEditor
+        <RichTextEditor
           value={description}
           onChange={setDescription}
-          placeholder="Add a description (supports **bold**, *italic*, - bullets)"
-          rows={3}
-          maxLength={5000}
+          placeholder="Add a description..."
+          minHeight={80}
         />
       </div>
 

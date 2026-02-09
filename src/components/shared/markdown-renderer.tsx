@@ -3,6 +3,7 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { cn } from "@/lib/utils";
+import { isHtmlContent } from "@/lib/description-utils";
 
 interface MarkdownRendererProps {
   content: string | null | undefined;
@@ -21,6 +22,17 @@ export function MarkdownRenderer({
     );
   }
 
+  // If content is HTML (from the rich-text editor), render it directly
+  if (isHtmlContent(content)) {
+    return (
+      <div
+        className={cn("prose-description", className)}
+        dangerouslySetInnerHTML={{ __html: content }}
+      />
+    );
+  }
+
+  // Otherwise, render as markdown (legacy content)
   return (
     <div className={cn("prose-description", className)}>
       <ReactMarkdown
