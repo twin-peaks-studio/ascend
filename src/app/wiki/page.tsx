@@ -26,6 +26,7 @@ import {
   Clock,
   Plus,
   Layers,
+  Bell,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -480,6 +481,53 @@ const sections: WikiSection[] = [
         paragraphs: [
           "Designate a project lead from the properties panel. The lead dropdown is also filtered to project members only.",
         ],
+      },
+      {
+        heading: "Comments",
+        paragraphs: [
+          "Every task has a comment section where team members can discuss work. Comments appear in chronological order and support real-time updates via Supabase Realtime.",
+        ],
+      },
+      {
+        heading: "@Mentions",
+        paragraphs: [
+          "Inside a shared project task's comment box, type @ to trigger the mention dropdown. The list shows all project members (excluding yourself), filtered as you type. Select a member with the mouse, or use the arrow keys and press Enter. The mentioned user's name is inserted into your comment text.",
+          "When you submit the comment, the mentioned user receives an instant notification in their notification center.",
+        ],
+        tip: "Mentions are only available on tasks that belong to a shared project with at least two members.",
+      },
+    ],
+  },
+  {
+    id: "notifications",
+    icon: Bell,
+    title: "Notifications",
+    description: "Stay informed with real-time alerts for mentions, assignments, and project changes.",
+    content: [
+      {
+        heading: "Notification Center",
+        paragraphs: [
+          "The bell icon in the header is your notification center. A badge shows how many unread notifications you have. Click the bell to open a dropdown listing all recent notifications.",
+          "Each notification shows who triggered it, what happened, and when. Click a notification to navigate directly to the relevant task or project. Use \"Mark all read\" to clear all unread badges at once.",
+        ],
+      },
+      {
+        heading: "Notification Types",
+        list: [
+          "Mentioned you in a comment — Someone @mentioned you in a task comment",
+          "Assigned a task to you — Someone assigned you to a task",
+          "Removed you from a task — Someone changed a task's assignee away from you",
+          "Invited you to a project — Someone added you as a project member",
+          "Made you lead of a project — Someone designated you as project lead",
+          "Removed you as project lead — Someone changed the project lead to someone else",
+        ],
+      },
+      {
+        heading: "Real-Time Delivery",
+        paragraphs: [
+          "Notifications are delivered instantly via Supabase Realtime. You do not need to refresh the page — the bell badge updates automatically the moment another user triggers a notification for you.",
+        ],
+        tip: "You will never receive a notification for your own actions. If you assign a task to yourself, no notification is created.",
       },
     ],
   },

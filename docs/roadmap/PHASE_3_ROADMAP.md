@@ -1,8 +1,20 @@
 # Phase 3: Team Collaboration - Implementation Roadmap
 
-**Status:** Planning
+**Status:** In Progress (~50% complete)
 **Duration:** 2-3 weeks
 **Priority:** High (Market expectation, competitive differentiator)
+**Last Updated:** 2026-02-09
+
+### Implementation Progress
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| #15 Real-time Task Updates | ✅ DONE | Hooks exist, tasks table now in Realtime publication |
+| #16 Comments System | ✅ DONE | Full CRUD, RLS, Realtime enabled |
+| #17 @Mentions & Notifications | ✅ DONE (core) | 6 notification types, real-time bell, @mention UI. Task due notifications (cron) pending. |
+| #18 Activity Feed | ❌ Not started | |
+| #19 User Presence Indicators | ❌ Not started | |
+| #20 Typing Indicators | ❌ Not started (optional) | |
 
 ---
 

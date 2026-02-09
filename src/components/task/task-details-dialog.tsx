@@ -408,7 +408,7 @@ export function TaskDetailsDialog({
 
             {/* Comments */}
             <div className="border-t border-border/40 pt-4 mt-6">
-              <CommentList taskId={task.id} />
+              <CommentList taskId={task.id} mentionProjectId={task.project_id} />
             </div>
           </div>
 

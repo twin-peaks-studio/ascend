@@ -2,22 +2,29 @@
 
 import { useState } from "react";
 import { MessageSquare, Loader2, ChevronDown, ChevronRight } from "lucide-react";
-import { CommentForm } from "./comment-form";
+import { CommentForm, type MentionedUser } from "./comment-form";
 import { CommentItem } from "./comment-item";
 import { useCommentMutations, useTaskComments, useProjectComments } from "@/hooks/use-comments";
 import { useRealtimeCommentsForTask, useRealtimeCommentsForProject } from "@/hooks/use-realtime-comments";
+import { useAuth } from "@/hooks/use-auth";
+import { notifyMention } from "@/lib/notifications/create-notification";
+import type { CommentInsert } from "@/types";
 
 interface CommentListProps {
   taskId?: string | null;
   projectId?: string | null;
+  /** Project ID for @mention member lookup. Pass task.project_id for task comments. */
+  mentionProjectId?: string | null;
   collapsible?: boolean;
 }
 
 export function CommentList({
   taskId,
   projectId,
+  mentionProjectId,
   collapsible = true
 }: CommentListProps) {
+  const { user } = useAuth();
   const [isExpanded, setIsExpanded] = useState(!collapsible);
 
   // Fetch comments based on whether this is for a task or project
@@ -46,8 +53,20 @@ export function CommentList({
     setHasCheckedComments(false);
   }
 
-  const handleCreateComment = async (input: Parameters<typeof createComment>[0]) => {
-    await createComment(input);
+  const handleCreateComment = async (input: CommentInsert, mentions: MentionedUser[]) => {
+    const newComment = await createComment(input);
+
+    if (mentions.length > 0 && user && newComment) {
+      for (const mention of mentions) {
+        await notifyMention({
+          recipientId: mention.userId,
+          actorId: user.id,
+          commentId: newComment.id,
+          taskId: taskId || null,
+          projectId: mentionProjectId || projectId || null,
+        });
+      }
+    }
   };
 
   const handleUpdateComment = async (id: string, updates: Parameters<typeof updateComment>[0]["updates"]) => {
@@ -125,6 +144,7 @@ export function CommentList({
           <CommentForm
             taskId={taskId}
             projectId={projectId}
+            mentionProjectId={mentionProjectId}
             onSubmit={handleCreateComment}
             isSubmitting={isCreating}
           />

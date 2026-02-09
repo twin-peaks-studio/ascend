@@ -1,6 +1,7 @@
 "use client";
 
 import { Moon, Sun, Plus, LogOut, LayoutGrid, List, Search, MessageSquarePlus, Newspaper } from "lucide-react";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { GlobalTimerIndicator } from "@/components/time";
@@ -85,6 +86,9 @@ export function Header({
 
           {/* Global timer indicator */}
           <GlobalTimerIndicator className="hidden sm:flex" />
+
+          {/* Notifications */}
+          <NotificationBell />
 
           {/* Search button */}
           <Button

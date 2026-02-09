@@ -25,6 +25,7 @@ import {
   CheckCircle2,
   Trash2,
   MessageSquarePlus,
+  Bell,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -47,6 +48,43 @@ interface ChangelogEntry {
 }
 
 const changelog: ChangelogEntry[] = [
+  {
+    date: "February 9, 2026",
+    version: "0.10.0",
+    title: "Notifications & @Mentions",
+    description:
+      "Real-time notification system with @mentions in comments, task assignment alerts, project invite notifications, and more.",
+    features: [
+      {
+        icon: Bell,
+        title: "Notification Center",
+        description:
+          "A new bell icon in the header shows your unread notifications in real time. Click to view a dropdown of all notifications, mark individual items or all as read, and click through to the relevant task or project.",
+        tag: "new",
+      },
+      {
+        icon: Users,
+        title: "@Mentions in Comments",
+        description:
+          "Type @ in a comment on a shared project task to mention a teammate. A dropdown shows project members filtered as you type. The mentioned user receives a real-time notification instantly.",
+        tag: "new",
+      },
+      {
+        icon: CheckCircle2,
+        title: "Task Assignment Notifications",
+        description:
+          "When you assign or unassign someone from a task, they receive an automatic notification. Works across all task editing surfaces (detail page, dialog, and mobile).",
+        tag: "new",
+      },
+      {
+        icon: Users,
+        title: "Project & Lead Notifications",
+        description:
+          "Users are now notified when invited to a project, designated as project lead, or removed as project lead.",
+        tag: "new",
+      },
+    ],
+  },
   {
     date: "February 9, 2026",
     version: "0.9.1",

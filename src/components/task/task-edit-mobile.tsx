@@ -685,7 +685,7 @@ export function TaskEditMobile({
 
           {/* Comments */}
           <div className="py-3 border-t border-border/40">
-            <CommentList taskId={task.id} />
+            <CommentList taskId={task.id} mentionProjectId={task.project_id} />
           </div>
 
           {/* Created by info */}
