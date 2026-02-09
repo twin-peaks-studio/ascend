@@ -414,6 +414,36 @@ CREATE POLICY "Users can insert own projects" ON projects
   FOR INSERT WITH CHECK (auth.uid() = user_id);
 ```
 
+### Notifications Table (Phase 3)
+
+```
+┌─────────────────────────┐
+│     notifications       │
+├─────────────────────────┤
+│ id (PK, UUID)           │
+│ user_id (FK → profiles) │  ← Recipient
+│ actor_id (FK → profiles)│  ← Who triggered it
+│ type (TEXT)              │  ← mention, task_assigned, task_unassigned,
+│                         │     project_invited, project_lead_assigned,
+│                         │     project_lead_removed
+│ comment_id (FK, NULL)   │
+│ task_id (FK, NULL)      │
+│ project_id (FK, NULL)   │
+│ read (BOOL, default F)  │
+│ created_at (TSTZ)       │
+└─────────────────────────┘
+```
+
+**RLS Policies:**
+- SELECT: `user_id = auth.uid()` (users see only their own notifications)
+- INSERT: `auth.uid() IS NOT NULL` (any authenticated user can create, app validates context)
+- UPDATE: `user_id = auth.uid()` (users can mark their own as read)
+- DELETE: `user_id = auth.uid()` (users can delete their own)
+
+**Realtime:** Enabled via `ALTER PUBLICATION supabase_realtime ADD TABLE notifications`
+
+**Indexes:** `user_id`, `created_at DESC`, partial index on `(user_id, read) WHERE read = false`
+
 ---
 
 ## Supabase Integration
@@ -983,6 +1013,41 @@ const createTaskFromNote = async (noteId, projectId, taskData) => {
   return task;
 };
 ```
+
+### useNotifications (`src/hooks/use-notifications.ts`)
+
+```typescript
+// Query keys
+export const notificationKeys = {
+  all: ["notifications"] as const,
+  list: (userId: string) => [...notificationKeys.all, "list", userId] as const,
+  unreadCount: (userId: string) => [...notificationKeys.all, "unread-count", userId] as const,
+};
+
+// Hooks
+export function useNotifications(userId: string | null);       // Fetch notifications list
+export function useUnreadNotificationCount(userId: string | null); // Fetch unread count
+export function useNotificationMutations(userId: string | null);   // markAsRead, markAllAsRead
+```
+
+### useRealtimeNotifications (`src/hooks/use-realtime-notifications.ts`)
+
+Subscribes to Supabase Realtime `postgres_changes` on the `notifications` table filtered by `user_id=eq.{userId}`. On INSERT events, invalidates the notification list and unread count queries so the bell badge updates instantly.
+
+### Notification Helper (`src/lib/notifications/create-notification.ts`)
+
+Centralized utility for creating notification rows. All notification types go through this module:
+
+```typescript
+notifyMention(params)              // @mention in a comment
+notifyTaskAssigned(params)         // Task assigned to user
+notifyTaskUnassigned(params)       // Task unassigned from user
+notifyProjectInvited(params)       // User invited to project
+notifyProjectLeadAssigned(params)  // User made project lead
+notifyProjectLeadRemoved(params)   // User removed as project lead
+```
+
+Each function inserts a row into `notifications` and suppresses self-notifications (won't notify you for your own actions).
 
 ### useKeyboardShortcuts (`src/hooks/use-keyboard-shortcuts.ts`)
 
