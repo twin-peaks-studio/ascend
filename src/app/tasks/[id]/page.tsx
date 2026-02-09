@@ -17,6 +17,9 @@ import {
   ChevronRight,
   Trash2,
   Loader2,
+  PanelRightClose,
+  PanelRight,
+  Settings2,
 } from "lucide-react";
 import { AppShell } from "@/components/layout";
 import { Button } from "@/components/ui/button";
@@ -42,6 +45,12 @@ import { AttachmentsList } from "@/components/shared/attachments-list";
 import { TimerButton, TimeEntryList } from "@/components/time";
 import { CommentList } from "@/components/comments/comment-list";
 import { DeleteConfirmationDialog } from "@/components/ui/delete-confirmation-dialog";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { useTask } from "@/hooks/use-task";
 import { useTaskMutations } from "@/hooks/use-tasks";
 import { useProfiles } from "@/hooks/use-profiles";
@@ -118,6 +127,10 @@ export default function TaskDetailPage() {
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // Properties panel state
+  const [showProperties, setShowProperties] = useState(true);
+  const [showMobileProperties, setShowMobileProperties] = useState(false);
 
   // Track task ID to sync local state only when task changes (not on every render)
   const [prevTaskId, setPrevTaskId] = useState<string | null>(null);
@@ -288,8 +301,9 @@ export default function TaskDetailPage() {
 
   return (
     <AppShell>
+      <div className="h-full flex flex-col">
       {/* Header */}
-      <div className="border-b border-border/40 px-8 py-4">
+      <div className="border-b border-border/40 px-4 md:px-8 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Button
@@ -331,9 +345,10 @@ export default function TaskDetailPage() {
       </div>
 
       {/* Main Content */}
-      <div className="grid grid-cols-1 md:grid-cols-[1fr_300px]">
+      <div className="flex-1 overflow-hidden">
+        <div className="h-full flex">
         {/* Left Panel - Main Content */}
-        <div className="px-16 py-10 overflow-y-auto">
+        <div className="flex-1 px-4 md:px-16 py-10 overflow-y-auto md:border-r border-border/40">
           {/* Title with checkbox */}
           <div className="flex items-start gap-3 mb-6">
             <button
@@ -516,8 +531,24 @@ export default function TaskDetailPage() {
           </div>
         </div>
 
-        {/* Right Panel - Properties Sidebar */}
-        <div className="border-l border-border/40 p-6 bg-muted/10 overflow-y-auto">
+        {/* Right Panel - Properties Sidebar (desktop, collapsible) */}
+        {showProperties && (
+        <div className="hidden md:block w-[300px] p-6 bg-muted/10 overflow-y-auto">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+              Properties
+            </h3>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 text-muted-foreground"
+              onClick={() => setShowProperties(false)}
+              title="Hide properties"
+            >
+              <PanelRightClose className="h-4 w-4" />
+            </Button>
+          </div>
+
           {/* Project */}
           <SidebarRow label="Project">
             <Select
@@ -746,7 +777,270 @@ export default function TaskDetailPage() {
             />
           </SidebarRow>
         </div>
+        )}
+
+        {/* Collapsed properties toggle button (desktop) */}
+        {!showProperties && (
+          <div className="hidden md:flex items-start p-2 bg-muted/10">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-muted-foreground"
+              onClick={() => setShowProperties(true)}
+              title="Show properties"
+            >
+              <PanelRight className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
+        </div>
       </div>
+
+      {/* Mobile properties floating button */}
+      <button
+        onClick={() => setShowMobileProperties(true)}
+        className="fixed bottom-28 left-4 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-card text-muted-foreground shadow-lg ring-1 ring-border/50 transition-transform hover:scale-105 active:scale-95 md:hidden"
+        aria-label="Open properties"
+      >
+        <Settings2 className="h-5 w-5" />
+      </button>
+
+      {/* Mobile properties sheet */}
+      <Sheet open={showMobileProperties} onOpenChange={setShowMobileProperties}>
+        <SheetContent side="bottom" className="h-[80vh] overflow-y-auto">
+          <SheetHeader className="pb-4">
+            <SheetTitle>Properties</SheetTitle>
+          </SheetHeader>
+
+          {/* Project */}
+          <SidebarRow label="Project">
+            <Select
+              value={task.project_id || "__none__"}
+              onValueChange={handleProjectChange}
+              disabled={loading}
+            >
+              <SelectTrigger className="border-0 p-0 h-auto shadow-none focus:ring-0 hover:bg-muted/50 -mx-1.5 px-1.5 rounded min-h-0 text-xs">
+                <SelectValue>
+                  {task.project ? (
+                    <div className="flex items-start gap-1.5">
+                      <Hash
+                        className="h-3 w-3 shrink-0 mt-0.5"
+                        style={{ color: task.project.color }}
+                      />
+                      <span className="text-left break-words">
+                        {task.project.title}
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1.5 text-muted-foreground">
+                      <Hash className="h-3 w-3 shrink-0" />
+                      <span>No project</span>
+                    </div>
+                  )}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">
+                  <div className="flex items-center gap-1.5 text-xs">
+                    <Hash className="h-3 w-3 text-muted-foreground" />
+                    <span>No project</span>
+                  </div>
+                </SelectItem>
+                {projects.map((project) => (
+                  <SelectItem key={project.id} value={project.id}>
+                    <div className="flex items-center gap-1.5 text-xs">
+                      <Hash
+                        className="h-3 w-3"
+                        style={{ color: project.color }}
+                      />
+                      <span>{project.title}</span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </SidebarRow>
+
+          {/* Assignee */}
+          <SidebarRow label="Assignee">
+            <Select
+              value={task.assignee_id || "__none__"}
+              onValueChange={handleAssigneeChange}
+              disabled={loading}
+            >
+              <SelectTrigger className="border-0 p-0 h-auto shadow-none focus:ring-0 hover:bg-muted/50 -mx-1.5 px-1.5 rounded min-h-0 text-xs">
+                <SelectValue>
+                  {assignee ? (
+                    <div className="flex items-center gap-1.5">
+                      <Avatar className="h-3.5 w-3.5">
+                        <AvatarImage src={assignee.avatar_url || undefined} />
+                        <AvatarFallback className="text-[7px]">
+                          {getInitials(assignee.display_name, assignee.email)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="break-words">
+                        {assignee.display_name || assignee.email}
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1.5 text-muted-foreground">
+                      <User className="h-3 w-3" />
+                      <span>Unassigned</span>
+                    </div>
+                  )}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">
+                  <div className="flex items-center gap-1.5 text-xs">
+                    <User className="h-3 w-3 text-muted-foreground" />
+                    <span>Unassigned</span>
+                  </div>
+                </SelectItem>
+                {assignableProfiles.map((profile) => (
+                  <SelectItem key={profile.id} value={profile.id}>
+                    <div className="flex items-center gap-1.5 text-xs">
+                      <Avatar className="h-3.5 w-3.5">
+                        <AvatarImage src={profile.avatar_url || undefined} />
+                        <AvatarFallback className="text-[7px]">
+                          {getInitials(profile.display_name, profile.email)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span>{profile.display_name || profile.email}</span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </SidebarRow>
+
+          {/* Due Date */}
+          <SidebarRow label="Due Date">
+            <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+              <PopoverTrigger asChild>
+                <button
+                  className={cn(
+                    "flex items-center gap-1.5 hover:bg-muted/50 -mx-1.5 px-1.5 py-0.5 rounded w-full text-left text-xs",
+                    isTaskOverdue && "text-red-500"
+                  )}
+                  disabled={loading}
+                >
+                  <Calendar className="h-3 w-3 shrink-0" />
+                  {task.due_date ? (
+                    <span>{formatDueDate(task.due_date)}</span>
+                  ) : (
+                    <span className="text-muted-foreground">Add date</span>
+                  )}
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <CalendarComponent
+                  mode="single"
+                  selected={
+                    task.due_date ? new Date(task.due_date) : undefined
+                  }
+                  onSelect={handleDueDateChange}
+                  initialFocus
+                />
+                {task.due_date && (
+                  <div className="p-2 border-t">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full"
+                      onClick={() => handleDueDateChange(undefined)}
+                    >
+                      Clear date
+                    </Button>
+                  </div>
+                )}
+              </PopoverContent>
+            </Popover>
+          </SidebarRow>
+
+          {/* Priority */}
+          <SidebarRow label="Priority">
+            <Select
+              value={task.priority}
+              onValueChange={handlePriorityChange}
+              disabled={loading}
+            >
+              <SelectTrigger className="border-0 p-0 h-auto shadow-none focus:ring-0 hover:bg-muted/50 -mx-1.5 px-1.5 rounded min-h-0 text-xs">
+                <SelectValue>
+                  <div className={cn("flex items-center gap-1.5", priorityConfig.color)}>
+                    <Flag className="h-3 w-3" />
+                    <span>{priorityConfig.label}</span>
+                  </div>
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="urgent">
+                  <div className="flex items-center gap-1.5 text-xs text-red-500">
+                    <Flag className="h-3 w-3" />
+                    <span>P1</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="high">
+                  <div className="flex items-center gap-1.5 text-xs text-orange-500">
+                    <Flag className="h-3 w-3" />
+                    <span>P2</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="medium">
+                  <div className="flex items-center gap-1.5 text-xs text-blue-500">
+                    <Flag className="h-3 w-3" />
+                    <span>P3</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="low">
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <Flag className="h-3 w-3" />
+                    <span>P4</span>
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </SidebarRow>
+
+          {/* Status */}
+          <SidebarRow label="Status">
+            <Select
+              value={task.status}
+              onValueChange={handleStatusChange}
+              disabled={loading}
+            >
+              <SelectTrigger className="border-0 p-0 h-auto shadow-none focus:ring-0 hover:bg-muted/50 -mx-1.5 px-1.5 rounded min-h-0 text-xs">
+                <SelectValue>
+                  <span>{STATUS_CONFIG[task.status].label}</span>
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todo" className="text-xs">
+                  To Do
+                </SelectItem>
+                <SelectItem value="in-progress" className="text-xs">
+                  In Progress
+                </SelectItem>
+                <SelectItem value="done" className="text-xs">
+                  Done
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </SidebarRow>
+
+          {/* Timer */}
+          <SidebarRow label="Timer">
+            <TimerButton
+              entityType="task"
+              entityId={task.id}
+              entityName={task.title}
+              size="sm"
+              showLabel={true}
+              className="w-full justify-center"
+            />
+          </SidebarRow>
+        </SheetContent>
+      </Sheet>
 
       {/* Delete Confirmation Dialog */}
       <DeleteConfirmationDialog
@@ -757,6 +1051,7 @@ export default function TaskDetailPage() {
         description="Are you sure you want to delete this task? This action cannot be undone."
         confirmLabel="Delete"
       />
+      </div>
     </AppShell>
   );
 }

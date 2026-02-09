@@ -75,6 +75,13 @@ const changelog: ChangelogEntry[] = [
           "Fixed an issue where typing in the title or description fields on the task detail page would immediately revert changes.",
         tag: "fix",
       },
+      {
+        icon: Smartphone,
+        title: "Mobile Task Properties",
+        description:
+          "The task detail page now hides the properties sidebar on mobile and shows it via a floating toggle button and bottom sheet, matching the project page experience.",
+        tag: "improved",
+      },
     ],
   },
   {
