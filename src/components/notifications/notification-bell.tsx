@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Bell } from "lucide-react";
+import { Bell, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -49,6 +49,8 @@ function getNotificationMessage(type: string): string {
       return "made you lead of a project";
     case "project_lead_removed":
       return "removed you as project lead";
+    case "task_due":
+      return "is due in less than 1 hour";
     default:
       return "sent you a notification";
   }
@@ -69,6 +71,7 @@ function NotificationItem({
   onMarkAsRead: (id: string) => void;
   onNavigate: (path: string) => void;
 }) {
+  const isSystemNotification = notification.type === "task_due";
   const actorName =
     notification.actor?.display_name ||
     notification.actor?.email ||
@@ -93,16 +96,31 @@ function NotificationItem({
       )}
       onClick={handleClick}
     >
-      <Avatar className="h-8 w-8 shrink-0">
-        <AvatarImage src={notification.actor?.avatar_url || undefined} />
-        <AvatarFallback className="text-xs">
-          {getInitials(notification.actor?.display_name, notification.actor?.email)}
-        </AvatarFallback>
-      </Avatar>
+      {isSystemNotification ? (
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-orange-100 dark:bg-orange-900/30">
+          <Clock className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+        </div>
+      ) : (
+        <Avatar className="h-8 w-8 shrink-0">
+          <AvatarImage src={notification.actor?.avatar_url || undefined} />
+          <AvatarFallback className="text-xs">
+            {getInitials(notification.actor?.display_name, notification.actor?.email)}
+          </AvatarFallback>
+        </Avatar>
+      )}
       <div className="min-w-0 flex-1">
         <p className="truncate">
-          <span className="font-medium">{actorName}</span>
-          {" "}{getNotificationMessage(notification.type)}
+          {isSystemNotification ? (
+            <>
+              <span className="font-medium">Your task</span>
+              {" "}{getNotificationMessage(notification.type)}
+            </>
+          ) : (
+            <>
+              <span className="font-medium">{actorName}</span>
+              {" "}{getNotificationMessage(notification.type)}
+            </>
+          )}
         </p>
         <p className="text-xs text-muted-foreground">
           {formatTimeAgo(notification.created_at)}

@@ -50,6 +50,29 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: "February 9, 2026",
+    version: "0.11.0",
+    title: "Task Due Reminders via Inngest",
+    description:
+      "Scheduled task due date reminders powered by Inngest's durable workflow engine. Get notified 1 hour before a task is due — even if you haven't opened the app.",
+    features: [
+      {
+        icon: Clock,
+        title: "Due Date Reminders",
+        description:
+          "When a task has a due date and an assignee, a background function sleeps until 1 hour before the deadline and then creates an in-app notification. If the task is completed, deleted, or the due date changes, the reminder is automatically cancelled.",
+        tag: "new",
+      },
+      {
+        icon: Zap,
+        title: "Inngest Durable Workflows",
+        description:
+          "Background notifications are powered by Inngest, a durable workflow engine that schedules, retries, and cancels long-running functions. This lays the foundation for future email and mobile push notifications.",
+        tag: "new",
+      },
+    ],
+  },
+  {
+    date: "February 9, 2026",
     version: "0.10.0",
     title: "Notifications & @Mentions",
     description:

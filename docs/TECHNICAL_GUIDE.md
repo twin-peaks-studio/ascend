@@ -1049,6 +1049,46 @@ notifyProjectLeadRemoved(params)   // User removed as project lead
 
 Each function inserts a row into `notifications` and suppresses self-notifications (won't notify you for your own actions).
 
+### Inngest — Durable Workflow Engine
+
+Inngest powers time-based notifications (task due reminders). It schedules a function to wake up at a future time and automatically cancels it when the task is completed, deleted, or the due date changes.
+
+**Files:**
+
+```
+src/inngest/client.ts                       — Inngest client singleton
+src/inngest/events.ts                       — Typed event definitions
+src/inngest/functions/task-due-reminder.ts  — The due date reminder function
+src/app/api/inngest/route.ts               — Inngest serve handler (GET/POST/PUT)
+src/app/api/inngest/events/route.ts        — Authenticated event proxy for client-side hooks
+src/lib/inngest/send-events.ts             — Client-side utility to send events via proxy
+src/lib/supabase/service.ts                — Service role client (bypasses RLS for Inngest functions)
+```
+
+**Events:**
+
+| Event | Purpose |
+|-------|---------|
+| `task/due-date.set` | Trigger: schedules reminder for 1hr before due |
+| `task/due-date.updated` | Cancel: cancels sleeping reminder when due date changes |
+| `task/due-date.removed` | Cancel: cancels when due date is cleared |
+| `task/completed` | Cancel: cancels when task status → done |
+| `task/deleted` | Cancel: cancels when task is deleted |
+
+**Flow:**
+
+1. Hook fires event via `sendInngestEvents()` → POST `/api/inngest/events`
+2. Event proxy authenticates user and forwards to Inngest
+3. Inngest function sleeps until `dueDate - 1 hour`
+4. On wake: inserts `task_due` notification row via service role client
+5. Realtime subscription delivers notification to user's bell
+
+**Environment Variables:**
+
+- `INNGEST_EVENT_KEY` — for sending events (production)
+- `INNGEST_SIGNING_KEY` — for verifying webhook authenticity (production)
+- `SUPABASE_SERVICE_ROLE_KEY` — for the service client used in Inngest functions
+
 ### useKeyboardShortcuts (`src/hooks/use-keyboard-shortcuts.ts`)
 
 ```typescript

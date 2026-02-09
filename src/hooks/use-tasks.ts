@@ -19,6 +19,7 @@ import {
   notifyTaskAssigned,
   notifyTaskUnassigned,
 } from "@/lib/notifications/create-notification";
+import { sendInngestEvents } from "@/lib/inngest/send-events";
 import type { Task, TaskWithProject, TaskStatus } from "@/types";
 import type { TaskInsert, TaskUpdate } from "@/types/database";
 import {
@@ -236,8 +237,24 @@ export function useTaskMutations() {
         // Invalidate tasks list to refetch
         queryClient.invalidateQueries({ queryKey: taskKeys.lists() });
 
+        const newTask = insertResult.data as Task;
+
+        // Schedule due date reminder if task has a due date and assignee
+        if (newTask.due_date && newTask.assignee_id) {
+          sendInngestEvents([{
+            name: "task/due-date.set",
+            data: {
+              taskId: newTask.id,
+              dueDate: newTask.due_date,
+              assigneeId: newTask.assignee_id,
+              taskTitle: newTask.title,
+              projectId: newTask.project_id,
+            },
+          }]);
+        }
+
         toast.success("Task created successfully");
-        return insertResult.data as Task;
+        return newTask;
       } catch (err: unknown) {
         const supabaseError = err as {
           message?: string;
@@ -316,7 +333,56 @@ export function useTaskMutations() {
                 projectId: updatedTask.project_id,
               });
             }
+
+            // Reschedule due date reminder for the new assignee
+            if (updatedTask.due_date) {
+              const inngestEvents: Array<{ name: string; data: Record<string, unknown> }> = [
+                { name: "task/due-date.updated", data: { taskId } },
+              ];
+              if (newAssigneeId) {
+                inngestEvents.push({
+                  name: "task/due-date.set",
+                  data: {
+                    taskId,
+                    dueDate: updatedTask.due_date,
+                    assigneeId: newAssigneeId,
+                    taskTitle: updatedTask.title,
+                    projectId: updatedTask.project_id,
+                  },
+                });
+              }
+              sendInngestEvents(inngestEvents);
+            }
           }
+        }
+
+        // Handle due date changes (schedule/reschedule/cancel reminder)
+        if ("due_date" in validated) {
+          const inngestEvents: Array<{ name: string; data: Record<string, unknown> }> = [
+            // Always cancel the existing reminder first
+            { name: "task/due-date.updated", data: { taskId } },
+          ];
+
+          // Schedule a new reminder if there's a new due date and an assignee
+          if (validated.due_date && updatedTask.assignee_id) {
+            inngestEvents.push({
+              name: "task/due-date.set",
+              data: {
+                taskId,
+                dueDate: validated.due_date,
+                assigneeId: updatedTask.assignee_id,
+                taskTitle: updatedTask.title,
+                projectId: updatedTask.project_id,
+              },
+            });
+          }
+
+          sendInngestEvents(inngestEvents);
+        }
+
+        // Cancel reminder when task is completed
+        if (validated.status === "done") {
+          sendInngestEvents([{ name: "task/completed", data: { taskId } }]);
         }
 
         // Invalidate tasks list and single task cache
@@ -435,6 +501,9 @@ export function useTaskMutations() {
         );
 
         if (deleteResult.error) throw deleteResult.error;
+
+        // Cancel any pending due date reminder
+        sendInngestEvents([{ name: "task/deleted", data: { taskId } }]);
 
         // Invalidate tasks list and single task cache
         queryClient.invalidateQueries({ queryKey: taskKeys.lists() });

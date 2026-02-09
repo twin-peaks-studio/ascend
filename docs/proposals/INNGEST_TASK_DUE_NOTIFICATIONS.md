@@ -1,6 +1,6 @@
 # Proposal: Task Due Notifications via Inngest
 
-> **Status:** Proposed
+> **Status:** Implemented
 > **Date:** February 9, 2026
 > **Scope:** Phase 3 — Team Collaboration (#18 Notifications & Activity)
 
