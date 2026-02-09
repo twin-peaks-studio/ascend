@@ -527,7 +527,7 @@ export default function TaskDetailPage() {
 
           {/* Comments - Always expanded, part of page scroll */}
           <div className="mb-8">
-            <CommentList taskId={task.id} collapsible={false} />
+            <CommentList taskId={task.id} mentionProjectId={task.project_id} collapsible={false} />
           </div>
         </div>
 
