@@ -579,21 +579,25 @@ export function TaskDetailsDialog({
                     selected={pendingDueDate || undefined}
                     onSelect={handleDueDateSelect}
                     initialFocus
+                    calendarFooter={
+                      <>
+                        <div className="border-t" />
+                        <TimePicker value={pendingDueDate} onChange={handleDueTimeChange} />
+                        {pendingDueDate && (
+                          <div className="p-2 border-t">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="w-full"
+                              onClick={handleClearDueDate}
+                            >
+                              Clear date
+                            </Button>
+                          </div>
+                        )}
+                      </>
+                    }
                   />
-                  <div className="border-t" />
-                  <TimePicker value={pendingDueDate} onChange={handleDueTimeChange} />
-                  {pendingDueDate && (
-                    <div className="p-2 border-t">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="w-full"
-                        onClick={handleClearDueDate}
-                      >
-                        Clear date
-                      </Button>
-                    </div>
-                  )}
                 </PopoverContent>
               </Popover>
             </SidebarRow>

@@ -85,9 +85,13 @@ export function DatePicker({
           selected={value || undefined}
           onSelect={handleSelect}
           initialFocus
+          calendarFooter={
+            <>
+              <div className="border-t" />
+              <TimePicker value={value} onChange={handleTimeChange} />
+            </>
+          }
         />
-        <div className="border-t" />
-        <TimePicker value={value} onChange={handleTimeChange} />
       </PopoverContent>
     </Popover>
   );

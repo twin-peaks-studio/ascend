@@ -230,27 +230,31 @@ function QuickAddTaskForm({
                     setDueDate(date);
                   }}
                   initialFocus
+                  calendarFooter={
+                    <>
+                      <div className="border-t" />
+                      <TimePicker
+                        value={dueDate}
+                        onChange={(date) => setDueDate(date)}
+                      />
+                      {dueDate && (
+                        <div className="p-2 border-t">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="w-full"
+                            onClick={() => {
+                              setDueDate(null);
+                              setDatePickerOpen(false);
+                            }}
+                          >
+                            Clear date
+                          </Button>
+                        </div>
+                      )}
+                    </>
+                  }
                 />
-                <div className="border-t" />
-                <TimePicker
-                  value={dueDate}
-                  onChange={(date) => setDueDate(date)}
-                />
-                {dueDate && (
-                  <div className="p-2 border-t">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="w-full"
-                      onClick={() => {
-                        setDueDate(null);
-                        setDatePickerOpen(false);
-                      }}
-                    >
-                      Clear date
-                    </Button>
-                  </div>
-                )}
               </PopoverContent>
             </Popover>
 

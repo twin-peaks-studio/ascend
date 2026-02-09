@@ -444,19 +444,23 @@ export function TaskEditMobile({
                   selected={pendingDueDate || undefined}
                   onSelect={handleDueDateSelect}
                   initialFocus
+                  calendarFooter={
+                    <>
+                      <div className="border-t" />
+                      <TimePicker value={pendingDueDate} onChange={handleDueTimeChange} />
+                      <div className="p-2 border-t">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="w-full"
+                          onClick={handleClearDueDate}
+                        >
+                          Clear date
+                        </Button>
+                      </div>
+                    </>
+                  }
                 />
-                <div className="border-t" />
-                <TimePicker value={pendingDueDate} onChange={handleDueTimeChange} />
-                <div className="p-2 border-t">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="w-full"
-                    onClick={handleClearDueDate}
-                  >
-                    Clear date
-                  </Button>
-                </div>
               </PopoverContent>
             </Popover>
           )}
@@ -611,9 +615,13 @@ export function TaskEditMobile({
                         selected={pendingDueDate || undefined}
                         onSelect={handleDueDateSelect}
                         initialFocus
+                        calendarFooter={
+                          <>
+                            <div className="border-t" />
+                            <TimePicker value={pendingDueDate} onChange={handleDueTimeChange} />
+                          </>
+                        }
                       />
-                      <div className="border-t" />
-                      <TimePicker value={pendingDueDate} onChange={handleDueTimeChange} />
                     </PopoverContent>
                   </Popover>
                 )}

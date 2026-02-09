@@ -290,9 +290,13 @@ export function PropertiesPanel({
                 selected={pendingDueDate || undefined}
                 onSelect={handleDueDateSelect}
                 initialFocus
+                calendarFooter={
+                  <>
+                    <div className="border-t" />
+                    <TimePicker value={pendingDueDate} onChange={handleDueTimeChange} />
+                  </>
+                }
               />
-              <div className="border-t" />
-              <TimePicker value={pendingDueDate} onChange={handleDueTimeChange} />
             </PopoverContent>
           </Popover>
           {project.due_date && (
