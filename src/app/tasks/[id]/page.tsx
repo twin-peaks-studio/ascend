@@ -118,8 +118,10 @@ export default function TaskDetailPage() {
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // Sync local state when task loads
-  if (task && (title !== task.title || description !== task.description)) {
+  // Track task ID to sync local state only when task changes (not on every render)
+  const [prevTaskId, setPrevTaskId] = useState<string | null>(null);
+  if (task && prevTaskId !== task.id) {
+    setPrevTaskId(task.id);
     setTitle(task.title);
     setDescription(task.description ?? "");
   }
