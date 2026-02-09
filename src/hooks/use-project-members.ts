@@ -13,6 +13,7 @@ import { getClient } from "@/lib/supabase/client-manager";
 import { withTimeout, TIMEOUTS } from "@/lib/utils/with-timeout";
 import { logger } from "@/lib/logger/logger";
 import { useAuth } from "@/hooks/use-auth";
+import { notifyProjectInvited } from "@/lib/notifications/create-notification";
 import type { ProjectMember, Profile } from "@/types/database";
 import { toast } from "sonner";
 
@@ -207,6 +208,13 @@ export function useProjectMemberMutations() {
           });
 
         if (insertError) throw insertError;
+
+        // Notify the invited user
+        notifyProjectInvited({
+          recipientId: profile.id,
+          actorId: user.id,
+          projectId,
+        });
 
         // Invalidate project members cache
         queryClient.invalidateQueries({ queryKey: projectMemberKeys.list(projectId) });

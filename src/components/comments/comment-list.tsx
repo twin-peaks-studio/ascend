@@ -7,8 +7,7 @@ import { CommentItem } from "./comment-item";
 import { useCommentMutations, useTaskComments, useProjectComments } from "@/hooks/use-comments";
 import { useRealtimeCommentsForTask, useRealtimeCommentsForProject } from "@/hooks/use-realtime-comments";
 import { useAuth } from "@/hooks/use-auth";
-import { getClient } from "@/lib/supabase/client-manager";
-import { logger } from "@/lib/logger/logger";
+import { notifyMention } from "@/lib/notifications/create-notification";
 import type { CommentInsert } from "@/types";
 
 interface CommentListProps {
@@ -57,25 +56,15 @@ export function CommentList({
   const handleCreateComment = async (input: CommentInsert, mentions: MentionedUser[]) => {
     const newComment = await createComment(input);
 
-    // Create notifications for each mentioned user
     if (mentions.length > 0 && user && newComment) {
-      const supabase = getClient();
       for (const mention of mentions) {
-        const { error } = await supabase.from("notifications").insert({
-          user_id: mention.userId,
-          actor_id: user.id,
-          type: "mention",
-          comment_id: newComment.id,
-          task_id: taskId || null,
-          project_id: mentionProjectId || projectId || null,
+        await notifyMention({
+          recipientId: mention.userId,
+          actorId: user.id,
+          commentId: newComment.id,
+          taskId: taskId || null,
+          projectId: mentionProjectId || projectId || null,
         });
-        if (error) {
-          logger.error("Failed to create mention notification", {
-            mentionedUserId: mention.userId,
-            commentId: newComment.id,
-            error,
-          });
-        }
       }
     }
   };

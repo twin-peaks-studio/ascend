@@ -106,7 +106,9 @@ function TimerTaskDialog() {
     if (!selectedTask) return;
     setIsUpdating(true);
     try {
-      await updateTask(selectedTask.id, data);
+      // Pass previous assignee for notification tracking when assignee changes
+      const previousAssigneeId = "assignee_id" in data ? selectedTask.assignee_id : undefined;
+      await updateTask(selectedTask.id, data, previousAssigneeId);
       // Update the local selected task with new data
       setSelectedTask((prev) =>
         prev ? { ...prev, ...data } : null

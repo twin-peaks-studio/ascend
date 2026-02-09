@@ -159,7 +159,9 @@ export default function TaskDetailPage() {
     async (data: UpdateTaskInput) => {
       if (!task) return;
       setLoading(true);
-      const result = await updateTask(task.id, data);
+      // Pass previous assignee for notification tracking when assignee changes
+      const previousAssigneeId = "assignee_id" in data ? task.assignee_id : undefined;
+      const result = await updateTask(task.id, data, previousAssigneeId);
       setLoading(false);
       if (!result) {
         // Revert optimistic updates on failure

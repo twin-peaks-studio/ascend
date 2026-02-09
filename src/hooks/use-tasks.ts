@@ -15,6 +15,10 @@ import { withTimeout, TIMEOUTS } from "@/lib/utils/with-timeout";
 import { logger } from "@/lib/logger/logger";
 import { useAuth } from "@/hooks/use-auth";
 import { singleTaskKeys } from "@/hooks/use-task";
+import {
+  notifyTaskAssigned,
+  notifyTaskUnassigned,
+} from "@/lib/notifications/create-notification";
 import type { Task, TaskWithProject, TaskStatus } from "@/types";
 import type { TaskInsert, TaskUpdate } from "@/types/database";
 import {
@@ -261,7 +265,12 @@ export function useTaskMutations() {
   );
 
   const updateTask = useCallback(
-    async (taskId: string, input: UpdateTaskInput): Promise<Task | null> => {
+    async (
+      taskId: string,
+      input: UpdateTaskInput,
+      /** Previous assignee ID for notification tracking. Pass task.assignee_id before the update. */
+      previousAssigneeId?: string | null
+    ): Promise<Task | null> => {
       try {
         setLoading(true);
         const supabase = getClient();
@@ -281,11 +290,40 @@ export function useTaskMutations() {
 
         if (updateResult.error) throw updateResult.error;
 
+        const updatedTask = updateResult.data as Task;
+
+        // Send assignment notifications if assignee changed
+        if (user && "assignee_id" in validated && previousAssigneeId !== undefined) {
+          const newAssigneeId = validated.assignee_id ?? null;
+          const oldAssigneeId = previousAssigneeId ?? null;
+
+          if (newAssigneeId !== oldAssigneeId) {
+            // Notify the old assignee they were removed
+            if (oldAssigneeId) {
+              notifyTaskUnassigned({
+                recipientId: oldAssigneeId,
+                actorId: user.id,
+                taskId,
+                projectId: updatedTask.project_id,
+              });
+            }
+            // Notify the new assignee they were assigned
+            if (newAssigneeId) {
+              notifyTaskAssigned({
+                recipientId: newAssigneeId,
+                actorId: user.id,
+                taskId,
+                projectId: updatedTask.project_id,
+              });
+            }
+          }
+        }
+
         // Invalidate tasks list and single task cache
         queryClient.invalidateQueries({ queryKey: taskKeys.lists() });
         queryClient.invalidateQueries({ queryKey: singleTaskKeys.detail(taskId) });
 
-        return updateResult.data as Task;
+        return updatedTask;
       } catch (err: unknown) {
         const supabaseError = err as {
           message?: string;
@@ -308,7 +346,7 @@ export function useTaskMutations() {
         setLoading(false);
       }
     },
-    [queryClient]
+    [queryClient, user]
   );
 
   /**

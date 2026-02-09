@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -34,17 +35,55 @@ function formatTimeAgo(dateStr: string): string {
   return date.toLocaleDateString();
 }
 
+function getNotificationMessage(type: string): string {
+  switch (type) {
+    case "mention":
+      return "mentioned you in a comment";
+    case "task_assigned":
+      return "assigned a task to you";
+    case "task_unassigned":
+      return "removed you from a task";
+    case "project_invited":
+      return "invited you to a project";
+    case "project_lead_assigned":
+      return "made you lead of a project";
+    case "project_lead_removed":
+      return "removed you as project lead";
+    default:
+      return "sent you a notification";
+  }
+}
+
+function getNotificationLink(notification: NotificationWithActor): string | null {
+  if (notification.task_id) return `/tasks/${notification.task_id}`;
+  if (notification.project_id) return `/projects/${notification.project_id}`;
+  return null;
+}
+
 function NotificationItem({
   notification,
   onMarkAsRead,
+  onNavigate,
 }: {
   notification: NotificationWithActor;
   onMarkAsRead: (id: string) => void;
+  onNavigate: (path: string) => void;
 }) {
   const actorName =
     notification.actor?.display_name ||
     notification.actor?.email ||
     "Someone";
+
+  const link = getNotificationLink(notification);
+
+  const handleClick = () => {
+    if (!notification.read) {
+      onMarkAsRead(notification.id);
+    }
+    if (link) {
+      onNavigate(link);
+    }
+  };
 
   return (
     <button
@@ -52,11 +91,7 @@ function NotificationItem({
         "flex w-full items-start gap-3 rounded-md px-3 py-2.5 text-left text-sm transition-colors hover:bg-accent",
         !notification.read && "bg-accent/50"
       )}
-      onClick={() => {
-        if (!notification.read) {
-          onMarkAsRead(notification.id);
-        }
-      }}
+      onClick={handleClick}
     >
       <Avatar className="h-8 w-8 shrink-0">
         <AvatarImage src={notification.actor?.avatar_url || undefined} />
@@ -67,7 +102,7 @@ function NotificationItem({
       <div className="min-w-0 flex-1">
         <p className="truncate">
           <span className="font-medium">{actorName}</span>
-          {" mentioned you"}
+          {" "}{getNotificationMessage(notification.type)}
         </p>
         <p className="text-xs text-muted-foreground">
           {formatTimeAgo(notification.created_at)}
@@ -81,6 +116,7 @@ function NotificationItem({
 }
 
 export function NotificationBell() {
+  const router = useRouter();
   const { user } = useAuth();
   const userId = user?.id ?? null;
 
@@ -131,6 +167,7 @@ export function NotificationBell() {
                   key={notification.id}
                   notification={notification}
                   onMarkAsRead={markAsRead}
+                  onNavigate={(path) => router.push(path)}
                 />
               ))}
             </div>

@@ -58,6 +58,10 @@ import { InviteMemberDialog, PropertiesPanel } from "@/components/project";
 import { TimeReportDialog } from "@/components/time/project-time-report";
 import { useProjectTotalTime } from "@/hooks/use-time-tracking";
 import { NoteListItem } from "@/components/note";
+import {
+  notifyProjectLeadAssigned,
+  notifyProjectLeadRemoved,
+} from "@/lib/notifications/create-notification";
 import type { DocumentType, Project, ProjectStatus, TaskPriority, TaskWithProject, Task, TaskStatus } from "@/types";
 import type { CreateTaskInput, UpdateTaskInput, CreateDocumentInput } from "@/lib/validation";
 import { STATUS_CONFIG, PRIORITY_CONFIG } from "@/types";
@@ -191,11 +195,29 @@ export default function ProjectDetailPage() {
 
   // Handle lead change
   const handleLeadChange = useCallback(async (leadId: string | null) => {
+    const oldLeadId = project?.lead_id ?? null;
     const result = await updateProject(projectId, { lead_id: leadId });
-    if (result) {
+    if (result && user) {
       setProject((prev) => prev ? { ...prev, lead_id: leadId } : null);
+
+      // Notify old lead they were removed
+      if (oldLeadId && oldLeadId !== leadId) {
+        notifyProjectLeadRemoved({
+          recipientId: oldLeadId,
+          actorId: user.id,
+          projectId,
+        });
+      }
+      // Notify new lead they were assigned
+      if (leadId && leadId !== oldLeadId) {
+        notifyProjectLeadAssigned({
+          recipientId: leadId,
+          actorId: user.id,
+          projectId,
+        });
+      }
     }
-  }, [projectId, updateProject, setProject]);
+  }, [projectId, project?.lead_id, user, updateProject, setProject]);
 
   // Handle due date change
   const handleDueDateChange = useCallback(async (date: Date | null) => {
