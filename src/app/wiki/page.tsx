@@ -520,7 +520,16 @@ const sections: WikiSection[] = [
           "Invited you to a project — Someone added you as a project member",
           "Made you lead of a project — Someone designated you as project lead",
           "Removed you as project lead — Someone changed the project lead to someone else",
+          "Task due reminder — An automatic reminder fires 1 hour before a task's due date",
         ],
+      },
+      {
+        heading: "Due Date Reminders",
+        paragraphs: [
+          "When a task has both a due date and an assignee, a background reminder is scheduled to fire 1 hour before the deadline. This happens automatically — you do not need to set a reminder manually.",
+          "If you complete or delete the task, or change the due date, the pending reminder is automatically cancelled. If the assignee changes, the reminder is rescheduled for the new assignee.",
+        ],
+        tip: "Due date reminders are powered by Inngest, a durable workflow engine. They work even if you have not opened the app — the notification will be waiting for you when you return.",
       },
       {
         heading: "Real-Time Delivery",
