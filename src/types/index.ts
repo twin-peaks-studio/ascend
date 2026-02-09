@@ -31,6 +31,9 @@ export type {
   Comment,
   CommentInsert,
   CommentUpdate,
+  Notification,
+  NotificationInsert,
+  NotificationUpdate,
 } from "./database";
 
 import type {
@@ -41,6 +44,7 @@ import type {
   Attachment as DBAttachment,
   Note as DBNote,
   Comment as DBComment,
+  Notification as DBNotification,
 } from "./database";
 
 /**
@@ -80,6 +84,13 @@ export interface NoteWithRelations extends DBNote {
  */
 export interface CommentWithAuthor extends DBComment {
   author: DBProfile;
+}
+
+/**
+ * Notification with actor profile loaded
+ */
+export interface NotificationWithActor extends DBNotification {
+  actor: DBProfile;
 }
 
 /**

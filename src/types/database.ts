@@ -423,6 +423,78 @@ export type Database = {
           }
         ];
       };
+      notifications: {
+        Row: {
+          id: string;
+          user_id: string;
+          actor_id: string;
+          type: string;
+          comment_id: string | null;
+          task_id: string | null;
+          project_id: string | null;
+          read: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          actor_id: string;
+          type?: string;
+          comment_id?: string | null;
+          task_id?: string | null;
+          project_id?: string | null;
+          read?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          actor_id?: string;
+          type?: string;
+          comment_id?: string | null;
+          task_id?: string | null;
+          project_id?: string | null;
+          read?: boolean;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "notifications_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "notifications_actor_id_fkey";
+            columns: ["actor_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "notifications_comment_id_fkey";
+            columns: ["comment_id"];
+            isOneToOne: false;
+            referencedRelation: "comments";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "notifications_task_id_fkey";
+            columns: ["task_id"];
+            isOneToOne: false;
+            referencedRelation: "tasks";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "notifications_project_id_fkey";
+            columns: ["project_id"];
+            isOneToOne: false;
+            referencedRelation: "projects";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
       time_entries: {
         Row: {
           id: string;
@@ -525,6 +597,10 @@ export type NoteUpdate = UpdateTables<"notes">;
 export type NoteTask = Tables<"note_tasks">;
 export type NoteTaskInsert = InsertTables<"note_tasks">;
 export type NoteTaskUpdate = UpdateTables<"note_tasks">;
+
+export type Notification = Tables<"notifications">;
+export type NotificationInsert = InsertTables<"notifications">;
+export type NotificationUpdate = UpdateTables<"notifications">;
 
 export type TimeEntry = Tables<"time_entries">;
 export type TimeEntryInsert = InsertTables<"time_entries">;
