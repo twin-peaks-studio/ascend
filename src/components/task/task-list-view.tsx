@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { stripFormatting } from "@/lib/description-utils";
 import type { TaskWithProject, TaskStatus, Task, Profile } from "@/types";
 import { getInitials } from "@/lib/profile-utils";
 import { formatDueDate, isOverdue } from "@/lib/date-utils";
@@ -108,7 +109,7 @@ export function TaskListItem({ task, onTaskClick, onStatusToggle, assignee }: Ta
         {/* Description preview */}
         {task.description && (
           <p className="text-sm text-muted-foreground mt-0.5 line-clamp-1">
-            {task.description}
+            {stripFormatting(task.description)}
           </p>
         )}
 

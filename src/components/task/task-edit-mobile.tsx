@@ -17,6 +17,7 @@ import {
   Clock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { stripFormatting } from "@/lib/description-utils";
 import {
   Drawer,
   DrawerContent,
@@ -380,7 +381,7 @@ export function TaskEditMobile({
               onClick={() => setIsEditingDescription(true)}
             >
               <p className="text-sm text-foreground line-clamp-2">
-                {task.description}
+                {stripFormatting(task.description || "")}
               </p>
             </PropertyRow>
           ) : null}

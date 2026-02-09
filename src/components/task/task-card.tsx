@@ -5,6 +5,7 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, MoreHorizontal, Copy, Archive, Trash2, Pencil, Calendar } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { stripFormatting } from "@/lib/description-utils";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -164,7 +165,7 @@ export function TaskCard({
         {/* Description preview */}
         {task.description && (
           <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
-            {task.description}
+            {stripFormatting(task.description)}
           </p>
         )}
 
@@ -248,7 +249,7 @@ export function TaskCardDragOverlay({ task }: { task: TaskWithProject }) {
 
         {task.description && (
           <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
-            {task.description}
+            {stripFormatting(task.description)}
           </p>
         )}
 

@@ -22,7 +22,8 @@ import { AppShell } from "@/components/layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { MarkdownEditor, MarkdownRenderer } from "@/components/shared";
+import { RichTextEditor } from "@/components/shared";
+import { MarkdownRenderer } from "@/components/shared";
 import {
   Select,
   SelectContent,
@@ -397,7 +398,7 @@ export default function TaskDetailPage() {
           <div className="mb-8">
             {isEditingDescription ? (
               <div className="space-y-2">
-                <MarkdownEditor
+                <RichTextEditor
                   value={description}
                   onChange={setDescription}
                   onKeyDown={(e) => {
@@ -407,7 +408,7 @@ export default function TaskDetailPage() {
                     }
                   }}
                   autoFocus
-                  rows={6}
+                  minHeight={120}
                   placeholder="Add a description..."
                 />
                 <div className="flex items-center gap-2">

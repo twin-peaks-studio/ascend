@@ -23,7 +23,8 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { MarkdownEditor, MarkdownRenderer } from "@/components/shared";
+import { RichTextEditor } from "@/components/shared";
+import { MarkdownRenderer } from "@/components/shared";
 import {
   Select,
   SelectContent,
@@ -289,7 +290,7 @@ export function TaskDetailsDialog({
             <div className="mb-6">
               {isEditingDescription ? (
                 <div className="space-y-2">
-                  <MarkdownEditor
+                  <RichTextEditor
                     value={description}
                     onChange={setDescription}
                     onKeyDown={(e) => {
@@ -299,7 +300,7 @@ export function TaskDetailsDialog({
                       }
                     }}
                     autoFocus
-                    rows={4}
+                    minHeight={100}
                     placeholder="Add a description..."
                   />
                   <div className="flex items-center gap-2">

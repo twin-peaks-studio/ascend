@@ -4,7 +4,7 @@ import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
 import Placeholder from "@tiptap/extension-placeholder";
-import { useEffect } from "react";
+import { useEffect, useCallback } from "react";
 import {
   Bold,
   Italic,
@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { markdownToHtml, isHtmlContent } from "@/lib/description-utils";
 
 interface RichTextEditorProps {
   value: string;
@@ -24,6 +25,10 @@ interface RichTextEditorProps {
   className?: string;
   disabled?: boolean;
   autoFocus?: boolean;
+  /** Minimum height in pixels for the editor area (default 80) */
+  minHeight?: number;
+  /** Called on keydown events inside the editor (e.g. for Escape handling) */
+  onKeyDown?: (e: React.KeyboardEvent) => void;
 }
 
 export function RichTextEditor({
@@ -33,7 +38,12 @@ export function RichTextEditor({
   className,
   disabled = false,
   autoFocus = false,
+  minHeight = 80,
+  onKeyDown,
 }: RichTextEditorProps) {
+  // Convert markdown content to HTML for initial load
+  const initialContent = value ? (isHtmlContent(value) ? value : markdownToHtml(value)) : "";
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -44,7 +54,7 @@ export function RichTextEditor({
           HTMLAttributes: { class: "list-decimal pl-4 space-y-1" },
         },
         paragraph: {
-          HTMLAttributes: { class: "mb-2" },
+          HTMLAttributes: { class: "mb-2 last:mb-0" },
         },
       }),
       Link.configure({
@@ -55,26 +65,35 @@ export function RichTextEditor({
         placeholder,
       }),
     ],
-    content: value,
+    content: initialContent,
     editable: !disabled,
     autofocus: autoFocus,
     immediatelyRender: false, // Prevent SSR hydration mismatch
-    onUpdate: ({ editor }) => {
-      onChange(editor.getHTML());
+    onUpdate: ({ editor: e }) => {
+      onChange(e.getHTML());
     },
   });
 
-  // Sync external value changes
+  // Sync external value changes (e.g. when parent resets the value)
   useEffect(() => {
-    if (editor && value !== editor.getHTML()) {
-      editor.commands.setContent(value);
+    if (!editor) return;
+    const html = isHtmlContent(value) ? value : markdownToHtml(value);
+    if (html !== editor.getHTML()) {
+      editor.commands.setContent(html);
     }
   }, [editor, value]);
+
+  // Expose keyboard events to parent
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      onKeyDown?.(e);
+    },
+    [onKeyDown]
+  );
 
   if (!editor) return null;
 
   const addLink = () => {
-    // TODO: Replace with a proper dialog component (see Definition of Done: no-alert rule)
     // eslint-disable-next-line no-alert
     const url = window.prompt("Enter URL:");
     if (url) {
@@ -153,15 +172,26 @@ export function RichTextEditor({
       </div>
 
       {/* Editor */}
+      { }
       <div
+        onKeyDown={handleKeyDown}
         className={cn(
-          "min-h-[300px] border rounded-md p-3 bg-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2",
+          "border rounded-md p-3 bg-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2",
           disabled && "opacity-50 cursor-not-allowed"
         )}
+        style={{ minHeight }}
       >
         <EditorContent
           editor={editor}
-          className="prose prose-sm dark:prose-invert max-w-none focus:outline-none [&_.ProseMirror]:focus:outline-none [&_.ProseMirror]:min-h-[280px]"
+          className={cn(
+            "prose prose-sm dark:prose-invert max-w-none focus:outline-none",
+            "[&_.ProseMirror]:focus:outline-none [&_.ProseMirror]:min-h-0",
+            "[&_.ProseMirror_p.is-editor-empty:first-child::before]:text-muted-foreground",
+            "[&_.ProseMirror_p.is-editor-empty:first-child::before]:float-left",
+            "[&_.ProseMirror_p.is-editor-empty:first-child::before]:content-[attr(data-placeholder)]",
+            "[&_.ProseMirror_p.is-editor-empty:first-child::before]:pointer-events-none",
+            "[&_.ProseMirror_p.is-editor-empty:first-child::before]:h-0"
+          )}
         />
       </div>
     </div>
