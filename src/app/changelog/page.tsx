@@ -48,6 +48,22 @@ interface ChangelogEntry {
 
 const changelog: ChangelogEntry[] = [
   {
+    date: "February 9, 2026",
+    version: "0.9.1",
+    title: "Task Editing Fix",
+    description:
+      "Fixed a bug where editing task title or description on the task detail page had no effect.",
+    features: [
+      {
+        icon: CheckCircle2,
+        title: "Task Edit Bug Fix",
+        description:
+          "Fixed an issue where typing in the title or description fields on the task detail page would immediately revert changes. The render-time state sync was overwriting user input on every keystroke.",
+        tag: "fix",
+      },
+    ],
+  },
+  {
     date: "February 5, 2026",
     version: "0.9.0",
     title: "Landing Page & Polish",
