@@ -17,8 +17,9 @@ interface TimePickerProps {
  * Designed to sit below a Calendar in a Popover.
  */
 export function TimePicker({ value, onChange, className }: TimePickerProps) {
-  const hours = value ? value.getHours() : 9;
-  const minutes = value ? value.getMinutes() : 0;
+  const now = new Date();
+  const hours = value ? value.getHours() : now.getHours();
+  const minutes = value ? value.getMinutes() : Math.floor(now.getMinutes() / 5) * 5;
 
   const handleHourChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const date = value ? new Date(value) : new Date();

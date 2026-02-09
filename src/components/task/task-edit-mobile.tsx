@@ -445,12 +445,8 @@ export function TaskEditMobile({
                   onSelect={handleDueDateSelect}
                   initialFocus
                 />
-                {pendingDueDate && (
-                  <>
-                    <div className="border-t" />
-                    <TimePicker value={pendingDueDate} onChange={handleDueTimeChange} />
-                  </>
-                )}
+                <div className="border-t" />
+                <TimePicker value={pendingDueDate} onChange={handleDueTimeChange} />
                 <div className="p-2 border-t">
                   <Button
                     variant="ghost"
@@ -616,12 +612,8 @@ export function TaskEditMobile({
                         onSelect={handleDueDateSelect}
                         initialFocus
                       />
-                      {pendingDueDate && (
-                        <>
-                          <div className="border-t" />
-                          <TimePicker value={pendingDueDate} onChange={handleDueTimeChange} />
-                        </>
-                      )}
+                      <div className="border-t" />
+                      <TimePicker value={pendingDueDate} onChange={handleDueTimeChange} />
                     </PopoverContent>
                   </Popover>
                 )}

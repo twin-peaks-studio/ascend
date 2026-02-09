@@ -580,12 +580,8 @@ export function TaskDetailsDialog({
                     onSelect={handleDueDateSelect}
                     initialFocus
                   />
-                  {pendingDueDate && (
-                    <>
-                      <div className="border-t" />
-                      <TimePicker value={pendingDueDate} onChange={handleDueTimeChange} />
-                    </>
-                  )}
+                  <div className="border-t" />
+                  <TimePicker value={pendingDueDate} onChange={handleDueTimeChange} />
                   {pendingDueDate && (
                     <div className="p-2 border-t">
                       <Button

@@ -101,6 +101,7 @@ export function PropertiesPanel({
   };
 
   const handleDueTimeChange = (date: Date) => {
+    // If no date selected yet, the TimePicker creates a Date based on today
     setPendingDueDate(date);
   };
 
@@ -290,12 +291,8 @@ export function PropertiesPanel({
                 onSelect={handleDueDateSelect}
                 initialFocus
               />
-              {pendingDueDate && (
-                <>
-                  <div className="border-t" />
-                  <TimePicker value={pendingDueDate} onChange={handleDueTimeChange} />
-                </>
-              )}
+              <div className="border-t" />
+              <TimePicker value={pendingDueDate} onChange={handleDueTimeChange} />
             </PopoverContent>
           </Popover>
           {project.due_date && (

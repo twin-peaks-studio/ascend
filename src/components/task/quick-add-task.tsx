@@ -231,15 +231,11 @@ function QuickAddTaskForm({
                   }}
                   initialFocus
                 />
-                {dueDate && (
-                  <>
-                    <div className="border-t" />
-                    <TimePicker
-                      value={dueDate}
-                      onChange={(date) => setDueDate(date)}
-                    />
-                  </>
-                )}
+                <div className="border-t" />
+                <TimePicker
+                  value={dueDate}
+                  onChange={(date) => setDueDate(date)}
+                />
                 {dueDate && (
                   <div className="p-2 border-t">
                     <Button

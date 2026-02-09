@@ -86,12 +86,8 @@ export function DatePicker({
           onSelect={handleSelect}
           initialFocus
         />
-        {value && (
-          <>
-            <div className="border-t" />
-            <TimePicker value={value} onChange={handleTimeChange} />
-          </>
-        )}
+        <div className="border-t" />
+        <TimePicker value={value} onChange={handleTimeChange} />
       </PopoverContent>
     </Popover>
   );
