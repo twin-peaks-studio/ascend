@@ -545,6 +545,58 @@ export type Database = {
           }
         ];
       };
+      activity_log: {
+        Row: {
+          id: string;
+          project_id: string;
+          task_id: string | null;
+          actor_id: string | null;
+          action: string;
+          details: Json;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          project_id: string;
+          task_id?: string | null;
+          actor_id?: string | null;
+          action: string;
+          details?: Json;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          project_id?: string;
+          task_id?: string | null;
+          actor_id?: string | null;
+          action?: string;
+          details?: Json;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "activity_log_project_id_fkey";
+            columns: ["project_id"];
+            isOneToOne: false;
+            referencedRelation: "projects";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "activity_log_task_id_fkey";
+            columns: ["task_id"];
+            isOneToOne: false;
+            referencedRelation: "tasks";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "activity_log_actor_id_fkey";
+            columns: ["actor_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
@@ -605,6 +657,10 @@ export type NotificationUpdate = UpdateTables<"notifications">;
 export type TimeEntry = Tables<"time_entries">;
 export type TimeEntryInsert = InsertTables<"time_entries">;
 export type TimeEntryUpdate = UpdateTables<"time_entries">;
+
+export type ActivityLog = Tables<"activity_log">;
+export type ActivityLogInsert = InsertTables<"activity_log">;
+export type ActivityLogUpdate = UpdateTables<"activity_log">;
 
 // Entity type for polymorphic relationships (time entries, etc.)
 export type TimeTrackingEntityType = "task" | "note" | "project";

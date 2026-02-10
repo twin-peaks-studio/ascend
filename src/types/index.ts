@@ -34,6 +34,9 @@ export type {
   Notification,
   NotificationInsert,
   NotificationUpdate,
+  ActivityLog,
+  ActivityLogInsert,
+  ActivityLogUpdate,
 } from "./database";
 
 import type {
@@ -45,6 +48,7 @@ import type {
   Note as DBNote,
   Comment as DBComment,
   Notification as DBNotification,
+  ActivityLog as DBActivityLog,
 } from "./database";
 
 /**
@@ -92,6 +96,27 @@ export interface CommentWithAuthor extends DBComment {
 export interface NotificationWithActor extends DBNotification {
   actor: DBProfile;
 }
+
+/**
+ * Activity log entry with actor profile loaded
+ */
+export interface ActivityLogWithActor extends DBActivityLog {
+  actor: DBProfile | null;
+}
+
+/**
+ * Activity action types tracked by database triggers
+ */
+export type ActivityAction =
+  | "task_created"
+  | "task_status_changed"
+  | "task_priority_changed"
+  | "task_assigned"
+  | "task_deleted"
+  | "comment_added"
+  | "member_added"
+  | "member_removed"
+  | "project_updated";
 
 /**
  * Task status type for Kanban columns
