@@ -40,6 +40,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { TimePicker } from "@/components/ui/time-picker";
 import { FileUpload } from "@/components/shared/file-upload";
 import { AttachmentsList } from "@/components/shared/attachments-list";
 import { TimerButton, TimeEntryList } from "@/components/time";
@@ -125,6 +126,9 @@ export default function TaskDetailPage() {
   const [showAttachments, setShowAttachments] = useState(false);
   const [showTimeEntries, setShowTimeEntries] = useState(false);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [pendingDueDate, setPendingDueDate] = useState<Date | null>(
+    task?.due_date ? new Date(task.due_date) : null
+  );
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -138,6 +142,16 @@ export default function TaskDetailPage() {
     setPrevTaskId(task.id);
     setTitle(task.title);
     setDescription(task.description ?? "");
+    setPendingDueDate(task.due_date ? new Date(task.due_date) : null);
+  }
+
+  // Sync pending date when task.due_date changes from an external update
+  const [prevDueDate, setPrevDueDate] = useState<string | null>(task?.due_date ?? null);
+  if (task && task.due_date !== prevDueDate) {
+    setPrevDueDate(task.due_date);
+    if (!datePickerOpen) {
+      setPendingDueDate(task.due_date ? new Date(task.due_date) : null);
+    }
   }
 
   // Auto-expand attachments when they exist
@@ -217,13 +231,44 @@ export default function TaskDetailPage() {
     [handleUpdate]
   );
 
-  const handleDueDateChange = useCallback(
-    async (date: Date | undefined) => {
-      await handleUpdate({ due_date: date?.toISOString() || null });
-      setDatePickerOpen(false);
+  const handleDueDateSelect = useCallback(
+    (date: Date | undefined) => {
+      if (!date) {
+        setPendingDueDate(null);
+        return;
+      }
+      // Preserve time from pending date
+      if (pendingDueDate) {
+        date.setHours(pendingDueDate.getHours(), pendingDueDate.getMinutes(), 0, 0);
+      }
+      setPendingDueDate(date);
     },
-    [handleUpdate]
+    [pendingDueDate]
   );
+
+  const handleDueTimeChange = useCallback((date: Date) => {
+    setPendingDueDate(date);
+  }, []);
+
+  const handleDatePickerOpenChange = useCallback(
+    async (open: boolean) => {
+      if (!open && datePickerOpen && task) {
+        // Popover is closing — save the pending value
+        const newValue = pendingDueDate?.toISOString() || null;
+        if (newValue !== (task.due_date || null)) {
+          await handleUpdate({ due_date: newValue });
+        }
+      }
+      setDatePickerOpen(open);
+    },
+    [datePickerOpen, pendingDueDate, task, handleUpdate]
+  );
+
+  const handleClearDueDate = useCallback(async () => {
+    setPendingDueDate(null);
+    await handleUpdate({ due_date: null });
+    setDatePickerOpen(false);
+  }, [handleUpdate]);
 
   const handleDelete = useCallback(async () => {
     if (!task) return;
@@ -655,7 +700,7 @@ export default function TaskDetailPage() {
 
           {/* Date */}
           <SidebarRow label="Due Date">
-            <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+            <Popover open={datePickerOpen} onOpenChange={handleDatePickerOpenChange}>
               <PopoverTrigger asChild>
                 <button
                   className={cn(
@@ -675,24 +720,28 @@ export default function TaskDetailPage() {
               <PopoverContent className="w-auto p-0" align="start">
                 <CalendarComponent
                   mode="single"
-                  selected={
-                    task.due_date ? new Date(task.due_date) : undefined
-                  }
-                  onSelect={handleDueDateChange}
+                  selected={pendingDueDate || undefined}
+                  onSelect={handleDueDateSelect}
                   initialFocus
+                  calendarFooter={
+                    <>
+                      <div className="border-t" />
+                      <TimePicker value={pendingDueDate} onChange={handleDueTimeChange} />
+                      {pendingDueDate && (
+                        <div className="p-2 border-t">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="w-full"
+                            onClick={handleClearDueDate}
+                          >
+                            Clear date
+                          </Button>
+                        </div>
+                      )}
+                    </>
+                  }
                 />
-                {task.due_date && (
-                  <div className="p-2 border-t">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="w-full"
-                      onClick={() => handleDueDateChange(undefined)}
-                    >
-                      Clear date
-                    </Button>
-                  </div>
-                )}
               </PopoverContent>
             </Popover>
           </SidebarRow>
@@ -918,7 +967,7 @@ export default function TaskDetailPage() {
 
           {/* Due Date */}
           <SidebarRow label="Due Date">
-            <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+            <Popover open={datePickerOpen} onOpenChange={handleDatePickerOpenChange}>
               <PopoverTrigger asChild>
                 <button
                   className={cn(
@@ -938,24 +987,28 @@ export default function TaskDetailPage() {
               <PopoverContent className="w-auto p-0" align="start">
                 <CalendarComponent
                   mode="single"
-                  selected={
-                    task.due_date ? new Date(task.due_date) : undefined
-                  }
-                  onSelect={handleDueDateChange}
+                  selected={pendingDueDate || undefined}
+                  onSelect={handleDueDateSelect}
                   initialFocus
+                  calendarFooter={
+                    <>
+                      <div className="border-t" />
+                      <TimePicker value={pendingDueDate} onChange={handleDueTimeChange} />
+                      {pendingDueDate && (
+                        <div className="p-2 border-t">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="w-full"
+                            onClick={handleClearDueDate}
+                          >
+                            Clear date
+                          </Button>
+                        </div>
+                      )}
+                    </>
+                  }
                 />
-                {task.due_date && (
-                  <div className="p-2 border-t">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="w-full"
-                      onClick={() => handleDueDateChange(undefined)}
-                    >
-                      Clear date
-                    </Button>
-                  </div>
-                )}
               </PopoverContent>
             </Popover>
           </SidebarRow>
