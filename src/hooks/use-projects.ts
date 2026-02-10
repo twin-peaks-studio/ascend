@@ -309,19 +309,41 @@ export function useProjectMutations() {
             { name: "project/due-date.updated", data: { projectId } },
           ];
 
-          // Schedule a new reminder if there's a new due date and a lead
-          if (validated.due_date && updatedProject.lead_id) {
+          // Schedule a new reminder if there's a new due date
+          // Notify the lead if set, otherwise fall back to the project creator
+          const recipientId = updatedProject.lead_id ?? updatedProject.created_by;
+          if (validated.due_date && recipientId) {
             inngestEvents.push({
               name: "project/due-date.set",
               data: {
                 projectId,
                 dueDate: validated.due_date,
-                leadId: updatedProject.lead_id,
+                leadId: recipientId,
                 projectTitle: updatedProject.title,
               },
             });
           }
 
+          sendInngestEvents(inngestEvents);
+        }
+
+        // Reschedule reminder when lead changes on a project with a due date
+        if ("lead_id" in validated && !("due_date" in validated) && updatedProject.due_date) {
+          const newRecipientId = validated.lead_id ?? updatedProject.created_by;
+          const inngestEvents: Array<{ name: string; data: Record<string, unknown> }> = [
+            { name: "project/due-date.updated", data: { projectId } },
+          ];
+          if (newRecipientId) {
+            inngestEvents.push({
+              name: "project/due-date.set",
+              data: {
+                projectId,
+                dueDate: updatedProject.due_date,
+                leadId: newRecipientId,
+                projectTitle: updatedProject.title,
+              },
+            });
+          }
           sendInngestEvents(inngestEvents);
         }
 
