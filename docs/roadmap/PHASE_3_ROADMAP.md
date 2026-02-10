@@ -11,7 +11,7 @@
 |---------|--------|-------|
 | #15 Real-time Task Updates | ✅ DONE | Hooks exist, tasks table now in Realtime publication |
 | #16 Comments System | ✅ DONE | Full CRUD, RLS, Realtime enabled |
-| #17 @Mentions & Notifications | ✅ DONE | 7 notification types, real-time bell, @mention UI, task due reminders via Inngest. Project due reminders also implemented (notifies project lead). |
+| #17 @Mentions & Notifications | ✅ DONE | 8 notification types (mention, task_assigned, task_unassigned, project_invited, project_lead_assigned, project_lead_removed, task_due, project_due), real-time bell, @mention UI. Due reminders via Inngest notify both the assignee/lead and the project/task creator. |
 | TimePicker on Due Dates | ✅ DONE | Tasks and projects support time-of-day selection on due dates via inline TimePicker. |
 | Single Task Detail Surface | ✅ DONE | Consolidated from 3 components to 1 (`/tasks/[id]` page). Removed TaskDetailsDialog, TaskEditMobile, TaskDetailsResponsive (1,749 lines deleted). |
 | Inline Mobile Due Date | ✅ DONE | Due date is a collapsible inline section on mobile task detail page (not buried in properties sheet). |

@@ -309,19 +309,22 @@ export function useProjectMutations() {
             { name: "project/due-date.updated", data: { projectId } },
           ];
 
-          // Schedule a new reminder if there's a new due date
-          // Notify the lead if set, otherwise fall back to the project creator
-          const recipientId = updatedProject.lead_id ?? updatedProject.created_by;
-          if (validated.due_date && recipientId) {
-            inngestEvents.push({
-              name: "project/due-date.set",
-              data: {
-                projectId,
-                dueDate: validated.due_date,
-                leadId: recipientId,
-                projectTitle: updatedProject.title,
-              },
-            });
+          // Schedule reminders for lead + creator
+          if (validated.due_date) {
+            const recipients = new Set<string>();
+            if (updatedProject.lead_id) recipients.add(updatedProject.lead_id);
+            recipients.add(updatedProject.created_by); // creator always gets reminded
+            for (const recipientId of recipients) {
+              inngestEvents.push({
+                name: "project/due-date.set",
+                data: {
+                  projectId,
+                  dueDate: validated.due_date,
+                  leadId: recipientId,
+                  projectTitle: updatedProject.title,
+                },
+              });
+            }
           }
 
           sendInngestEvents(inngestEvents);
@@ -329,17 +332,19 @@ export function useProjectMutations() {
 
         // Reschedule reminder when lead changes on a project with a due date
         if ("lead_id" in validated && !("due_date" in validated) && updatedProject.due_date) {
-          const newRecipientId = validated.lead_id ?? updatedProject.created_by;
           const inngestEvents: Array<{ name: string; data: Record<string, unknown> }> = [
             { name: "project/due-date.updated", data: { projectId } },
           ];
-          if (newRecipientId) {
+          const recipients = new Set<string>();
+          if (validated.lead_id) recipients.add(validated.lead_id);
+          recipients.add(updatedProject.created_by);
+          for (const recipientId of recipients) {
             inngestEvents.push({
               name: "project/due-date.set",
               data: {
                 projectId,
                 dueDate: updatedProject.due_date,
-                leadId: newRecipientId,
+                leadId: recipientId,
                 projectTitle: updatedProject.title,
               },
             });

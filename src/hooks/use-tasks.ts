@@ -239,18 +239,25 @@ export function useTaskMutations() {
 
         const newTask = insertResult.data as Task;
 
-        // Schedule due date reminder if task has a due date and assignee
-        if (newTask.due_date && newTask.assignee_id) {
-          sendInngestEvents([{
-            name: "task/due-date.set",
-            data: {
-              taskId: newTask.id,
-              dueDate: newTask.due_date,
-              assigneeId: newTask.assignee_id,
-              taskTitle: newTask.title,
-              projectId: newTask.project_id,
-            },
-          }]);
+        // Schedule due date reminders for assignee + creator
+        if (newTask.due_date) {
+          const recipients = new Set<string>();
+          if (newTask.assignee_id) recipients.add(newTask.assignee_id);
+          recipients.add(user.id); // creator always gets reminded
+          const events: Array<{ name: string; data: Record<string, unknown> }> = [];
+          for (const recipientId of recipients) {
+            events.push({
+              name: "task/due-date.set",
+              data: {
+                taskId: newTask.id,
+                dueDate: newTask.due_date,
+                assigneeId: recipientId,
+                taskTitle: newTask.title,
+                projectId: newTask.project_id,
+              },
+            });
+          }
+          sendInngestEvents(events);
         }
 
         toast.success("Task created successfully");
@@ -334,18 +341,21 @@ export function useTaskMutations() {
               });
             }
 
-            // Reschedule due date reminder for the new assignee
+            // Reschedule due date reminders for new assignee + creator
             if (updatedTask.due_date) {
               const inngestEvents: Array<{ name: string; data: Record<string, unknown> }> = [
                 { name: "task/due-date.updated", data: { taskId } },
               ];
-              if (newAssigneeId) {
+              const recipients = new Set<string>();
+              if (newAssigneeId) recipients.add(newAssigneeId);
+              recipients.add(updatedTask.created_by);
+              for (const recipientId of recipients) {
                 inngestEvents.push({
                   name: "task/due-date.set",
                   data: {
                     taskId,
                     dueDate: updatedTask.due_date,
-                    assigneeId: newAssigneeId,
+                    assigneeId: recipientId,
                     taskTitle: updatedTask.title,
                     projectId: updatedTask.project_id,
                   },
@@ -363,18 +373,23 @@ export function useTaskMutations() {
             { name: "task/due-date.updated", data: { taskId } },
           ];
 
-          // Schedule a new reminder if there's a new due date and an assignee
-          if (validated.due_date && updatedTask.assignee_id) {
-            inngestEvents.push({
-              name: "task/due-date.set",
-              data: {
-                taskId,
-                dueDate: validated.due_date,
-                assigneeId: updatedTask.assignee_id,
-                taskTitle: updatedTask.title,
-                projectId: updatedTask.project_id,
-              },
-            });
+          // Schedule reminders for assignee + creator
+          if (validated.due_date) {
+            const recipients = new Set<string>();
+            if (updatedTask.assignee_id) recipients.add(updatedTask.assignee_id);
+            recipients.add(updatedTask.created_by);
+            for (const recipientId of recipients) {
+              inngestEvents.push({
+                name: "task/due-date.set",
+                data: {
+                  taskId,
+                  dueDate: validated.due_date,
+                  assigneeId: recipientId,
+                  taskTitle: updatedTask.title,
+                  projectId: updatedTask.project_id,
+                },
+              });
+            }
           }
 
           sendInngestEvents(inngestEvents);
