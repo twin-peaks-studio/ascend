@@ -20,6 +20,7 @@ import {
   PanelRightClose,
   PanelRight,
   Settings2,
+  X,
 } from "lucide-react";
 import { AppShell } from "@/components/layout";
 import { Button } from "@/components/ui/button";
@@ -507,6 +508,64 @@ export default function TaskDetailPage() {
                 )}
               </button>
             )}
+          </div>
+
+          {/* Due Date - inline on mobile only (desktop uses sidebar) */}
+          <div className="mb-8 md:hidden">
+            <Popover open={datePickerOpen} onOpenChange={handleDatePickerOpenChange}>
+              <div className="flex items-center gap-2">
+                <PopoverTrigger asChild>
+                  <button
+                    className={cn(
+                      "flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors",
+                      isTaskOverdue && !isCompleted && "text-red-500"
+                    )}
+                    disabled={loading}
+                  >
+                    <Calendar className="h-4 w-4" />
+                    {task.due_date ? (
+                      <span>{formatDueDate(task.due_date)}</span>
+                    ) : (
+                      <span>Add due date</span>
+                    )}
+                  </button>
+                </PopoverTrigger>
+                {task.due_date && (
+                  <button
+                    onClick={handleClearDueDate}
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
+              <PopoverContent className="w-auto p-0" align="start">
+                <CalendarComponent
+                  mode="single"
+                  selected={pendingDueDate || undefined}
+                  onSelect={handleDueDateSelect}
+                  initialFocus
+                  calendarFooter={
+                    <>
+                      <div className="border-t" />
+                      <TimePicker value={pendingDueDate} onChange={handleDueTimeChange} />
+                      {pendingDueDate && (
+                        <div className="p-2 border-t">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="w-full"
+                            onClick={handleClearDueDate}
+                          >
+                            Clear date
+                          </Button>
+                        </div>
+                      )}
+                    </>
+                  }
+                />
+              </PopoverContent>
+            </Popover>
           </div>
 
           {/* Attachments */}
