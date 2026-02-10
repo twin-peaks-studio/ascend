@@ -26,6 +26,8 @@ import {
   Trash2,
   MessageSquarePlus,
   Bell,
+  Calendar,
+  Combine,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -48,6 +50,43 @@ interface ChangelogEntry {
 }
 
 const changelog: ChangelogEntry[] = [
+  {
+    date: "February 10, 2026",
+    version: "0.12.0",
+    title: "Due Date Time Picker & Task Detail Consolidation",
+    description:
+      "Due dates now support time-of-day selection, project due reminders notify the project lead, and the task detail experience has been consolidated into a single page for consistency.",
+    features: [
+      {
+        icon: Clock,
+        title: "Time Picker on Due Dates",
+        description:
+          "When setting a due date on a task or project, you can now pick a specific time of day. The time picker appears as a footer inside the calendar popover. On mobile, the due date calendar is an inline collapsible section for quick access.",
+        tag: "new",
+      },
+      {
+        icon: Calendar,
+        title: "Inline Mobile Due Date",
+        description:
+          "On mobile, the due date is now a first-class field on the task detail page — visible between the description and attachments. Tap to expand an inline calendar with time picker. No more digging through the properties sheet.",
+        tag: "improved",
+      },
+      {
+        icon: Bell,
+        title: "Project Due Reminders",
+        description:
+          "Projects with a due date and a designated lead now receive automatic reminders 1 hour before the deadline, powered by Inngest. Reminders are cancelled if the project is completed, archived, or the due date changes.",
+        tag: "new",
+      },
+      {
+        icon: Combine,
+        title: "Unified Task Detail Page",
+        description:
+          "Consolidated 3 separate task detail components (dialog, mobile drawer, responsive wrapper) into a single /tasks/[id] page. This ensures all task editing features are available everywhere and eliminates feature drift between surfaces.",
+        tag: "improved",
+      },
+    ],
+  },
   {
     date: "February 9, 2026",
     version: "0.11.0",

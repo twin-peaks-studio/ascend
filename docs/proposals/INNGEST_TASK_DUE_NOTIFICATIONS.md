@@ -510,6 +510,44 @@ INNGEST_SIGNING_KEY=xxx        # For verifying webhook authenticity
 
 ---
 
+## Project Due Date Reminders (Implemented Feb 10, 2026)
+
+The same durable workflow pattern has been extended to **projects**. When a project has a due date and a designated lead, a background reminder is scheduled to fire 1 hour before the deadline.
+
+### How It Works
+
+- **Trigger event:** `project/due-date.set` — fired when a project due date is created or changed
+- **Cancel events:** `project/completed`, `project/due-date.updated`, `project/due-date.removed`, `project/deleted`
+- **Recipient:** The project lead (not all members)
+- **Notification type:** `project_due`
+
+### Architecture
+
+```
+project/due-date.set ──► projectDueReminder function
+  │                        │
+  │  cancelOn:             │
+  │    project/completed   │  sleepUntil(dueDate - 1h)
+  │    project/due-date.updated  │
+  │    project/due-date.removed  │
+  │    project/deleted     │
+  │                        ▼
+  │                  Create notification
+  │                  (user_id = leadId, type = "project_due")
+```
+
+### Files
+
+- `src/inngest/functions/project-due-reminder.ts` — The durable function
+- `src/inngest/events.ts` — Event type definitions (includes all `project/*` events)
+- `src/hooks/use-projects.ts` — Fires events on project create/update/complete/delete
+
+### Lead vs Assignee
+
+Unlike tasks (which notify the **assignee**), projects notify the **project lead**. If no lead is set, no reminder is scheduled. Changing the lead cancels the old reminder and schedules a new one for the new lead.
+
+---
+
 ## Future Extensions
 
 Once this foundation is in place, these become straightforward additions:

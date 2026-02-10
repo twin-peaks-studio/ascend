@@ -167,13 +167,21 @@ const sections: WikiSection[] = [
         },
         list: [
           "Title (required) — A short description of what needs to be done",
-          "Description — Additional details in plain text",
+          "Description — Additional details in rich text (bold, italic, lists)",
           "Status — To Do, In Progress, or Done",
           "Priority — Low, Medium, High, or Urgent (color-coded)",
           "Assignee — Which team member is responsible",
-          "Due Date — When the task should be completed",
+          "Due Date — When the task should be completed, with optional time-of-day",
           "Project — Which project this task belongs to",
         ],
+      },
+      {
+        heading: "Due Date with Time Picker",
+        paragraphs: [
+          "When setting a due date, you can also pick a specific time of day. The calendar popover includes a time picker footer where you select hours and minutes. The date and time are saved together when you close the popover.",
+          "On mobile, the due date is a first-class field on the task detail page — visible inline between the description and attachments. Tap the due date row to expand an inline calendar with time picker. This avoids burying the date in the properties sheet.",
+        ],
+        tip: "If a task has both a due date and an assignee, an automatic reminder fires 1 hour before the deadline. You don't need to set a reminder manually.",
       },
       {
         heading: "Sorting Tasks",
@@ -190,10 +198,10 @@ const sections: WikiSection[] = [
       {
         heading: "Task Actions",
         list: [
-          "Click a task to open its details dialog (or bottom drawer on mobile)",
+          "Click a task to open its dedicated detail page (/tasks/[id])",
           "Toggle status with the checkbox in list view",
           "Drag and drop to reorder in Kanban view",
-          "Delete a task from the details dialog (with confirmation)",
+          "Delete a task from the detail page (with confirmation)",
           "Archive or mark as duplicate from the task menu",
         ],
       },
@@ -521,6 +529,7 @@ const sections: WikiSection[] = [
           "Made you lead of a project — Someone designated you as project lead",
           "Removed you as project lead — Someone changed the project lead to someone else",
           "Task due reminder — An automatic reminder fires 1 hour before a task's due date",
+          "Project due reminder — An automatic reminder fires 1 hour before a project's due date (sent to the project lead)",
         ],
       },
       {
@@ -528,6 +537,7 @@ const sections: WikiSection[] = [
         paragraphs: [
           "When a task has both a due date and an assignee, a background reminder is scheduled to fire 1 hour before the deadline. This happens automatically — you do not need to set a reminder manually.",
           "If you complete or delete the task, or change the due date, the pending reminder is automatically cancelled. If the assignee changes, the reminder is rescheduled for the new assignee.",
+          "Projects also support due date reminders. When a project has a due date and a designated lead, the project lead receives a reminder 1 hour before the deadline. Completing, archiving, or deleting the project cancels the pending reminder.",
         ],
         tip: "Due date reminders are powered by Inngest, a durable workflow engine. They work even if you have not opened the app — the notification will be waiting for you when you return.",
       },

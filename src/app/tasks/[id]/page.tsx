@@ -558,7 +558,7 @@ export default function TaskDetailPage() {
             </div>
 
             {mobileDateExpanded && (
-              <div className="mt-3 rounded-lg border bg-popover">
+              <div className="mt-3 rounded-lg border bg-popover w-fit max-w-full">
                 <CalendarComponent
                   mode="single"
                   selected={pendingDueDate || undefined}

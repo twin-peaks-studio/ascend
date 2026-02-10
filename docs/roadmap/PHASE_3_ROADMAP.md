@@ -1,9 +1,9 @@
 # Phase 3: Team Collaboration - Implementation Roadmap
 
-**Status:** In Progress (~60% complete)
+**Status:** In Progress (~65% complete)
 **Duration:** 2-3 weeks
 **Priority:** High (Market expectation, competitive differentiator)
-**Last Updated:** 2026-02-09
+**Last Updated:** 2026-02-10
 
 ### Implementation Progress
 
@@ -11,7 +11,10 @@
 |---------|--------|-------|
 | #15 Real-time Task Updates | ✅ DONE | Hooks exist, tasks table now in Realtime publication |
 | #16 Comments System | ✅ DONE | Full CRUD, RLS, Realtime enabled |
-| #17 @Mentions & Notifications | ✅ DONE | 7 notification types, real-time bell, @mention UI, task due reminders via Inngest. |
+| #17 @Mentions & Notifications | ✅ DONE | 7 notification types, real-time bell, @mention UI, task due reminders via Inngest. Project due reminders also implemented (notifies project lead). |
+| TimePicker on Due Dates | ✅ DONE | Tasks and projects support time-of-day selection on due dates via inline TimePicker. |
+| Single Task Detail Surface | ✅ DONE | Consolidated from 3 components to 1 (`/tasks/[id]` page). Removed TaskDetailsDialog, TaskEditMobile, TaskDetailsResponsive (1,749 lines deleted). |
+| Inline Mobile Due Date | ✅ DONE | Due date is a collapsible inline section on mobile task detail page (not buried in properties sheet). |
 | #18 Activity Feed | ❌ Not started | |
 | #19 User Presence Indicators | ❌ Not started | |
 | #20 Typing Indicators | ❌ Not started (optional) | |
@@ -815,4 +818,4 @@ Once Phase 3 is complete, we'll evaluate:
 **Created:** 2026-02-08
 **Estimated Start:** After Phase 1 cleanup complete
 **Estimated Completion:** 2-3 weeks from start
-**Last Updated:** 2026-02-08
+**Last Updated:** 2026-02-10
