@@ -546,14 +546,14 @@ const handleTyping = debounce(() => {
    - Implement real-time notification delivery
    - Add additional notification triggers
 
-4. ✅ Activity Feed (Item #18) - 3-4 days
+4. ❌ Activity Feed (Item #18) - 3-4 days
    - Create activity log table
    - Set up database triggers for auto-logging
    - Build activity feed UI
    - Add filtering and pagination
 
 **Week 3: Presence & Polish**
-5. ✅ User Presence Indicators (Item #19) - 2-3 days
+5. ❌ User Presence Indicators (Item #19) - 2-3 days
    - Implement Supabase presence tracking
    - Build presence avatars UI
    - Test with multiple users
@@ -759,8 +759,8 @@ Phase 3 is complete when:
 - [x] Comments can be added, edited, deleted
 - [x] @mentions work and send notifications
 - [x] Notification center shows unread notifications
-- [x] Activity feed logs all changes
-- [x] User presence shows who's viewing tasks
+- [ ] Activity feed logs all changes
+- [ ] User presence shows who's viewing tasks
 
 ### Quality
 - [x] All ESLint errors fixed
