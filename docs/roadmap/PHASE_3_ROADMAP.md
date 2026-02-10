@@ -1,6 +1,6 @@
 # Phase 3: Team Collaboration - Implementation Roadmap
 
-**Status:** In Progress (~65% complete)
+**Status:** In Progress (~73% complete)
 **Duration:** 2-3 weeks
 **Priority:** High (Market expectation, competitive differentiator)
 **Last Updated:** 2026-02-10
@@ -15,7 +15,7 @@
 | TimePicker on Due Dates | ✅ DONE | Tasks and projects support time-of-day selection on due dates via inline TimePicker. |
 | Single Task Detail Surface | ✅ DONE | Consolidated from 3 components to 1 (`/tasks/[id]` page). Removed TaskDetailsDialog, TaskEditMobile, TaskDetailsResponsive (1,749 lines deleted). |
 | Inline Mobile Due Date | ✅ DONE | Due date is a collapsible inline section on mobile task detail page (not buried in properties sheet). |
-| #18 Activity Feed | ❌ Not started | |
+| #18 Activity Feed | ✅ DONE | Database triggers (4 functions, 9 action types), RLS, Realtime, React Query hook, collapsible UI on project page |
 | #19 User Presence Indicators | ❌ Not started | |
 | #20 Typing Indicators | ❌ Not started (optional) | |
 
@@ -546,7 +546,7 @@ const handleTyping = debounce(() => {
    - Implement real-time notification delivery
    - Add additional notification triggers
 
-4. ❌ Activity Feed (Item #18) - 3-4 days
+4. ✅ Activity Feed (Item #18) - 3-4 days
    - Create activity log table
    - Set up database triggers for auto-logging
    - Build activity feed UI
@@ -759,7 +759,7 @@ Phase 3 is complete when:
 - [x] Comments can be added, edited, deleted
 - [x] @mentions work and send notifications
 - [x] Notification center shows unread notifications
-- [ ] Activity feed logs all changes
+- [x] Activity feed logs all changes
 - [ ] User presence shows who's viewing tasks
 
 ### Quality

@@ -28,6 +28,7 @@ import {
   Bell,
   Calendar,
   Combine,
+  History,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -50,6 +51,29 @@ interface ChangelogEntry {
 }
 
 const changelog: ChangelogEntry[] = [
+  {
+    date: "February 10, 2026",
+    version: "0.13.0",
+    title: "Project Activity Feed",
+    description:
+      "A chronological audit trail of all project changes — task updates, comments, member changes, and more — powered by database triggers and real-time subscriptions.",
+    features: [
+      {
+        icon: History,
+        title: "Project Activity Feed",
+        description:
+          "Every project now has a collapsible Activity section that logs task creation, status changes, priority changes, assignments, deletions, comments, member changes, and project updates. Entries show who did what, when, with full context preserved even after items are deleted.",
+        tag: "new",
+      },
+      {
+        icon: Zap,
+        title: "Real-Time Activity Updates",
+        description:
+          "Activity entries appear instantly via Supabase Realtime. Open a project in two tabs — changes made in one appear in the other without refreshing. Powered by database triggers so logging is automatic and server-side.",
+        tag: "new",
+      },
+    ],
+  },
   {
     date: "February 10, 2026",
     version: "0.12.0",

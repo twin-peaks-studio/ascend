@@ -17,6 +17,7 @@ import {
   PanelRightClose,
   PanelRight,
   Settings2,
+  History,
 } from "lucide-react";
 import { AppShell } from "@/components/layout";
 import { TaskDialog, TaskListItem } from "@/components/task";
@@ -58,6 +59,7 @@ import { InviteMemberDialog, PropertiesPanel } from "@/components/project";
 import { TimeReportDialog } from "@/components/time/project-time-report";
 import { useProjectTotalTime } from "@/hooks/use-time-tracking";
 import { NoteListItem } from "@/components/note";
+import { ActivityFeed } from "@/components/activity/activity-feed";
 import {
   notifyProjectLeadAssigned,
   notifyProjectLeadRemoved,
@@ -103,6 +105,7 @@ export default function ProjectDetailPage() {
   const [showResources, setShowResources] = useState(documents.length > 0);
   const [showTasks, setShowTasks] = useState(false);
   const [showNotes, setShowNotes] = useState(false);
+  const [showActivity, setShowActivity] = useState(false);
 
   // Track previous project ID to reset editing state when project changes
   const [prevProjectId, setPrevProjectId] = useState(projectId);
@@ -693,6 +696,26 @@ export default function ProjectDetailPage() {
                       Add document or link...
                     </Button>
                   </div>
+                )}
+              </div>
+
+              {/* Activity Section - Collapsible (collapsed by default) */}
+              <div className="border-t border-border/40 pt-6 mt-6">
+                <button
+                  onClick={() => setShowActivity(!showActivity)}
+                  className="flex items-center gap-2 text-sm font-semibold text-muted-foreground uppercase tracking-wide hover:text-foreground transition-colors w-full mb-4"
+                >
+                  {showActivity ? (
+                    <ChevronDown className="h-4 w-4" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4" />
+                  )}
+                  <History className="h-4 w-4" />
+                  Activity
+                </button>
+
+                {showActivity && (
+                  <ActivityFeed projectId={projectId} />
                 )}
               </div>
             </div>
