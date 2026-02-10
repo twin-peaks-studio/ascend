@@ -93,8 +93,8 @@ src/
                       │
                       ▼ (onTaskClick)
           ┌─────────────────────┐
-          │ TaskDetailsDialog   │
-          │ (opens on top)      │
+          │ /tasks/[id] page    │
+          │ (navigates to)      │
           └─────────────────────┘
 ```
 

@@ -25,6 +25,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { TimePicker } from "@/components/ui/time-picker";
 import { Button } from "@/components/ui/button";
 import type { Project, Profile, TaskPriority } from "@/types";
 import { PRIORITY_OPTIONS } from "@/types";
@@ -219,26 +220,41 @@ function QuickAddTaskForm({
                   mode="single"
                   selected={dueDate || undefined}
                   onSelect={(date) => {
-                    setDueDate(date || null);
-                    setDatePickerOpen(false);
+                    if (!date) {
+                      setDueDate(null);
+                      return;
+                    }
+                    if (dueDate) {
+                      date.setHours(dueDate.getHours(), dueDate.getMinutes(), 0, 0);
+                    }
+                    setDueDate(date);
                   }}
                   initialFocus
+                  calendarFooter={
+                    <>
+                      <div className="border-t" />
+                      <TimePicker
+                        value={dueDate}
+                        onChange={(date) => setDueDate(date)}
+                      />
+                      {dueDate && (
+                        <div className="p-2 border-t">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="w-full"
+                            onClick={() => {
+                              setDueDate(null);
+                              setDatePickerOpen(false);
+                            }}
+                          >
+                            Clear date
+                          </Button>
+                        </div>
+                      )}
+                    </>
+                  }
                 />
-                {dueDate && (
-                  <div className="p-2 border-t">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="w-full"
-                      onClick={() => {
-                        setDueDate(null);
-                        setDatePickerOpen(false);
-                      }}
-                    >
-                      Clear date
-                    </Button>
-                  </div>
-                )}
               </PopoverContent>
             </Popover>
 

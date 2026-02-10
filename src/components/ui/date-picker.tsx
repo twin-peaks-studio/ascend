@@ -6,6 +6,7 @@ import { CalendarIcon, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
+import { TimePicker } from "@/components/ui/time-picker";
 import {
   Popover,
   PopoverContent,
@@ -30,13 +31,30 @@ export function DatePicker({
   const [open, setOpen] = React.useState(false);
 
   const handleSelect = (date: Date | undefined) => {
-    onChange(date || null);
-    setOpen(false);
+    if (!date) {
+      onChange(null);
+      setOpen(false);
+      return;
+    }
+    // Preserve existing time when changing the date
+    if (value) {
+      date.setHours(value.getHours(), value.getMinutes(), 0, 0);
+    }
+    onChange(date);
+  };
+
+  const handleTimeChange = (date: Date) => {
+    onChange(date);
   };
 
   const handleClear = (e: React.MouseEvent) => {
     e.stopPropagation();
     onChange(null);
+  };
+
+  const formatDisplay = (date: Date) => {
+    const hasTime = date.getHours() !== 0 || date.getMinutes() !== 0;
+    return hasTime ? format(date, "PPP 'at' h:mm a") : format(date, "PPP");
   };
 
   return (
@@ -52,7 +70,7 @@ export function DatePicker({
           )}
         >
           <CalendarIcon className="mr-2 h-4 w-4" />
-          {value ? format(value, "PPP") : <span>{placeholder}</span>}
+          {value ? formatDisplay(value) : <span>{placeholder}</span>}
           {value && (
             <X
               className="ml-auto h-4 w-4 opacity-50 hover:opacity-100"
@@ -67,6 +85,12 @@ export function DatePicker({
           selected={value || undefined}
           onSelect={handleSelect}
           initialFocus
+          calendarFooter={
+            <>
+              <div className="border-t" />
+              <TimePicker value={value} onChange={handleTimeChange} />
+            </>
+          }
         />
       </PopoverContent>
     </Popover>

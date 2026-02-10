@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { User, Calendar, Flag, X, Users, Clock, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { TimePicker } from "@/components/ui/time-picker";
 import { cn } from "@/lib/utils";
 import type { ProjectWithRelations, TaskPriority, ProjectStatus } from "@/types";
 import type { Profile } from "@/types";
@@ -71,6 +73,51 @@ export function PropertiesPanel({
 
   // Filter lead options to only show project members
   const { assignableProfiles: leadProfiles } = useProjectAssignees(project.id, profiles);
+
+  // Local state for date + time selection before committing
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [pendingDueDate, setPendingDueDate] = useState<Date | null>(
+    project.due_date ? new Date(project.due_date) : null
+  );
+
+  // Render-time sync when project.due_date changes externally
+  const [prevDueDate, setPrevDueDate] = useState<string | null>(project.due_date ?? null);
+  if (project.due_date !== prevDueDate) {
+    setPrevDueDate(project.due_date ?? null);
+    if (!datePickerOpen) {
+      setPendingDueDate(project.due_date ? new Date(project.due_date) : null);
+    }
+  }
+
+  const handleDueDateSelect = (date: Date | undefined) => {
+    if (!date) {
+      setPendingDueDate(null);
+      return;
+    }
+    if (pendingDueDate) {
+      date.setHours(pendingDueDate.getHours(), pendingDueDate.getMinutes(), 0, 0);
+    }
+    setPendingDueDate(date);
+  };
+
+  const handleDueTimeChange = (date: Date) => {
+    // If no date selected yet, the TimePicker creates a Date based on today
+    setPendingDueDate(date);
+  };
+
+  const handleDatePickerOpenChange = (open: boolean) => {
+    if (!open && datePickerOpen) {
+      // Save on close
+      onDueDateChange(pendingDueDate);
+    }
+    setDatePickerOpen(open);
+  };
+
+  const handleClearProjectDueDate = () => {
+    setPendingDueDate(null);
+    onDueDateChange(null);
+    setDatePickerOpen(false);
+  };
 
   return (
     <div className="space-y-0">
@@ -198,7 +245,7 @@ export function PropertiesPanel({
       {/* Due Date */}
       <SidebarRow label="Due Date">
         <div className="flex items-center gap-2 -mx-2 px-2">
-          <Popover>
+          <Popover open={datePickerOpen} onOpenChange={handleDatePickerOpenChange}>
             <PopoverTrigger asChild>
               <button
                 disabled={projectMutationLoading}
@@ -240,15 +287,21 @@ export function PropertiesPanel({
             <PopoverContent className="w-auto p-0" align="start">
               <CalendarComponent
                 mode="single"
-                selected={project.due_date ? new Date(project.due_date) : undefined}
-                onSelect={(date) => onDueDateChange(date || null)}
+                selected={pendingDueDate || undefined}
+                onSelect={handleDueDateSelect}
                 initialFocus
+                calendarFooter={
+                  <>
+                    <div className="border-t" />
+                    <TimePicker value={pendingDueDate} onChange={handleDueTimeChange} />
+                  </>
+                }
               />
             </PopoverContent>
           </Popover>
           {project.due_date && (
             <button
-              onClick={() => onDueDateChange(null)}
+              onClick={handleClearProjectDueDate}
               className="text-muted-foreground hover:text-foreground"
             >
               <X className="h-3 w-3" />

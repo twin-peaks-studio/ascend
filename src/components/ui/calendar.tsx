@@ -5,12 +5,16 @@ import { DayPicker } from "react-day-picker";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
 
-export type CalendarProps = React.ComponentProps<typeof DayPicker>;
+export type CalendarProps = React.ComponentProps<typeof DayPicker> & {
+  /** Content rendered below the scrollable calendar area (e.g. TimePicker) */
+  calendarFooter?: React.ReactNode;
+};
 
 function Calendar({
   className,
   classNames,
   showOutsideDays = true,
+  calendarFooter,
   ...props
 }: CalendarProps) {
   // Show 12 months for scrolling (6 before, current, 5 after)
@@ -68,7 +72,7 @@ function Calendar({
       onWheel={handleWheel}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
-      className="max-h-[200px] overflow-y-scroll overscroll-contain"
+      className={cn("max-h-[200px] overflow-y-scroll overscroll-contain", calendarFooter && "max-h-[240px]")}
       style={{
         WebkitOverflowScrolling: 'touch',
         touchAction: 'pan-y',
@@ -82,7 +86,7 @@ function Calendar({
         startMonth={startMonth}
         endMonth={endMonth}
         hideNavigation
-        className={cn("p-3", className)}
+        className={cn("p-3", calendarFooter && "pb-12", className)}
         classNames={{
           months: "flex flex-col",
           month: "",
@@ -118,6 +122,11 @@ function Calendar({
         }}
         {...props}
       />
+      {calendarFooter && (
+        <div className="sticky bottom-0 bg-popover">
+          {calendarFooter}
+        </div>
+      )}
     </div>
   );
 }

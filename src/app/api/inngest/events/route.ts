@@ -16,6 +16,11 @@ const VALID_EVENT_NAMES = new Set<string>([
   "task/due-date.removed",
   "task/completed",
   "task/deleted",
+  "project/due-date.set",
+  "project/due-date.updated",
+  "project/due-date.removed",
+  "project/completed",
+  "project/deleted",
 ]);
 
 export async function POST(request: NextRequest) {

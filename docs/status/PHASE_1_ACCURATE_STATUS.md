@@ -21,8 +21,10 @@
 
 **Completion:** 4.8/5 items = 96% (excluding skipped email)
 
-> **Note (Feb 9):** Phase 3 (Team Collaboration) is now in progress.
+> **Note (Feb 10):** Phase 3 (Team Collaboration) is ~65% complete.
 > Features #15 (Real-time Tasks), #16 (Comments), and #17 (@Mentions & Notifications) are complete.
+> Additional improvements: Inngest due reminders for both tasks and projects, TimePicker on due dates,
+> single task detail surface (consolidated from 3 components to 1), inline mobile due date picker.
 > See `docs/roadmap/PHASE_3_ROADMAP.md` for full status.
 
 ---

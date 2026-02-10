@@ -20,6 +20,7 @@ import {
   PanelRightClose,
   PanelRight,
   Settings2,
+  X,
 } from "lucide-react";
 import { AppShell } from "@/components/layout";
 import { Button } from "@/components/ui/button";
@@ -40,6 +41,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { TimePicker } from "@/components/ui/time-picker";
 import { FileUpload } from "@/components/shared/file-upload";
 import { AttachmentsList } from "@/components/shared/attachments-list";
 import { TimerButton, TimeEntryList } from "@/components/time";
@@ -125,6 +127,10 @@ export default function TaskDetailPage() {
   const [showAttachments, setShowAttachments] = useState(false);
   const [showTimeEntries, setShowTimeEntries] = useState(false);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [mobileDateExpanded, setMobileDateExpanded] = useState(false);
+  const [pendingDueDate, setPendingDueDate] = useState<Date | null>(
+    task?.due_date ? new Date(task.due_date) : null
+  );
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -138,6 +144,16 @@ export default function TaskDetailPage() {
     setPrevTaskId(task.id);
     setTitle(task.title);
     setDescription(task.description ?? "");
+    setPendingDueDate(task.due_date ? new Date(task.due_date) : null);
+  }
+
+  // Sync pending date when task.due_date changes from an external update
+  const [prevDueDate, setPrevDueDate] = useState<string | null>(task?.due_date ?? null);
+  if (task && task.due_date !== prevDueDate) {
+    setPrevDueDate(task.due_date);
+    if (!datePickerOpen) {
+      setPendingDueDate(task.due_date ? new Date(task.due_date) : null);
+    }
   }
 
   // Auto-expand attachments when they exist
@@ -217,13 +233,56 @@ export default function TaskDetailPage() {
     [handleUpdate]
   );
 
-  const handleDueDateChange = useCallback(
-    async (date: Date | undefined) => {
-      await handleUpdate({ due_date: date?.toISOString() || null });
-      setDatePickerOpen(false);
+  const handleDueDateSelect = useCallback(
+    (date: Date | undefined) => {
+      if (!date) {
+        setPendingDueDate(null);
+        return;
+      }
+      // Preserve time from pending date
+      if (pendingDueDate) {
+        date.setHours(pendingDueDate.getHours(), pendingDueDate.getMinutes(), 0, 0);
+      }
+      setPendingDueDate(date);
     },
-    [handleUpdate]
+    [pendingDueDate]
   );
+
+  const handleDueTimeChange = useCallback((date: Date) => {
+    setPendingDueDate(date);
+  }, []);
+
+  const handleDatePickerOpenChange = useCallback(
+    async (open: boolean) => {
+      if (!open && datePickerOpen && task) {
+        // Popover is closing — save the pending value
+        const newValue = pendingDueDate?.toISOString() || null;
+        if (newValue !== (task.due_date || null)) {
+          await handleUpdate({ due_date: newValue });
+        }
+      }
+      setDatePickerOpen(open);
+    },
+    [datePickerOpen, pendingDueDate, task, handleUpdate]
+  );
+
+  const handleClearDueDate = useCallback(async () => {
+    setPendingDueDate(null);
+    await handleUpdate({ due_date: null });
+    setDatePickerOpen(false);
+    setMobileDateExpanded(false);
+  }, [handleUpdate]);
+
+  const handleMobileDateToggle = useCallback(async () => {
+    if (mobileDateExpanded && task) {
+      // Collapsing — save the pending value
+      const newValue = pendingDueDate?.toISOString() || null;
+      if (newValue !== (task.due_date || null)) {
+        await handleUpdate({ due_date: newValue });
+      }
+    }
+    setMobileDateExpanded((prev) => !prev);
+  }, [mobileDateExpanded, pendingDueDate, task, handleUpdate]);
 
   const handleDelete = useCallback(async () => {
     if (!task) return;
@@ -464,6 +523,69 @@ export default function TaskDetailPage() {
             )}
           </div>
 
+          {/* Due Date - inline on mobile only (desktop uses sidebar) */}
+          <div className="mb-8 md:hidden">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleMobileDateToggle}
+                className={cn(
+                  "flex items-center gap-2 text-sm font-medium transition-colors",
+                  task.due_date && isTaskOverdue && !isCompleted
+                    ? "text-red-500"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {mobileDateExpanded ? (
+                  <ChevronDown className="h-4 w-4" />
+                ) : (
+                  <ChevronRight className="h-4 w-4" />
+                )}
+                <Calendar className="h-4 w-4" />
+                {task.due_date ? (
+                  <span>{formatDueDate(task.due_date)}</span>
+                ) : (
+                  <span>Due Date</span>
+                )}
+              </button>
+              {task.due_date && (
+                <button
+                  onClick={handleClearDueDate}
+                  className="text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+
+            {mobileDateExpanded && (
+              <div className="mt-3 rounded-lg border bg-popover w-fit max-w-full">
+                <CalendarComponent
+                  mode="single"
+                  selected={pendingDueDate || undefined}
+                  onSelect={handleDueDateSelect}
+                  calendarFooter={
+                    <>
+                      <div className="border-t" />
+                      <TimePicker value={pendingDueDate} onChange={handleDueTimeChange} />
+                      {pendingDueDate && (
+                        <div className="p-2 border-t">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="w-full"
+                            onClick={handleClearDueDate}
+                          >
+                            Clear date
+                          </Button>
+                        </div>
+                      )}
+                    </>
+                  }
+                />
+              </div>
+            )}
+          </div>
+
           {/* Attachments */}
           <div className="mb-8">
             <button
@@ -655,7 +777,7 @@ export default function TaskDetailPage() {
 
           {/* Date */}
           <SidebarRow label="Due Date">
-            <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+            <Popover open={datePickerOpen} onOpenChange={handleDatePickerOpenChange}>
               <PopoverTrigger asChild>
                 <button
                   className={cn(
@@ -675,24 +797,28 @@ export default function TaskDetailPage() {
               <PopoverContent className="w-auto p-0" align="start">
                 <CalendarComponent
                   mode="single"
-                  selected={
-                    task.due_date ? new Date(task.due_date) : undefined
-                  }
-                  onSelect={handleDueDateChange}
+                  selected={pendingDueDate || undefined}
+                  onSelect={handleDueDateSelect}
                   initialFocus
+                  calendarFooter={
+                    <>
+                      <div className="border-t" />
+                      <TimePicker value={pendingDueDate} onChange={handleDueTimeChange} />
+                      {pendingDueDate && (
+                        <div className="p-2 border-t">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="w-full"
+                            onClick={handleClearDueDate}
+                          >
+                            Clear date
+                          </Button>
+                        </div>
+                      )}
+                    </>
+                  }
                 />
-                {task.due_date && (
-                  <div className="p-2 border-t">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="w-full"
-                      onClick={() => handleDueDateChange(undefined)}
-                    >
-                      Clear date
-                    </Button>
-                  </div>
-                )}
               </PopoverContent>
             </Popover>
           </SidebarRow>
@@ -916,49 +1042,7 @@ export default function TaskDetailPage() {
             </Select>
           </SidebarRow>
 
-          {/* Due Date */}
-          <SidebarRow label="Due Date">
-            <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
-              <PopoverTrigger asChild>
-                <button
-                  className={cn(
-                    "flex items-center gap-1.5 hover:bg-muted/50 -mx-1.5 px-1.5 py-0.5 rounded w-full text-left text-xs",
-                    isTaskOverdue && "text-red-500"
-                  )}
-                  disabled={loading}
-                >
-                  <Calendar className="h-3 w-3 shrink-0" />
-                  {task.due_date ? (
-                    <span>{formatDueDate(task.due_date)}</span>
-                  ) : (
-                    <span className="text-muted-foreground">Add date</span>
-                  )}
-                </button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <CalendarComponent
-                  mode="single"
-                  selected={
-                    task.due_date ? new Date(task.due_date) : undefined
-                  }
-                  onSelect={handleDueDateChange}
-                  initialFocus
-                />
-                {task.due_date && (
-                  <div className="p-2 border-t">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="w-full"
-                      onClick={() => handleDueDateChange(undefined)}
-                    >
-                      Clear date
-                    </Button>
-                  </div>
-                )}
-              </PopoverContent>
-            </Popover>
-          </SidebarRow>
+          {/* Due Date is handled inline on mobile (above attachments), not in this sheet */}
 
           {/* Priority */}
           <SidebarRow label="Priority">
