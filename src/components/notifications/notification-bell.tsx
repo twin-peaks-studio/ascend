@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Bell, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -139,6 +140,7 @@ export function NotificationBell() {
   const router = useRouter();
   const { user } = useAuth();
   const userId = user?.id ?? null;
+  const [showAll, setShowAll] = useState(false);
 
   const { data: notifications = [] } = useNotifications(userId);
   const { data: unreadCount = 0 } = useUnreadNotificationCount(userId);
@@ -146,6 +148,8 @@ export function NotificationBell() {
 
   // Subscribe to real-time notification updates
   useRealtimeNotifications(userId);
+
+  const filtered = showAll ? notifications : notifications.filter((n) => !n.read);
 
   return (
     <Popover>
@@ -163,7 +167,30 @@ export function NotificationBell() {
       <PopoverContent align="end" className="w-80 p-0">
         {/* Header */}
         <div className="flex items-center justify-between border-b px-4 py-3">
-          <h3 className="text-sm font-semibold">Notifications</h3>
+          <div className="flex items-center gap-1">
+            <button
+              className={cn(
+                "rounded-md px-2 py-1 text-xs font-medium transition-colors",
+                !showAll
+                  ? "bg-accent text-accent-foreground"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+              onClick={() => setShowAll(false)}
+            >
+              Unread
+            </button>
+            <button
+              className={cn(
+                "rounded-md px-2 py-1 text-xs font-medium transition-colors",
+                showAll
+                  ? "bg-accent text-accent-foreground"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+              onClick={() => setShowAll(true)}
+            >
+              All
+            </button>
+          </div>
           {unreadCount > 0 && (
             <button
               className="text-xs text-muted-foreground hover:text-foreground"
@@ -176,13 +203,13 @@ export function NotificationBell() {
 
         {/* Notification list */}
         <div className="max-h-80 overflow-y-auto">
-          {notifications.length === 0 ? (
+          {filtered.length === 0 ? (
             <div className="px-4 py-8 text-center text-sm text-muted-foreground">
-              No notifications yet
+              {showAll ? "No notifications yet" : "You\u2019re all caught up"}
             </div>
           ) : (
             <div className="py-1">
-              {notifications.map((notification) => (
+              {filtered.map((notification) => (
                 <NotificationItem
                   key={notification.id}
                   notification={notification}
