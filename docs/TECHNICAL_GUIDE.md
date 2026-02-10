@@ -147,10 +147,7 @@ src/
 │   ├── task/                    # Task-related components
 │   │   ├── task-card.tsx        # Draggable task card
 │   │   ├── task-form.tsx        # Create/edit task form
-│   │   ├── task-dialog.tsx      # Task quick create/edit modal
-│   │   ├── task-details-dialog.tsx  # Full task details modal (Todoist-style, desktop)
-│   │   ├── task-edit-mobile.tsx     # Mobile task edit drawer (Todoist-style)
-│   │   └── task-details-responsive.tsx  # Responsive wrapper (auto-switches desktop/mobile)
+│   │   └── task-dialog.tsx      # Task quick create/edit modal
 │   │
 │   ├── project/                 # Project-related components
 │   │   ├── project-card.tsx     # Project card for list view (links to detail page)
@@ -1256,152 +1253,19 @@ export function TaskForm({ mode, initialData, projectId, onSubmit, onCancel }: T
 }
 ```
 
-### Task Details Dialog
+### Task Detail Page
 
-The `TaskDetailsDialog` component provides a Todoist-style full details view:
+All task viewing/editing is done on the `/tasks/[id]` page (`src/app/tasks/[id]/page.tsx`). There is a single surface for task details — clicking a task anywhere in the app navigates to this page via `router.push(`/tasks/${taskId}`)`.
 
-**Layout:**
-- Two-column responsive layout (`md:grid-cols-[1fr_260px]`)
-- Size: 80vw width (max 1100px), 75vh height
-- Left panel: Title with checkbox, description, attachments (scrollable)
-- Right sidebar: Project, assignee, date, priority, status
+**Layout (Desktop):**
+- Two-panel layout: scrollable content area + collapsible 300px properties sidebar
+- Left panel: Title with checkbox, description, attachments, time tracking, comments
+- Right sidebar: Project, assignee, due date (with TimePicker), priority, status, timer
 
-**Inline Editing Pattern:**
-```typescript
-// Title/Description: Explicit save/cancel buttons
-{isEditingTitle ? (
-  <div className="flex-1 space-y-2">
-    <Input value={title} onChange={(e) => setTitle(e.target.value)} />
-    <div className="flex items-center gap-2">
-      <Button size="sm" onClick={handleTitleSave}>Save</Button>
-      <Button size="sm" variant="ghost" onClick={handleCancel}>Cancel</Button>
-    </div>
-  </div>
-) : (
-  <button onClick={() => setIsEditingTitle(true)}>{task.title}</button>
-)}
-
-// Sidebar fields: Immediate save on change (no refetch needed)
-<Select value={task.priority} onValueChange={handlePriorityChange}>
-  {/* Options */}
-</Select>
-```
-
-**State Synchronization (Optimistic Updates):**
-The parent component updates `selectedTask` immediately after successful updates. **Important:** Do NOT call `refetch()` after updates - this causes a visible UI glitch. Local state updates are sufficient:
-
-```typescript
-const handleDetailsUpdate = useCallback(async (data: UpdateTaskInput) => {
-  if (!selectedTask) return;
-  const result = await updateTask(selectedTask.id, data);
-  if (result) {
-    // Update selectedTask immediately for responsive UI
-    setSelectedTask((prev) => prev ? { ...prev, ...data } : null);
-    // Don't call refetch() - local state update is sufficient and avoids UI glitch
-  }
-}, [selectedTask, updateTask, activeProjects]);
-```
-
-**CSS Specificity Note:**
-When overriding Tailwind responsive classes in shadcn/ui components, use matching responsive prefixes:
-```typescript
-// Base DialogContent has: sm:max-w-lg
-// To override at sm+ breakpoint, use: sm:max-w-[1100px]
-<DialogContent className="w-[80vw] sm:max-w-[1100px] h-[75vh]">
-```
-
-### Mobile Task Edit (Responsive)
-
-The task details experience is responsive, automatically switching between desktop dialog and mobile drawer based on screen size.
-
-**Architecture:**
-```
-TaskDetailsResponsive (wrapper)
-├── Desktop (≥768px): TaskDetailsDialog
-│   └── Two-column dialog with sidebar
-└── Mobile (<768px): TaskEditMobile
-    └── Bottom drawer with Todoist-style layout
-```
-
-**Responsive Detection (`src/hooks/use-media-query.ts`):**
-```typescript
-// Uses useSyncExternalStore for proper React 18 SSR compatibility
-export function useMediaQuery(query: string): boolean {
-  return useSyncExternalStore(
-    (callback) => subscribe(query, callback),
-    () => getSnapshot(query),
-    getServerSnapshot  // Returns false on server to avoid hydration mismatch
-  );
-}
-
-export function useIsMobile(): boolean {
-  return useMediaQuery("(max-width: 767px)");
-}
-```
-
-**Mobile Layout (Todoist-inspired):**
-- Bottom drawer using `vaul` library
-- Title with completion toggle circle at top
-- Populated fields shown as tappable rows with icons
-- Empty fields shown as horizontal scrollable chips
-- Collapsible attachments section
-
-**Key Mobile UI Patterns:**
-
-1. **Property Rows** - For populated fields:
-```typescript
-const PropertyRow = forwardRef<HTMLButtonElement, Props>(
-  ({ icon: Icon, children, onClick, className, ...props }, ref) => (
-    <button
-      ref={ref}
-      className="flex items-center gap-3 w-full py-3 border-b border-border/40"
-      {...props}
-    >
-      <Icon className="h-5 w-5 text-muted-foreground" />
-      <div className="flex-1">{children}</div>
-    </button>
-  )
-);
-```
-
-2. **Property Chips** - Horizontal scroll for empty fields:
-```typescript
-// Shows chips for: Description, Date, Assignee, Attachments (when empty)
-<div className="py-3 -mx-4 px-4 overflow-x-auto">
-  <div className="flex items-center gap-2">
-    {!hasDescription && <PropertyChip icon={AlignLeft} label="Description" />}
-    {!hasDueDate && <PropertyChip icon={Calendar} label="Date" />}
-    {!hasAssignee && <PropertyChip icon={User} label="Assignee" />}
-    {attachments.length === 0 && <PropertyChip icon={Paperclip} label="Attachments" />}
-  </div>
-</div>
-```
-
-3. **Drawer Component** (`src/components/ui/drawer.tsx`):
-```typescript
-// Uses vaul library for native-feeling mobile drawer
-import { Drawer as DrawerPrimitive } from "vaul";
-
-<DrawerContent className="max-h-[90vh]">
-  <div className="mx-auto mt-4 h-1.5 w-12 rounded-full bg-muted" /> {/* Drag handle */}
-  {children}
-</DrawerContent>
-```
-
-**Usage in Pages:**
-```typescript
-// src/app/tasks/page.tsx
-import { TaskDetailsResponsive } from "@/components/task";
-
-<TaskDetailsResponsive
-  open={showDetailsDialog}
-  onOpenChange={setShowDetailsDialog}
-  task={selectedTask}
-  profiles={profiles}
-  projects={activeProjects}
-  onUpdate={handleDetailsUpdate}
-/>
-```
+**Layout (Mobile):**
+- Full-width content area with floating properties button (bottom-left)
+- Properties shown in a bottom Sheet when the button is tapped
+- Same fields as desktop, adapted for touch
 
 ### Responsive Layout Architecture
 
@@ -1509,8 +1373,7 @@ Reusable component for project properties, used in both:
 **Tasks Section:**
 - Collapsible section, collapsed by default when tasks exist
 - Shows task count in header: "Tasks (3)"
-- Task cards are clickable buttons that open `TaskDetailsResponsive`
-- Uses the same task details dialog as the Tasks page for consistency
+- Task cards are clickable buttons that navigate to `/tasks/[id]`
 - Optimistic updates: changes reflect immediately without page refresh
 
 **State Management Pattern:**

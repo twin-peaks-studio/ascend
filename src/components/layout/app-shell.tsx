@@ -3,6 +3,7 @@
 import { Sidebar } from "./sidebar";
 import { MobileBottomNav } from "./mobile-bottom-nav";
 import { useState, useCallback, useEffect, useLayoutEffect, useRef, createContext, useContext } from "react";
+import { useRouter } from "next/navigation";
 import { ShortcutsDialog } from "../shortcuts-dialog";
 import { SearchDialog } from "../search";
 import { AuthDialog } from "../auth";
@@ -11,14 +12,9 @@ import { TimerProvider, useTimerContext } from "@/contexts/timer-context";
 import { useSidebar } from "@/hooks/use-sidebar";
 import { useAuth } from "@/hooks/use-auth";
 import { useRecoveryState } from "@/hooks/use-recovery";
-import { useTasks, useTaskMutations } from "@/hooks/use-tasks";
-import { useProfiles } from "@/hooks/use-profiles";
-import { useProjects } from "@/hooks/use-projects";
-import { TaskDetailsResponsive } from "@/components/task/task-details-responsive";
 import { cn } from "@/lib/utils";
 import type { ViewMode } from "./header";
-import type { Project, TaskWithProject } from "@/types";
-import type { UpdateTaskInput } from "@/lib/validation";
+import type { Project } from "@/types";
 import type { TaskSortField, TaskSortDirection } from "@/lib/task-sort";
 
 // Context for search dialog trigger
@@ -74,61 +70,19 @@ interface AppShellProps {
 
 /**
  * Inner component that handles opening task details from the global timer indicator.
- * This needs to be inside the TimerProvider to access setOnOpenTask.
+ * Navigates to /tasks/[id] instead of opening a dialog, keeping one single task detail surface.
  */
-function TimerTaskDialog() {
+function TimerTaskNavigation() {
   const { setOnOpenTask } = useTimerContext();
-  const { tasks } = useTasks();
-  const { updateTask } = useTaskMutations();
-  const { profiles } = useProfiles();
-  const { projects } = useProjects();
+  const router = useRouter();
 
-  const [selectedTask, setSelectedTask] = useState<TaskWithProject | null>(null);
-  const [showTaskDialog, setShowTaskDialog] = useState(false);
-  const [isUpdating, setIsUpdating] = useState(false);
-
-  // Use ref to access current tasks without causing effect re-runs
-  const tasksRef = useRef(tasks);
-  tasksRef.current = tasks;
-
-  // Register the callback to open task dialog from timer indicator (runs once)
   useEffect(() => {
     setOnOpenTask((taskId: string) => {
-      const task = tasksRef.current.find((t) => t.id === taskId);
-      if (task) {
-        setSelectedTask(task);
-        setShowTaskDialog(true);
-      }
+      router.push(`/tasks/${taskId}`);
     });
-  }, [setOnOpenTask]);
+  }, [setOnOpenTask, router]);
 
-  const handleUpdateTask = async (data: UpdateTaskInput) => {
-    if (!selectedTask) return;
-    setIsUpdating(true);
-    try {
-      // Pass previous assignee for notification tracking when assignee changes
-      const previousAssigneeId = "assignee_id" in data ? selectedTask.assignee_id : undefined;
-      await updateTask(selectedTask.id, data, previousAssigneeId);
-      // Update the local selected task with new data
-      setSelectedTask((prev) =>
-        prev ? { ...prev, ...data } : null
-      );
-    } finally {
-      setIsUpdating(false);
-    }
-  };
-
-  return (
-    <TaskDetailsResponsive
-      task={selectedTask}
-      open={showTaskDialog}
-      onOpenChange={setShowTaskDialog}
-      onUpdate={handleUpdateTask}
-      profiles={profiles}
-      projects={projects}
-      loading={isUpdating}
-    />
-  );
+  return null;
 }
 
 export function AppShell({
@@ -295,7 +249,7 @@ export function AppShell({
         <FeedbackDialog open={showFeedback} onOpenChange={setShowFeedback} />
 
         {/* Task dialog for timer indicator clicks */}
-        <TimerTaskDialog />
+        <TimerTaskNavigation />
       </div>
       </FeedbackContext.Provider>
     </SearchContext.Provider>
