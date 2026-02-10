@@ -309,19 +309,46 @@ export function useProjectMutations() {
             { name: "project/due-date.updated", data: { projectId } },
           ];
 
-          // Schedule a new reminder if there's a new due date and a lead
-          if (validated.due_date && updatedProject.lead_id) {
+          // Schedule reminders for lead + creator
+          if (validated.due_date) {
+            const recipients = new Set<string>();
+            if (updatedProject.lead_id) recipients.add(updatedProject.lead_id);
+            recipients.add(updatedProject.created_by); // creator always gets reminded
+            for (const recipientId of recipients) {
+              inngestEvents.push({
+                name: "project/due-date.set",
+                data: {
+                  projectId,
+                  dueDate: validated.due_date,
+                  leadId: recipientId,
+                  projectTitle: updatedProject.title,
+                },
+              });
+            }
+          }
+
+          sendInngestEvents(inngestEvents);
+        }
+
+        // Reschedule reminder when lead changes on a project with a due date
+        if ("lead_id" in validated && !("due_date" in validated) && updatedProject.due_date) {
+          const inngestEvents: Array<{ name: string; data: Record<string, unknown> }> = [
+            { name: "project/due-date.updated", data: { projectId } },
+          ];
+          const recipients = new Set<string>();
+          if (validated.lead_id) recipients.add(validated.lead_id);
+          recipients.add(updatedProject.created_by);
+          for (const recipientId of recipients) {
             inngestEvents.push({
               name: "project/due-date.set",
               data: {
                 projectId,
-                dueDate: validated.due_date,
-                leadId: updatedProject.lead_id,
+                dueDate: updatedProject.due_date,
+                leadId: recipientId,
                 projectTitle: updatedProject.title,
               },
             });
           }
-
           sendInngestEvents(inngestEvents);
         }
 

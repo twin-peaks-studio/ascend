@@ -93,7 +93,7 @@ Four events govern the lifecycle of a task due reminder:
 
 ### `task/due-date.set`
 
-Fired when a task is created with a due date or an existing task's due date is changed. This is the **trigger** that schedules the reminder function.
+Fired when a task is created with a due date or an existing task's due date is changed. This is the **trigger** that schedules the reminder function. One event is fired **per recipient** (assignee and/or creator), so a single due date change may produce 1 or 2 events.
 
 ```typescript
 {
@@ -101,7 +101,7 @@ Fired when a task is created with a due date or an existing task's due date is c
   data: {
     taskId: string;       // Task UUID
     dueDate: string;      // ISO 8601 datetime
-    assigneeId: string;   // Who to notify
+    assigneeId: string;   // Who to notify (assignee, or creator as fallback)
     taskTitle: string;     // For notification message
     projectId: string | null;
   }
@@ -512,19 +512,19 @@ INNGEST_SIGNING_KEY=xxx        # For verifying webhook authenticity
 
 ## Project Due Date Reminders (Implemented Feb 10, 2026)
 
-The same durable workflow pattern has been extended to **projects**. When a project has a due date and a designated lead, a background reminder is scheduled to fire 1 hour before the deadline.
+The same durable workflow pattern has been extended to **projects**. When a project has a due date, background reminders are scheduled to fire 1 hour before the deadline.
 
 ### How It Works
 
 - **Trigger event:** `project/due-date.set` — fired when a project due date is created or changed
 - **Cancel events:** `project/completed`, `project/due-date.updated`, `project/due-date.removed`, `project/deleted`
-- **Recipient:** The project lead (not all members)
+- **Recipients:** The project lead (if set) **and** the project creator. If the lead and creator are the same person, only one reminder is created (deduplication via `Set`). If no lead is set, the creator still receives a reminder.
 - **Notification type:** `project_due`
 
 ### Architecture
 
 ```
-project/due-date.set ──► projectDueReminder function
+project/due-date.set ──► projectDueReminder function (one run per recipient)
   │                        │
   │  cancelOn:             │
   │    project/completed   │  sleepUntil(dueDate - 1h)
@@ -534,6 +534,10 @@ project/due-date.set ──► projectDueReminder function
   │                        ▼
   │                  Create notification
   │                  (user_id = leadId, type = "project_due")
+  │
+  │  Recipients (deduplicated via Set):
+  │    - Lead (if set)
+  │    - Creator (always)
 ```
 
 ### Files
@@ -542,9 +546,22 @@ project/due-date.set ──► projectDueReminder function
 - `src/inngest/events.ts` — Event type definitions (includes all `project/*` events)
 - `src/hooks/use-projects.ts` — Fires events on project create/update/complete/delete
 
-### Lead vs Assignee
+### Recipient Logic (Tasks and Projects)
 
-Unlike tasks (which notify the **assignee**), projects notify the **project lead**. If no lead is set, no reminder is scheduled. Changing the lead cancels the old reminder and schedules a new one for the new lead.
+Both tasks and projects follow the same recipient pattern:
+
+| Scenario | Recipients |
+|----------|-----------|
+| Assignee/lead set, different from creator | **Both** assignee/lead and creator |
+| Assignee/lead set, same as creator | Creator only (deduplicated) |
+| No assignee/lead set | Creator only |
+
+For **tasks**: recipients = `{assignee_id, created_by}` (deduplicated via `Set`).
+For **projects**: recipients = `{lead_id, created_by}` (deduplicated via `Set`).
+
+One `task/due-date.set` or `project/due-date.set` event is fired **per recipient**, creating independent Inngest function runs. All runs for the same task/project are cancelled together when a cancellation event fires (matching on `data.taskId` or `data.projectId`).
+
+Changing the lead/assignee on an item with an existing due date cancels all old reminders and reschedules for the updated recipient set.
 
 ---
 
