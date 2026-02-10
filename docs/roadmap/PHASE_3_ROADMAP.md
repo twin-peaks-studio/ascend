@@ -11,7 +11,7 @@
 |---------|--------|-------|
 | #15 Real-time Task Updates | ✅ DONE | Hooks exist, tasks table now in Realtime publication |
 | #16 Comments System | ✅ DONE | Full CRUD, RLS, Realtime enabled |
-| #17 @Mentions & Notifications | ✅ DONE | 7 notification types, real-time bell, @mention UI, task due reminders via Inngest. Project due reminders also implemented (notifies project lead). |
+| #17 @Mentions & Notifications | ✅ DONE | 8 notification types (mention, task_assigned, task_unassigned, project_invited, project_lead_assigned, project_lead_removed, task_due, project_due), real-time bell, @mention UI, task due reminders via Inngest. Project due reminders also implemented (notifies project lead). |
 | TimePicker on Due Dates | ✅ DONE | Tasks and projects support time-of-day selection on due dates via inline TimePicker. |
 | Single Task Detail Surface | ✅ DONE | Consolidated from 3 components to 1 (`/tasks/[id]` page). Removed TaskDetailsDialog, TaskEditMobile, TaskDetailsResponsive (1,749 lines deleted). |
 | Inline Mobile Due Date | ✅ DONE | Due date is a collapsible inline section on mobile task detail page (not buried in properties sheet). |
@@ -546,14 +546,14 @@ const handleTyping = debounce(() => {
    - Implement real-time notification delivery
    - Add additional notification triggers
 
-4. ✅ Activity Feed (Item #18) - 3-4 days
+4. ❌ Activity Feed (Item #18) - 3-4 days
    - Create activity log table
    - Set up database triggers for auto-logging
    - Build activity feed UI
    - Add filtering and pagination
 
 **Week 3: Presence & Polish**
-5. ✅ User Presence Indicators (Item #19) - 2-3 days
+5. ❌ User Presence Indicators (Item #19) - 2-3 days
    - Implement Supabase presence tracking
    - Build presence avatars UI
    - Test with multiple users
@@ -759,8 +759,8 @@ Phase 3 is complete when:
 - [x] Comments can be added, edited, deleted
 - [x] @mentions work and send notifications
 - [x] Notification center shows unread notifications
-- [x] Activity feed logs all changes
-- [x] User presence shows who's viewing tasks
+- [ ] Activity feed logs all changes
+- [ ] User presence shows who's viewing tasks
 
 ### Quality
 - [x] All ESLint errors fixed
