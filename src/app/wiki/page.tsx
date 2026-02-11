@@ -28,6 +28,7 @@ import {
   Layers,
   Bell,
   History,
+  Eye,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -504,6 +505,33 @@ const sections: WikiSection[] = [
           "When you submit the comment, the mentioned user receives an instant notification in their notification center.",
         ],
         tip: "Mentions are only available on tasks that belong to a shared project with at least two members.",
+      },
+    ],
+  },
+  {
+    id: "presence",
+    icon: Eye,
+    title: "User Presence",
+    description: "See who is viewing the same page in real time.",
+    content: [
+      {
+        heading: "Real-Time Presence Indicators",
+        paragraphs: [
+          "When you open a task or project detail page, Ascend tracks your presence in real time. If other team members are viewing the same page, their avatars appear in the header bar next to a small eye icon.",
+        ],
+      },
+      {
+        heading: "How It Works",
+        list: [
+          "Avatars of active viewers appear in the top header bar of task and project detail pages.",
+          "Hover over the avatar group to see a list of everyone currently viewing the page.",
+          "Up to 5 avatars are shown; additional viewers appear as a \"+N\" count.",
+          "If you are the only person viewing the page, no presence indicator is shown — keeping the interface clean.",
+          "Presence updates automatically when users arrive, leave, or become inactive (30 seconds of inactivity).",
+        ],
+      },
+      {
+        tip: "Presence indicators help you avoid edit conflicts. If you see a teammate's avatar on the same task, consider coordinating before making changes.",
       },
     ],
   },

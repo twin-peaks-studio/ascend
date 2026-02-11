@@ -32,6 +32,7 @@ import {
   StickyNote,
   MousePointerClick,
   RefreshCw,
+  Eye,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -54,6 +55,22 @@ interface ChangelogEntry {
 }
 
 const changelog: ChangelogEntry[] = [
+  {
+    date: "February 11, 2026",
+    version: "0.14.0",
+    title: "Real-Time User Presence",
+    description:
+      "See who else is viewing the same task or project, with live avatar indicators in the page header.",
+    features: [
+      {
+        icon: Eye,
+        title: "User Presence Indicators",
+        description:
+          "When team members are viewing the same task or project page, their avatars appear in the header bar. Hover to see who's online. Avatars disappear automatically when users navigate away or become inactive.",
+        tag: "new",
+      },
+    ],
+  },
   {
     date: "February 11, 2026",
     version: "0.13.2",

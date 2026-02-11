@@ -27,7 +27,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { MarkdownEditor, MarkdownRenderer } from "@/components/shared";
+import { MarkdownEditor, MarkdownRenderer, PresenceAvatars } from "@/components/shared";
 import {
   Select,
   SelectContent,
@@ -371,14 +371,17 @@ export default function ProjectDetailPage() {
               {project.title}
             </span>
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setDeleteProjectConfirm(true)}
-            className="text-destructive hover:text-destructive"
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
+          <div className="flex items-center gap-3">
+            <PresenceAvatars entityType="project" entityId={projectId} />
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setDeleteProjectConfirm(true)}
+              className="text-destructive hover:text-destructive"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
 
         {/* Main content - two column layout */}

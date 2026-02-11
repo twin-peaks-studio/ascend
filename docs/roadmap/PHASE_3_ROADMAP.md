@@ -1,6 +1,6 @@
 # Phase 3: Team Collaboration - Implementation Roadmap
 
-**Status:** In Progress (~73% complete)
+**Status:** In Progress (~82% complete)
 **Duration:** 2-3 weeks
 **Priority:** High (Market expectation, competitive differentiator)
 **Last Updated:** 2026-02-11
@@ -17,7 +17,7 @@
 | Inline Mobile Due Date | ✅ DONE | Due date is a collapsible inline section on mobile task detail page (not buried in properties sheet). |
 | #18 Activity Feed | ✅ DONE | Database triggers (4 functions, 9 action types), RLS, Realtime, React Query hook, collapsible UI on project page. Post-launch fixes: FK constraint fix for task deletion trigger (NULL instead of deleted task_id), activity feed `refetchOnMount: "always"` for freshness. |
 | Post-launch Bug Fixes (v0.13.2) | ✅ DONE | Task deletion: FK trigger fix, 406 error fix, stale list fix (global + project), "not found" flash fix, post-delete navigation. Notes: stale list fix (optimistic cache), "not found" flash fix, activity feed freshness. |
-| #19 User Presence Indicators | ❌ Not started | |
+| #19 User Presence Indicators | ✅ DONE | Supabase Realtime Presence, task + project detail pages, 30s staleness timeout, multi-tab dedup, avatar stack with +N overflow |
 | #20 Typing Indicators | ❌ Not started (optional) | |
 
 ---
@@ -554,7 +554,7 @@ const handleTyping = debounce(() => {
    - Add filtering and pagination
 
 **Week 3: Presence & Polish**
-5. ❌ User Presence Indicators (Item #19) - 2-3 days
+5. ✅ User Presence Indicators (Item #19) - 2-3 days
    - Implement Supabase presence tracking
    - Build presence avatars UI
    - Test with multiple users
@@ -771,7 +771,7 @@ Phase 3 is complete when:
 - [x] @mentions work and send notifications
 - [x] Notification center shows unread notifications
 - [x] Activity feed logs all changes
-- [ ] User presence shows who's viewing tasks
+- [x] User presence shows who's viewing tasks
 
 ### Quality
 - [x] All ESLint errors fixed

@@ -26,7 +26,7 @@ import { AppShell } from "@/components/layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { RichTextEditor } from "@/components/shared";
+import { RichTextEditor, PresenceAvatars } from "@/components/shared";
 import { MarkdownRenderer } from "@/components/shared";
 import {
   Select,
@@ -411,15 +411,18 @@ export default function TaskDetailPage() {
               )}
             </div>
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setDeleteConfirm(true)}
-            className="text-destructive hover:text-destructive"
-          >
-            <Trash2 className="h-4 w-4 mr-2" />
-            Delete
-          </Button>
+          <div className="flex items-center gap-3">
+            <PresenceAvatars entityType="task" entityId={taskId} />
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setDeleteConfirm(true)}
+              className="text-destructive hover:text-destructive"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete
+            </Button>
+          </div>
         </div>
       </div>
 
