@@ -38,7 +38,7 @@ export function ActivityFeed({ projectId }: ActivityFeedProps) {
         <History className="h-8 w-8 mx-auto mb-2 opacity-50" />
         <p className="text-sm mb-1">No activity yet</p>
         <p className="text-xs">
-          Changes to tasks, comments, and members will appear here
+          Changes to tasks, notes, comments, and members will appear here
         </p>
       </div>
     );
@@ -48,7 +48,7 @@ export function ActivityFeed({ projectId }: ActivityFeedProps) {
     <ScrollArea className="max-h-[400px]">
       <div className="divide-y divide-border/40">
         {activities.map((activity) => (
-          <ActivityItem key={activity.id} activity={activity} />
+          <ActivityItem key={activity.id} activity={activity} projectId={projectId} />
         ))}
       </div>
     </ScrollArea>

@@ -116,7 +116,10 @@ export type ActivityAction =
   | "comment_added"
   | "member_added"
   | "member_removed"
-  | "project_updated";
+  | "project_updated"
+  | "note_created"
+  | "note_updated"
+  | "note_deleted";
 
 /**
  * Task status type for Kanban columns

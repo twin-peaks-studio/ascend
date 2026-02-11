@@ -29,6 +29,8 @@ import {
   Calendar,
   Combine,
   History,
+  StickyNote,
+  MousePointerClick,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -51,6 +53,36 @@ interface ChangelogEntry {
 }
 
 const changelog: ChangelogEntry[] = [
+  {
+    date: "February 11, 2026",
+    version: "0.13.1",
+    title: "Activity Feed Improvements",
+    description:
+      "Richer activity messages with before/after values, clickable entries, note tracking, and member name resolution.",
+    features: [
+      {
+        icon: StickyNote,
+        title: "Note Activity Tracking",
+        description:
+          "Creating, updating, and deleting notes now logs activity in the project feed. Note entries are clickable to navigate directly to the note.",
+        tag: "new",
+      },
+      {
+        icon: MousePointerClick,
+        title: "Clickable Activity Entries",
+        description:
+          "Task and note activity entries are now clickable — click to navigate directly to the task or note. Deleted items show a non-clickable record with the title preserved.",
+        tag: "new",
+      },
+      {
+        icon: History,
+        title: "Richer Activity Messages",
+        description:
+          "Project property changes now show before/after values (e.g., \"changed status from Active to Completed\"). Member add/remove shows the member's name. Lead changes show both old and new lead names.",
+        tag: "improved",
+      },
+    ],
+  },
   {
     date: "February 10, 2026",
     version: "0.13.0",

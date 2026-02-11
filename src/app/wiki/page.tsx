@@ -560,7 +560,7 @@ const sections: WikiSection[] = [
       {
         heading: "Overview",
         paragraphs: [
-          "The Activity Feed is a per-project log of everything that happens — task changes, comments, member updates, and project edits. It answers the question \"what did I miss?\" and provides an audit trail for accountability.",
+          "The Activity Feed is a per-project log of everything that happens — task changes, note edits, comments, member updates, and project edits. It answers the question \"what did I miss?\" and provides an audit trail for accountability.",
           "Open any project, scroll to the bottom of the left panel, and expand the Activity section to see the 50 most recent entries, newest first.",
         ],
       },
@@ -568,20 +568,24 @@ const sections: WikiSection[] = [
         heading: "What Gets Logged",
         list: [
           "Task created — A new task is added to the project",
-          "Task status changed — A task moves between To Do, In Progress, and Done",
-          "Task priority changed — A task's priority is updated",
+          "Task status changed — A task moves between To Do, In Progress, and Done (shows before/after values)",
+          "Task priority changed — A task's priority is updated (shows before/after values)",
           "Task assigned — A task's assignee changes",
           "Task deleted — A task is removed from the project (title preserved in log)",
+          "Note created — A new note is added to the project",
+          "Note updated — A note's title or content is modified",
+          "Note deleted — A note is removed from the project (title preserved in log)",
           "Comment added — A comment is posted on a project task",
-          "Member added — A new member is invited to the project",
-          "Member removed — A member is removed from the project",
-          "Project updated — The project's title, status, priority, lead, or due date changes",
+          "Member added — Shows who was added to the project by name",
+          "Member removed — Shows who was removed from the project by name",
+          "Project updated — Shows before/after values for title, status, priority, lead, and due date changes",
         ],
       },
       {
         heading: "Viewing the Feed",
         paragraphs: [
           "The Activity section is collapsed by default on the project page. Click the Activity header to expand it. Each entry shows the action icon, who performed the action, a human-readable description, and a relative timestamp (e.g., \"2h ago\").",
+          "Clickable entries: Task and note activity entries are clickable — click one to navigate directly to the task or note. Deleted items are not clickable since the target no longer exists.",
           "The feed displays the 50 most recent entries in a scrollable area. Activity entries are logged automatically by database triggers — no manual action is needed.",
         ],
       },
