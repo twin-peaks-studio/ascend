@@ -53,6 +53,7 @@ export default function NoteDetailPage() {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [showTasks, setShowTasks] = useState(true);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Task delete confirmation state
   const [deleteTaskConfirm, setDeleteTaskConfirm] = useState<string | null>(null);
@@ -219,10 +220,14 @@ export default function NoteDetailPage() {
 
   // Handle delete note
   const handleDelete = useCallback(async () => {
+    setIsDeleting(true);
     const success = await deleteNote(noteId, projectId);
     if (success) {
       router.push(`/projects/${projectId}`);
+    } else {
+      setIsDeleting(false);
     }
+    setDeleteConfirm(false);
   }, [noteId, projectId, deleteNote, router]);
 
   // Handle AI task extraction
@@ -231,13 +236,15 @@ export default function NoteDetailPage() {
     taskExtraction.extractFromNote(noteId, content, projectId, project?.title);
   }, [noteId, content, projectId, project?.title, taskExtraction]);
 
-  if (projectLoading || noteLoading) {
+  if (projectLoading || noteLoading || isDeleting) {
     return (
       <AppShell>
         <div className="flex items-center justify-center h-[50vh]">
           <div className="text-center">
             <div className="h-8 w-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-            <p className="text-muted-foreground">Loading...</p>
+            <p className="text-muted-foreground">
+              {isDeleting ? "Deleting note..." : "Loading..."}
+            </p>
           </div>
         </div>
       </AppShell>
