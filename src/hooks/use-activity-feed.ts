@@ -57,5 +57,6 @@ export function useActivityFeed(projectId: string | null) {
       projectId ? fetchProjectActivity(projectId) : Promise.resolve([]),
     enabled: !!projectId,
     staleTime: 30000,
+    refetchOnMount: "always",
   });
 }
