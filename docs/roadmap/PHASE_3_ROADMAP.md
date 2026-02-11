@@ -562,7 +562,17 @@ const handleTyping = debounce(() => {
    - Add typing broadcast events
    - Build typing indicator UI
 
-7. ⏳ Testing & Polish - 2-3 days
+7. ❌ Tech Debt Check — All Phase 3 Code - 1-2 days
+   - Audit network requests: open DevTools Network tab, navigate between pages, verify no duplicate or excessive requests (target 5–15 per navigation)
+   - Audit console: check for errors, warnings, or debug statements left in Phase 3 code
+   - Audit Realtime subscriptions: verify all channels are cleaned up on unmount (useEffect cleanup), no stale subscriptions, no channel name collisions
+   - Audit React Query hooks: verify query key uniqueness, proper `enabled` gating, reasonable `staleTime`/`gcTime`, no N+1 patterns
+   - Audit components: check for `useRouter` called inside list items (creates new instance per item), missing memoization on expensive renders, missing accessibility attributes
+   - Verify request deduplication: multiple components using the same hook should result in ONE network request, not one per component
+   - Check for infinite loops: watch for rapidly repeating requests caused by dependency array bugs in `useCallback`/`useEffect`
+   - Scalability check: ensure queries fetch only what's needed, caching is configured, and data fetching scales with more users/projects
+
+8. ⏳ Testing & Polish - 2-3 days
    - Manual testing of all features
    - Bug fixes
    - Performance optimization
@@ -768,6 +778,7 @@ Phase 3 is complete when:
 - [x] Mobile responsive
 - [x] No memory leaks (Realtime subscriptions cleaned up)
 - [x] Performance acceptable (< 2s page load)
+- [ ] Tech debt check completed: network requests, console output, Realtime cleanup, React Query efficiency, component performance (see Implementation Order item #7)
 
 ### Documentation
 - [x] User guide updated in wiki
