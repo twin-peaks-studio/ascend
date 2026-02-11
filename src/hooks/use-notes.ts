@@ -131,6 +131,7 @@ export function useProjectNotes(projectId: string | null) {
     enabled: !!projectId,
     staleTime: 60 * 1000, // Cache for 1 minute
     refetchOnWindowFocus: true,
+    refetchOnMount: "always",
   });
 
   return {
@@ -258,14 +259,24 @@ export function useNoteMutations() {
 
         if (error) throw error;
 
+        const updatedNote = data as Note;
+
         // Invalidate note detail cache
         queryClient.invalidateQueries({ queryKey: noteKeys.detail(noteId) });
-        // Invalidate project notes list if projectId provided
+
+        // Optimistically update the project notes list cache so navigating
+        // back to the project page reflects the change immediately
         if (projectId) {
-          queryClient.invalidateQueries({ queryKey: noteKeys.list(projectId) });
+          queryClient.setQueryData<Note[]>(
+            noteKeys.list(projectId),
+            (old) =>
+              old
+                ? old.map((n) => (n.id === noteId ? { ...n, ...updatedNote } : n))
+                : old
+          );
         }
 
-        return data as Note;
+        return updatedNote;
       } catch (err) {
         logger.error("Error updating note", {
           noteId,
@@ -294,10 +305,15 @@ export function useNoteMutations() {
 
         if (error) throw error;
 
-        // Invalidate caches
-        queryClient.invalidateQueries({ queryKey: noteKeys.detail(noteId) });
+        // Set the detail cache to null (prevents refetch of deleted note)
+        queryClient.setQueryData(noteKeys.detail(noteId), null);
+
+        // Optimistically remove the note from the project notes list cache
         if (projectId) {
-          queryClient.invalidateQueries({ queryKey: noteKeys.list(projectId) });
+          queryClient.setQueryData<Note[]>(
+            noteKeys.list(projectId),
+            (old) => (old ? old.filter((n) => n.id !== noteId) : old)
+          );
         }
 
         toast.success("Note deleted successfully");
