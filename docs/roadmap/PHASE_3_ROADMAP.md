@@ -3,7 +3,7 @@
 **Status:** In Progress (~73% complete)
 **Duration:** 2-3 weeks
 **Priority:** High (Market expectation, competitive differentiator)
-**Last Updated:** 2026-02-10
+**Last Updated:** 2026-02-11
 
 ### Implementation Progress
 
@@ -15,7 +15,8 @@
 | TimePicker on Due Dates | ✅ DONE | Tasks and projects support time-of-day selection on due dates via inline TimePicker. |
 | Single Task Detail Surface | ✅ DONE | Consolidated from 3 components to 1 (`/tasks/[id]` page). Removed TaskDetailsDialog, TaskEditMobile, TaskDetailsResponsive (1,749 lines deleted). |
 | Inline Mobile Due Date | ✅ DONE | Due date is a collapsible inline section on mobile task detail page (not buried in properties sheet). |
-| #18 Activity Feed | ✅ DONE | Database triggers (4 functions, 9 action types), RLS, Realtime, React Query hook, collapsible UI on project page |
+| #18 Activity Feed | ✅ DONE | Database triggers (4 functions, 9 action types), RLS, Realtime, React Query hook, collapsible UI on project page. Post-launch fixes: FK constraint fix for task deletion trigger (NULL instead of deleted task_id), activity feed `refetchOnMount: "always"` for freshness. |
+| Post-launch Bug Fixes (v0.13.2) | ✅ DONE | Task deletion: FK trigger fix, 406 error fix, stale list fix (global + project), "not found" flash fix, post-delete navigation. Notes: stale list fix (optimistic cache), "not found" flash fix, activity feed freshness. |
 | #19 User Presence Indicators | ❌ Not started | |
 | #20 Typing Indicators | ❌ Not started (optional) | |
 
@@ -829,4 +830,4 @@ Once Phase 3 is complete, we'll evaluate:
 **Created:** 2026-02-08
 **Estimated Start:** After Phase 1 cleanup complete
 **Estimated Completion:** 2-3 weeks from start
-**Last Updated:** 2026-02-10
+**Last Updated:** 2026-02-11

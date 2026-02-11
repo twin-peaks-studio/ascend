@@ -31,6 +31,7 @@ import {
   History,
   StickyNote,
   MousePointerClick,
+  RefreshCw,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -53,6 +54,43 @@ interface ChangelogEntry {
 }
 
 const changelog: ChangelogEntry[] = [
+  {
+    date: "February 11, 2026",
+    version: "0.13.2",
+    title: "Deletion & Data Consistency Fixes",
+    description:
+      "Smoother task and note deletion with instant cache updates, no more stale lists or flash-of-not-found after deleting items.",
+    features: [
+      {
+        icon: Trash2,
+        title: "Reliable Task Deletion",
+        description:
+          "Deleting a task now works cleanly: no more 409 errors, 406 console errors, or stale tasks lingering on the list. The task disappears immediately from both the global tasks page and the project tasks page.",
+        tag: "fix",
+      },
+      {
+        icon: RefreshCw,
+        title: "Instant Note List Updates",
+        description:
+          "Editing or deleting a note and navigating back to the project page now reflects changes immediately — no stale data or need to refresh.",
+        tag: "fix",
+      },
+      {
+        icon: StickyNote,
+        title: "Smooth Note Deletion",
+        description:
+          "Deleting a note no longer flashes a \"Note not found\" page. A loading spinner shows briefly while navigating back to the project.",
+        tag: "fix",
+      },
+      {
+        icon: History,
+        title: "Activity Feed Freshness",
+        description:
+          "The project activity feed now always fetches the latest entries when you navigate to the project page, so note edits and other recent changes appear without a manual refresh.",
+        tag: "fix",
+      },
+    ],
+  },
   {
     date: "February 11, 2026",
     version: "0.13.1",
