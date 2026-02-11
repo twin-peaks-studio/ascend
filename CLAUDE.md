@@ -1,5 +1,19 @@
 # Project Guidelines for Claude
 
+## Bug Reports & Clarification Protocol
+
+**IMPORTANT:** Before starting work on any bug fix, always ask the user to clarify the following:
+
+1. **Steps to reproduce** — Exact navigation path and actions to trigger the bug (e.g., "Go to /tasks > click task > delete > go back")
+2. **Expected result** — What the user expects to happen after those steps
+3. **Actual result** — What actually happens (error messages, stale data, visual glitches, etc.)
+4. **Affected areas** — If the feature exists in multiple places in the app (e.g., tasks appear on both `/tasks` and `/projects/[id]/tasks`), ask explicitly: *"Does this issue occur on all pages where this feature appears, or only on a specific one?"*
+
+Do NOT assume the scope of a bug. A bug reported on one page may also affect other pages that share the same data or components. Always confirm the full scope before writing code.
+
+### Why This Matters
+Fixing a bug in one location while missing it in another leads to multiple fix iterations, wasted time, and branches that need to be thrown away and restarted. Getting clarity upfront is always faster than iterating after the fact.
+
 ## Consistency Rules
 
 ### Task Editing Experience
