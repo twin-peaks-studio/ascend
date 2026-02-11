@@ -92,7 +92,7 @@ export default function NoteDetailPage() {
       // Set new timeout for auto-save
       saveTimeoutRef.current = setTimeout(async () => {
         if (note && newContent !== note.content) {
-          await updateNote(noteId, { content: newContent });
+          await updateNote(noteId, { content: newContent }, projectId);
         }
       }, 1500); // 1.5 second debounce
     },
@@ -112,7 +112,7 @@ export default function NoteDetailPage() {
   const handleTitleSave = useCallback(async () => {
     const trimmedTitle = title.trim();
     if (trimmedTitle && note && trimmedTitle !== note.title) {
-      const updated = await updateNote(noteId, { title: trimmedTitle });
+      const updated = await updateNote(noteId, { title: trimmedTitle }, projectId);
       if (updated) {
         setNote((prev) => (prev ? { ...prev, title: trimmedTitle } : prev));
       }
@@ -219,7 +219,7 @@ export default function NoteDetailPage() {
 
   // Handle delete note
   const handleDelete = useCallback(async () => {
-    const success = await deleteNote(noteId);
+    const success = await deleteNote(noteId, projectId);
     if (success) {
       router.push(`/projects/${projectId}`);
     }
