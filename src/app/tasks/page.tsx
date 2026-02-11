@@ -229,8 +229,9 @@ export default function TasksPage() {
   }, []);
 
   // Handle open task details (click on card) - navigate to task page
+  // Pass from=tasks so the task detail page returns here on delete
   const handleOpenDetails = useCallback((task: TaskWithProject) => {
-    router.push(`/tasks/${task.id}`);
+    router.push(`/tasks/${task.id}?from=tasks`);
   }, [router]);
 
   // Keyboard shortcuts
