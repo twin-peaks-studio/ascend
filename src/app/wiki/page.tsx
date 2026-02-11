@@ -27,6 +27,7 @@ import {
   Plus,
   Layers,
   Bell,
+  History,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -547,6 +548,53 @@ const sections: WikiSection[] = [
           "Notifications are delivered instantly via Supabase Realtime. You do not need to refresh the page — the bell badge updates automatically the moment another user triggers a notification for you.",
         ],
         tip: "You will never receive a notification for your own actions. If you assign a task to yourself, no notification is created.",
+      },
+    ],
+  },
+  {
+    id: "activity-feed",
+    icon: History,
+    title: "Activity Feed",
+    description: "A chronological audit trail of all changes within a project.",
+    content: [
+      {
+        heading: "Overview",
+        paragraphs: [
+          "The Activity Feed is a per-project log of everything that happens — task changes, note edits, comments, member updates, and project edits. It answers the question \"what did I miss?\" and provides an audit trail for accountability.",
+          "Open any project, scroll to the bottom of the left panel, and expand the Activity section to see the 50 most recent entries, newest first.",
+        ],
+      },
+      {
+        heading: "What Gets Logged",
+        list: [
+          "Task created — A new task is added to the project",
+          "Task status changed — A task moves between To Do, In Progress, and Done (shows before/after values)",
+          "Task priority changed — A task's priority is updated (shows before/after values)",
+          "Task assigned — A task's assignee changes",
+          "Task deleted — A task is removed from the project (title preserved in log)",
+          "Note created — A new note is added to the project",
+          "Note updated — A note's title or content is modified",
+          "Note deleted — A note is removed from the project (title preserved in log)",
+          "Comment added — A comment is posted on a project task",
+          "Member added — Shows who was added to the project by name",
+          "Member removed — Shows who was removed from the project by name",
+          "Project updated — Shows before/after values for title, status, priority, lead, and due date changes",
+        ],
+      },
+      {
+        heading: "Viewing the Feed",
+        paragraphs: [
+          "The Activity section is collapsed by default on the project page. Click the Activity header to expand it. Each entry shows the action icon, who performed the action, a human-readable description, and a relative timestamp (e.g., \"2h ago\").",
+          "Clickable entries: Task and note activity entries are clickable — click one to navigate directly to the task or note. Deleted items are not clickable since the target no longer exists.",
+          "The feed displays the 50 most recent entries in a scrollable area. Activity entries are logged automatically by database triggers — no manual action is needed.",
+        ],
+      },
+      {
+        heading: "Real-Time Updates",
+        paragraphs: [
+          "The activity feed updates in real time via Supabase Realtime. When a teammate makes a change, the new entry appears automatically without refreshing the page.",
+        ],
+        tip: "Activity entries persist even when the original item is deleted. For example, if a task is deleted, the \"task deleted\" entry still shows the task title in the log.",
       },
     ],
   },

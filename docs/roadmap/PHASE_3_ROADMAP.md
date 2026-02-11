@@ -1,6 +1,6 @@
 # Phase 3: Team Collaboration - Implementation Roadmap
 
-**Status:** In Progress (~65% complete)
+**Status:** In Progress (~73% complete)
 **Duration:** 2-3 weeks
 **Priority:** High (Market expectation, competitive differentiator)
 **Last Updated:** 2026-02-10
@@ -15,7 +15,7 @@
 | TimePicker on Due Dates | ✅ DONE | Tasks and projects support time-of-day selection on due dates via inline TimePicker. |
 | Single Task Detail Surface | ✅ DONE | Consolidated from 3 components to 1 (`/tasks/[id]` page). Removed TaskDetailsDialog, TaskEditMobile, TaskDetailsResponsive (1,749 lines deleted). |
 | Inline Mobile Due Date | ✅ DONE | Due date is a collapsible inline section on mobile task detail page (not buried in properties sheet). |
-| #18 Activity Feed | ❌ Not started | |
+| #18 Activity Feed | ✅ DONE | Database triggers (4 functions, 9 action types), RLS, Realtime, React Query hook, collapsible UI on project page |
 | #19 User Presence Indicators | ❌ Not started | |
 | #20 Typing Indicators | ❌ Not started (optional) | |
 
@@ -546,7 +546,7 @@ const handleTyping = debounce(() => {
    - Implement real-time notification delivery
    - Add additional notification triggers
 
-4. ❌ Activity Feed (Item #18) - 3-4 days
+4. ✅ Activity Feed (Item #18) - 3-4 days
    - Create activity log table
    - Set up database triggers for auto-logging
    - Build activity feed UI
@@ -562,7 +562,17 @@ const handleTyping = debounce(() => {
    - Add typing broadcast events
    - Build typing indicator UI
 
-7. ⏳ Testing & Polish - 2-3 days
+7. ❌ Tech Debt Check — All Phase 3 Code - 1-2 days
+   - Audit network requests: open DevTools Network tab, navigate between pages, verify no duplicate or excessive requests (target 5–15 per navigation)
+   - Audit console: check for errors, warnings, or debug statements left in Phase 3 code
+   - Audit Realtime subscriptions: verify all channels are cleaned up on unmount (useEffect cleanup), no stale subscriptions, no channel name collisions
+   - Audit React Query hooks: verify query key uniqueness, proper `enabled` gating, reasonable `staleTime`/`gcTime`, no N+1 patterns
+   - Audit components: check for `useRouter` called inside list items (creates new instance per item), missing memoization on expensive renders, missing accessibility attributes
+   - Verify request deduplication: multiple components using the same hook should result in ONE network request, not one per component
+   - Check for infinite loops: watch for rapidly repeating requests caused by dependency array bugs in `useCallback`/`useEffect`
+   - Scalability check: ensure queries fetch only what's needed, caching is configured, and data fetching scales with more users/projects
+
+8. ⏳ Testing & Polish - 2-3 days
    - Manual testing of all features
    - Bug fixes
    - Performance optimization
@@ -759,7 +769,7 @@ Phase 3 is complete when:
 - [x] Comments can be added, edited, deleted
 - [x] @mentions work and send notifications
 - [x] Notification center shows unread notifications
-- [ ] Activity feed logs all changes
+- [x] Activity feed logs all changes
 - [ ] User presence shows who's viewing tasks
 
 ### Quality
@@ -768,6 +778,7 @@ Phase 3 is complete when:
 - [x] Mobile responsive
 - [x] No memory leaks (Realtime subscriptions cleaned up)
 - [x] Performance acceptable (< 2s page load)
+- [ ] Tech debt check completed: network requests, console output, Realtime cleanup, React Query efficiency, component performance (see Implementation Order item #7)
 
 ### Documentation
 - [x] User guide updated in wiki
