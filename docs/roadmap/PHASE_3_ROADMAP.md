@@ -22,6 +22,70 @@
 
 ---
 
+## Next Up: #19 User Presence Indicators — Implementation Guide
+
+> **For AI sessions:** Read this section before starting implementation. It contains the full scope, file references, and guardrails needed to implement this feature without additional clarification.
+
+### What It Does
+Show stacked avatar bubbles of users currently viewing the same task or project, using Supabase Realtime presence. This is a read-only, ephemeral feature — no database tables needed.
+
+### Where Presence Should Appear
+- **`/projects/[id]`** — project detail page (header area, near the project title)
+- **`/tasks/[id]`** — task detail page (header area, near the task title)
+
+### What to Build
+
+1. **`src/hooks/use-presence.ts`** — New hook
+   - `usePresence(channelName: string, userId: string, userMeta: { name, avatar_url })`
+   - Subscribes to a Supabase Realtime presence channel
+   - Calls `channel.track()` with user metadata on subscribe
+   - Listens for `presence.sync` events and returns a list of current viewers
+   - Cleans up the channel on unmount (useEffect cleanup — critical)
+   - 30-second stale timeout for users who close the tab without cleanup
+
+2. **`src/components/ui/presence-avatars.tsx`** — New component
+   - `<PresenceAvatars viewers={[...]} />`
+   - Renders stacked avatar bubbles (max 5 visible, "+N more" overflow badge)
+   - Tooltip on hover showing viewer name
+   - Excludes the current user from the displayed list (or shows a "You" badge)
+   - Subtle entrance/exit animation for avatars appearing/disappearing
+
+3. **Integration into existing pages:**
+   - `src/app/projects/[id]/page.tsx` — Add `usePresence(`project:${projectId}`, ...)` and render `<PresenceAvatars>` in the header
+   - `src/app/tasks/[id]/page.tsx` — Add `usePresence(`task:${taskId}`, ...)` and render `<PresenceAvatars>` in the header
+
+### Existing Code to Reference
+- `src/hooks/use-realtime-tasks.ts` — Existing Supabase Realtime channel pattern (subscribe, cleanup)
+- `src/hooks/use-realtime-activity.ts` — Another Realtime subscription example
+- `src/hooks/use-auth.ts` — Current user info (id, full_name, avatar_url)
+- `src/hooks/use-team-members.ts` — Team member profiles for avatar resolution
+- `src/components/ui/avatar.tsx` — Existing avatar component (reuse this)
+
+### Technical Guardrails
+- **No database tables** — Presence is purely Realtime, not persisted
+- **No infinite loops** — Do NOT put objects or derived state in `useEffect`/`useCallback` dependency arrays. Use primitive values (userId, channelName) only
+- **Channel cleanup on unmount** — Every `channel.subscribe()` must have a corresponding `channel.unsubscribe()` in the useEffect cleanup function. Verify navigating between pages doesn't leak channels
+- **Follow `CLAUDE.md`** patterns — React Query conventions, optimistic updates, tech debt checklist
+- **Mobile responsive** — Avatar stack should work on mobile (smaller avatars, fewer visible)
+
+### Scope Boundaries — Do NOT:
+- Implement #20 Typing Indicators — that's a separate item
+- Refactor existing Realtime hooks — only add new code
+- Add presence to the global `/tasks` list page — only detail pages
+- Add presence to the notes detail page — only project and task detail pages
+- Create database migrations — this feature is purely client-side + Realtime
+
+### Post-Implementation Checklist
+- [ ] Update changelog (`src/app/changelog/page.tsx`) with new version entry
+- [ ] Update wiki (`src/app/wiki/page.tsx`) — add presence info to existing sections or create a new section
+- [ ] Update this roadmap — mark #19 as ✅ DONE in the progress table
+- [ ] Update the Phase 3 completion percentage in the header
+- [ ] Verify no Realtime channel leaks (navigate between pages, check for stale subscriptions)
+- [ ] Verify no console errors
+- [ ] Test mobile responsiveness
+
+---
+
 ## Overview
 
 Phase 3 transforms Ascend from a single-player project management tool into a real-time collaborative platform. Users will see live updates, comment on tasks, mention teammates, and track activity.

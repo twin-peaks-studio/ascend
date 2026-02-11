@@ -25,6 +25,14 @@ Examples of changes that should be synchronized:
 - Modifying the task card appearance or click behavior
 - Adding new actions (delete, archive, duplicate, etc.)
 
+## Roadmap & Implementation Guides
+
+**IMPORTANT:** Before starting work on a new feature, always check the roadmap at `docs/roadmap/PHASE_3_ROADMAP.md`. The roadmap contains:
+- **Implementation Progress** — What's done and what's next
+- **Implementation Guides** — Detailed instructions for the next feature to build, including scope, file references, technical guardrails, and a post-implementation checklist
+
+Start by reading the "Next Up" section in the roadmap. It tells you exactly what to build, which files to reference, and what NOT to do. Follow the post-implementation checklist at the end to ensure all documentation (changelog, wiki, roadmap) is updated before marking the feature complete.
+
 ## Technical Patterns
 
 ### Optimistic Updates
