@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -90,7 +90,9 @@ function SidebarRow({
 export default function TaskDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const taskId = params.id as string;
+  const cameFromTasks = searchParams.get("from") === "tasks";
 
   // Fetch task data
   const { task, isLoading, error } = useTask(taskId);
@@ -132,6 +134,7 @@ export default function TaskDetailPage() {
     task?.due_date ? new Date(task.due_date) : null
   );
   const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [loading, setLoading] = useState(false);
 
   // Properties panel state
@@ -286,17 +289,22 @@ export default function TaskDetailPage() {
 
   const handleDelete = useCallback(async () => {
     if (!task) return;
+    setIsDeleting(true);
+    // Navigate back to where the user came from:
+    // - From /tasks page (has ?from=tasks) → /tasks
+    // - From a project context → /projects/[id]/tasks
+    // - Independent task (no project) → /tasks
+    const destination = cameFromTasks || !task.project_id
+      ? "/tasks"
+      : `/projects/${task.project_id}/tasks`;
     const success = await deleteTask(task.id);
     if (success) {
-      // Redirect based on task context
-      if (task.project_id) {
-        router.push(`/projects/${task.project_id}/tasks`);
-      } else {
-        router.push("/tasks");
-      }
+      router.push(destination);
+    } else {
+      setIsDeleting(false);
     }
     setDeleteConfirm(false);
-  }, [task, deleteTask, router]);
+  }, [task, deleteTask, router, cameFromTasks]);
 
   const handleKeyDown = useCallback(
     (
@@ -342,6 +350,16 @@ export default function TaskDetailPage() {
   }
 
   if (!task) {
+    // Show spinner while deleting so the user doesn't see "Task not found"
+    if (isDeleting) {
+      return (
+        <AppShell>
+          <div className="flex items-center justify-center h-[50vh]">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        </AppShell>
+      );
+    }
     return (
       <AppShell>
         <div className="flex items-center justify-center h-[50vh]">

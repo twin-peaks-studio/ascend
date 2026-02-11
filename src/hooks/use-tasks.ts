@@ -15,6 +15,7 @@ import { withTimeout, TIMEOUTS } from "@/lib/utils/with-timeout";
 import { logger } from "@/lib/logger/logger";
 import { useAuth } from "@/hooks/use-auth";
 import { singleTaskKeys } from "@/hooks/use-task";
+import { projectKeys } from "@/hooks/use-projects";
 import {
   notifyTaskAssigned,
   notifyTaskUnassigned,
@@ -520,9 +521,33 @@ export function useTaskMutations() {
         // Cancel any pending due date reminder
         sendInngestEvents([{ name: "task/deleted", data: { taskId } }]);
 
-        // Invalidate tasks list and single task cache
-        queryClient.invalidateQueries({ queryKey: taskKeys.lists() });
-        queryClient.invalidateQueries({ queryKey: singleTaskKeys.detail(taskId) });
+        // Optimistically remove the task from all caches. We must NOT
+        // use invalidateQueries here because:
+        // 1. The single-task hook (useTask) is still mounted — invalidating
+        //    triggers a refetch of the deleted task via .single() → 406 error
+        // 2. Invalidating the list triggers a refetch that races with the
+        //    realtime DELETE event, causing flicker
+
+        // Set single task cache to null (prevents refetch by mounted useTask)
+        queryClient.setQueryData(singleTaskKeys.detail(taskId), null);
+
+        // Remove from the global tasks list (/tasks page)
+        queryClient.setQueriesData(
+          { queryKey: taskKeys.lists() },
+          (old: TaskWithProject[] | undefined) =>
+            old ? old.filter((t) => t.id !== taskId) : []
+        );
+
+        // Remove from project detail caches (/projects/[id]/tasks reads
+        // tasks from the nested project.tasks array, not the tasks list)
+        queryClient.setQueriesData(
+          { queryKey: projectKeys.details() },
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (old: any) => {
+            if (!old?.tasks) return old;
+            return { ...old, tasks: old.tasks.filter((t: Task) => t.id !== taskId) };
+          }
+        );
 
         toast.success("Task deleted successfully");
         return true;
