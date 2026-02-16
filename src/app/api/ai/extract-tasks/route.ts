@@ -25,7 +25,7 @@ import { logger } from "@/lib/logger/logger";
 
 const CLAUDE_API_URL = "https://api.anthropic.com/v1/messages";
 const CLAUDE_MODEL = "claude-sonnet-4-20250514";
-const AI_TIMEOUT = 15000; // 15 seconds
+const AI_TIMEOUT = 60000; // 60 seconds
 
 /**
  * POST /api/ai/extract-tasks
