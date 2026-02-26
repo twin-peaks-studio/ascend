@@ -14,10 +14,10 @@ import { Button } from "@/components/ui/button";
 import { useProject } from "@/hooks/use-projects";
 import { useTaskMutations } from "@/hooks/use-tasks";
 import { useRealtimeTasksForProject } from "@/hooks/use-realtime-tasks";
-import { useProfiles } from "@/hooks/use-profiles";
+import { useProjectMembers } from "@/hooks/use-project-members";
 import { useIsMobile } from "@/hooks/use-media-query";
 import { useAuth } from "@/hooks/use-auth";
-import type { TaskWithProject, TaskStatus, Project, Task } from "@/types";
+import type { TaskWithProject, TaskStatus, Project, Task, Profile } from "@/types";
 import type { CreateTaskInput, UpdateTaskInput } from "@/lib/validation";
 import { DeleteConfirmationDialog } from "@/components/ui/delete-confirmation-dialog";
 
@@ -27,7 +27,7 @@ export default function ProjectTasksPage() {
   const projectId = params.id as string;
 
   const { project, setProject, loading, refetch } = useProject(projectId);
-  const { profiles } = useProfiles();
+  const { members: projectMembers } = useProjectMembers(projectId);
   const isMobile = useIsMobile();
   const { user } = useAuth();
   const {
@@ -96,6 +96,13 @@ export default function ProjectTasksPage() {
       project: project as Project,
     }));
   }, [project]);
+
+  // Derive project-scoped profiles from project members
+  const profiles: Profile[] = useMemo(() => {
+    return projectMembers
+      .map((m) => m.profile)
+      .filter((p): p is Profile => p !== null);
+  }, [projectMembers]);
 
   // Assignee filter state
   const [selectedAssigneeIds, setSelectedAssigneeIds] = useState<string[]>([]);
