@@ -39,7 +39,16 @@ This project uses React Query (`@tanstack/react-query`) for data fetching. Key p
 - All data hooks use React Query for automatic request deduplication and caching
 - `refetchOnWindowFocus: true` handles mobile backgrounding recovery automatically
 - Query keys are defined in each hook file (e.g., `projectKeys`, `taskKeys`, `noteKeys`)
-- Use `queryClient.invalidateQueries()` after mutations to refresh related data
+- **Prefer `setQueriesData` over `invalidateQueries`** for update/archive/flag mutations — in-place cache updates preserve list order and avoid unnecessary refetches. Only use `invalidateQueries` when fresh server-generated data is needed (e.g., after `createTask` which needs a new ID and position). See `deleteTask()` and `updateTask()` in `src/hooks/use-tasks.ts` for the canonical pattern.
+
+### Persisted UI State (localStorage)
+Task view preferences are persisted in localStorage so they survive page navigation (e.g., `/tasks` → `/tasks/[id]` → back):
+- `tasks-view-mode` / `project-tasks-view-mode` — board or list layout
+- `tasks-sort` / `project-tasks-sort` — sort field and direction
+- `tasks-project-filter` — selected project IDs (global tasks page)
+- `tasks-assignee-filter` / `project-tasks-assignee-filter` — selected assignee filter IDs
+
+When adding new filterable state to task pages, follow this pattern: initialize with a `useState` lazy initializer that reads from localStorage, and persist on every change via a `useCallback` handler.
 
 ## Release Process
 
