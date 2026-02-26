@@ -104,8 +104,20 @@ export default function ProjectTasksPage() {
       .filter((p): p is Profile => p !== null);
   }, [projectMembers]);
 
-  // Assignee filter state
-  const [selectedAssigneeIds, setSelectedAssigneeIds] = useState<string[]>([]);
+  // Assignee filter state - persisted in localStorage
+  const [selectedAssigneeIds, setSelectedAssigneeIds] = useState<string[]>(() => {
+    if (typeof window === 'undefined') return [];
+    try {
+      const stored = localStorage.getItem("project-tasks-assignee-filter");
+      return stored ? JSON.parse(stored) : [];
+    } catch { return []; }
+  });
+
+  // Persist filter changes to localStorage
+  const handleAssigneesChange = useCallback((ids: string[]) => {
+    setSelectedAssigneeIds(ids);
+    localStorage.setItem("project-tasks-assignee-filter", JSON.stringify(ids));
+  }, []);
 
   // Filter tasks by assignee
   const filteredTasks = useMemo(() => {
@@ -384,7 +396,7 @@ export default function ProjectTasksPage() {
       assigneeProfiles={profiles}
       assigneeTasks={tasks}
       selectedAssigneeIds={selectedAssigneeIds}
-      onAssigneesChange={setSelectedAssigneeIds}
+      onAssigneesChange={handleAssigneesChange}
       currentUserId={user?.id ?? null}
       disableZeroCount={true}
     >
@@ -426,7 +438,7 @@ export default function ProjectTasksPage() {
             profiles={profiles}
             tasks={tasks}
             selectedAssigneeIds={selectedAssigneeIds}
-            onAssigneesChange={setSelectedAssigneeIds}
+            onAssigneesChange={handleAssigneesChange}
             currentUserId={user?.id ?? null}
             disableZeroCount={true}
           />

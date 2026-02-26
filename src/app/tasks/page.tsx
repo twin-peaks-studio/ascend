@@ -81,9 +81,31 @@ export default function TasksPage() {
     localStorage.setItem("tasks-sort", `${field}:${direction}`);
   }, []);
 
-  // Filter state - now supports multiple projects
-  const [selectedProjectIds, setSelectedProjectIds] = useState<string[]>([]);
-  const [selectedAssigneeIds, setSelectedAssigneeIds] = useState<string[]>([]);
+  // Filter state - persisted in localStorage
+  const [selectedProjectIds, setSelectedProjectIds] = useState<string[]>(() => {
+    if (typeof window === 'undefined') return [];
+    try {
+      const stored = localStorage.getItem("tasks-project-filter");
+      return stored ? JSON.parse(stored) : [];
+    } catch { return []; }
+  });
+  const [selectedAssigneeIds, setSelectedAssigneeIds] = useState<string[]>(() => {
+    if (typeof window === 'undefined') return [];
+    try {
+      const stored = localStorage.getItem("tasks-assignee-filter");
+      return stored ? JSON.parse(stored) : [];
+    } catch { return []; }
+  });
+
+  // Persist filter changes to localStorage
+  const handleProjectsChange = useCallback((ids: string[]) => {
+    setSelectedProjectIds(ids);
+    localStorage.setItem("tasks-project-filter", JSON.stringify(ids));
+  }, []);
+  const handleAssigneesChange = useCallback((ids: string[]) => {
+    setSelectedAssigneeIds(ids);
+    localStorage.setItem("tasks-assignee-filter", JSON.stringify(ids));
+  }, []);
 
   // Stage 1: Filter tasks by selected projects
   const projectFilteredTasks = useMemo(() => {
@@ -304,14 +326,14 @@ export default function TasksPage() {
       onViewModeChange={handleViewModeChange}
       projects={projects as Project[]}
       selectedProjectIds={selectedProjectIds}
-      onProjectsChange={setSelectedProjectIds}
+      onProjectsChange={handleProjectsChange}
       sortField={sortField}
       sortDirection={sortDirection}
       onSortChange={handleSortChange}
       assigneeProfiles={assigneeFilterProfiles}
       assigneeTasks={projectFilteredTasks}
       selectedAssigneeIds={selectedAssigneeIds}
-      onAssigneesChange={setSelectedAssigneeIds}
+      onAssigneesChange={handleAssigneesChange}
       currentUserId={user?.id ?? null}
     >
       <Header
@@ -330,13 +352,13 @@ export default function TasksPage() {
             <ProjectFilter
               projects={projects as Project[]}
               selectedProjectIds={selectedProjectIds}
-              onProjectsChange={setSelectedProjectIds}
+              onProjectsChange={handleProjectsChange}
             />
             <AssigneeFilter
               profiles={assigneeFilterProfiles}
               tasks={projectFilteredTasks}
               selectedAssigneeIds={selectedAssigneeIds}
-              onAssigneesChange={setSelectedAssigneeIds}
+              onAssigneesChange={handleAssigneesChange}
               currentUserId={user?.id ?? null}
             />
           </div>
