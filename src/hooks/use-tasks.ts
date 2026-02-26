@@ -401,8 +401,20 @@ export function useTaskMutations() {
           sendInngestEvents([{ name: "task/completed", data: { taskId } }]);
         }
 
-        // Invalidate tasks list and single task cache
-        queryClient.invalidateQueries({ queryKey: taskKeys.lists() });
+        // Update task in-place in caches (preserves list order, no refetch)
+        queryClient.setQueriesData<TaskWithProject[]>(
+          { queryKey: taskKeys.lists() },
+          (old) => old ? old.map(t => t.id === taskId ? { ...t, ...updateData } : t) : []
+        );
+        queryClient.setQueriesData(
+          { queryKey: projectKeys.details() },
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (old: any) => {
+            if (!old?.tasks) return old;
+            return { ...old, tasks: old.tasks.map((t: Task) => t.id === taskId ? { ...t, ...updateData } : t) };
+          }
+        );
+        // Invalidate single task cache (detail page needs fresh joined data)
         queryClient.invalidateQueries({ queryKey: singleTaskKeys.detail(taskId) });
 
         return updatedTask;
@@ -585,8 +597,19 @@ export function useTaskMutations() {
 
         if (archiveResult.error) throw archiveResult.error;
 
-        // Invalidate tasks list
-        queryClient.invalidateQueries({ queryKey: taskKeys.lists() });
+        // Remove archived task from caches in-place (preserves list order)
+        queryClient.setQueriesData<TaskWithProject[]>(
+          { queryKey: taskKeys.lists() },
+          (old) => old ? old.filter(t => t.id !== taskId) : []
+        );
+        queryClient.setQueriesData(
+          { queryKey: projectKeys.details() },
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (old: any) => {
+            if (!old?.tasks) return old;
+            return { ...old, tasks: old.tasks.filter((t: Task) => t.id !== taskId) };
+          }
+        );
 
         toast.success("Task archived successfully");
         return true;
@@ -624,8 +647,19 @@ export function useTaskMutations() {
 
         if (markResult.error) throw markResult.error;
 
-        // Invalidate tasks list
-        queryClient.invalidateQueries({ queryKey: taskKeys.lists() });
+        // Update in-place in caches (preserves list order)
+        queryClient.setQueriesData<TaskWithProject[]>(
+          { queryKey: taskKeys.lists() },
+          (old) => old ? old.map(t => t.id === taskId ? { ...t, is_duplicate: isDuplicate } : t) : []
+        );
+        queryClient.setQueriesData(
+          { queryKey: projectKeys.details() },
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (old: any) => {
+            if (!old?.tasks) return old;
+            return { ...old, tasks: old.tasks.map((t: Task) => t.id === taskId ? { ...t, is_duplicate: isDuplicate } : t) };
+          }
+        );
 
         toast.success(
           isDuplicate ? "Task marked as duplicate" : "Duplicate flag removed"

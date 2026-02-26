@@ -90,17 +90,22 @@ export function sortTasks<T extends TaskWithProject | Task>(
   direction: TaskSortDirection
 ): T[] {
   return [...tasks].sort((a, b) => {
+    let result: number;
     switch (field) {
       case "due_date":
-        return compareDates(a.due_date, b.due_date, direction);
+        result = compareDates(a.due_date, b.due_date, direction);
+        break;
       case "priority":
-        return comparePriorities(a.priority, b.priority, direction);
+        result = comparePriorities(a.priority, b.priority, direction);
+        break;
       case "position":
       default:
-        return direction === "asc"
+        result = direction === "asc"
           ? a.position - b.position
           : b.position - a.position;
     }
+    // Stable tiebreaker: deterministic ordering for equal sort values
+    return result !== 0 ? result : a.id.localeCompare(b.id);
   });
 }
 
