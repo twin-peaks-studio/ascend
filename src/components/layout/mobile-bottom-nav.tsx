@@ -17,6 +17,9 @@ import {
   Filter,
   ArrowUpDown,
   Settings,
+  Users,
+  UserCheck,
+  UserX,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -26,14 +29,17 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   TASK_SORT_OPTIONS,
   getSortOptionKey,
   type TaskSortField,
   type TaskSortDirection,
 } from "@/lib/task-sort";
+import { ASSIGNEE_FILTER_ASSIGNED_TO_ME, ASSIGNEE_FILTER_UNASSIGNED } from "@/components/filters/assignee-filter";
+import { getProfileInitials, getDisplayName } from "@/lib/profile-utils";
 import type { ViewMode } from "./header";
-import type { Project } from "@/types";
+import type { Profile, Project, TaskWithProject } from "@/types";
 
 interface NavItem {
   href: string;
@@ -74,9 +80,16 @@ interface MobileBottomNavProps {
   sortField?: TaskSortField;
   sortDirection?: TaskSortDirection;
   onSortChange?: (field: TaskSortField, direction: TaskSortDirection) => void;
+  // Assignee filter props
+  assigneeProfiles?: Profile[];
+  assigneeTasks?: TaskWithProject[];
+  selectedAssigneeIds?: string[];
+  onAssigneesChange?: (assigneeIds: string[]) => void;
+  currentUserId?: string | null;
+  disableZeroCount?: boolean;
 }
 
-type FilterView = "main" | "project" | "sort";
+type FilterView = "main" | "project" | "sort" | "assignee";
 
 export function MobileBottomNav({
   onAddTask,
@@ -88,11 +101,18 @@ export function MobileBottomNav({
   sortField = "position",
   sortDirection = "asc",
   onSortChange,
+  assigneeProfiles = [],
+  assigneeTasks = [],
+  selectedAssigneeIds = [],
+  onAssigneesChange,
+  currentUserId,
+  disableZeroCount = false,
 }: MobileBottomNavProps) {
   const pathname = usePathname();
   const [showSettings, setShowSettings] = useState(false);
   const [filterView, setFilterView] = useState<FilterView>("main");
   const [projectSearch, setProjectSearch] = useState("");
+  const [assigneeSearch, setAssigneeSearch] = useState("");
 
   // Show settings button on tasks pages (global tasks and project tasks)
   const showSettingsButton = pathname === "/tasks" || pathname.match(/^\/projects\/[^/]+\/tasks$/);
@@ -129,12 +149,13 @@ export function MobileBottomNav({
   // Count active filters
   const activeFilterCount = useMemo(() => {
     let count = selectedProjectIds.length;
+    count += selectedAssigneeIds.length;
     // Count non-default sorting as an active filter
     if (sortField !== "position" || sortDirection !== "asc") {
       count += 1;
     }
     return count;
-  }, [selectedProjectIds, sortField, sortDirection]);
+  }, [selectedProjectIds, selectedAssigneeIds, sortField, sortDirection]);
 
   // Get the current sort option label
   const currentSortLabel = useMemo(() => {
@@ -151,6 +172,7 @@ export function MobileBottomNav({
     if (!open) {
       setFilterView("main");
       setProjectSearch("");
+      setAssigneeSearch("");
     }
   };
 
@@ -168,6 +190,69 @@ export function MobileBottomNav({
     if (selectedProjects.length === 0) return "All projects";
     if (selectedProjects.length === 1) return selectedProjects[0].title;
     return `${selectedProjects.length} projects`;
+  };
+
+  // Assignee filter helpers
+  const taskCountByAssignee = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const task of assigneeTasks) {
+      const key = task.assignee_id ?? ASSIGNEE_FILTER_UNASSIGNED;
+      counts.set(key, (counts.get(key) || 0) + 1);
+    }
+    return counts;
+  }, [assigneeTasks]);
+
+  const assignedToMeCount = useMemo(() => {
+    if (!currentUserId) return 0;
+    return assigneeTasks.filter((t) => t.assignee_id === currentUserId).length;
+  }, [assigneeTasks, currentUserId]);
+
+  const unassignedCount = taskCountByAssignee.get(ASSIGNEE_FILTER_UNASSIGNED) ?? 0;
+
+  // Filter and sort assignee profiles
+  const filteredAssigneeProfiles = useMemo(() => {
+    let filtered = assigneeProfiles;
+
+    if (assigneeSearch.trim()) {
+      const searchLower = assigneeSearch.toLowerCase();
+      filtered = filtered.filter((profile) => {
+        const name = (profile.display_name || "").toLowerCase();
+        const email = (profile.email || "").toLowerCase();
+        return name.includes(searchLower) || email.includes(searchLower);
+      });
+    }
+
+    return [...filtered].sort((a, b) => {
+      const aSelected = selectedAssigneeIds.includes(a.id);
+      const bSelected = selectedAssigneeIds.includes(b.id);
+      if (aSelected && !bSelected) return -1;
+      if (!aSelected && bSelected) return 1;
+      const nameA = getDisplayName(a);
+      const nameB = getDisplayName(b);
+      return nameA.localeCompare(nameB);
+    });
+  }, [assigneeProfiles, assigneeSearch, selectedAssigneeIds]);
+
+  // Toggle a single assignee filter
+  const handleToggleAssignee = (id: string) => {
+    if (selectedAssigneeIds.includes(id)) {
+      onAssigneesChange?.(selectedAssigneeIds.filter((v) => v !== id));
+    } else {
+      onAssigneesChange?.([...selectedAssigneeIds, id]);
+    }
+  };
+
+  // Get assignee summary text
+  const getAssigneeSummaryText = () => {
+    if (selectedAssigneeIds.length === 0) return "All assignees";
+    if (selectedAssigneeIds.length === 1) {
+      const id = selectedAssigneeIds[0];
+      if (id === ASSIGNEE_FILTER_ASSIGNED_TO_ME) return "Assigned to me";
+      if (id === ASSIGNEE_FILTER_UNASSIGNED) return "Unassigned";
+      const profile = assigneeProfiles.find((p) => p.id === id);
+      return profile ? getDisplayName(profile) : "1 assignee";
+    }
+    return `${selectedAssigneeIds.length} selected`;
   };
 
   return (
@@ -271,6 +356,23 @@ export function MobileBottomNav({
                     </button>
                   )}
 
+                  {/* Assignee Filter Row */}
+                  {onAssigneesChange && (
+                    <button
+                      onClick={() => setFilterView("assignee")}
+                      className="flex items-center gap-3 w-full p-3 rounded-lg transition-colors hover:bg-muted"
+                    >
+                      <Users className="h-5 w-5 text-muted-foreground" />
+                      <div className="flex-1 text-left">
+                        <p className="font-medium">Assignee</p>
+                        <p className="text-xs text-muted-foreground">
+                          {getAssigneeSummaryText()}
+                        </p>
+                      </div>
+                      <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                    </button>
+                  )}
+
                   {/* Sort Row */}
                   {onSortChange && (
                     <button
@@ -293,6 +395,7 @@ export function MobileBottomNav({
                     <button
                       onClick={() => {
                         onProjectsChange?.([]);
+                        onAssigneesChange?.([]);
                         onSortChange?.("position", "asc");
                       }}
                       className="flex items-center gap-3 w-full p-3 rounded-lg transition-colors text-destructive hover:bg-destructive/10"
@@ -486,6 +589,152 @@ export function MobileBottomNav({
                     </button>
                   );
                 })}
+              </div>
+            </>
+          )}
+
+          {/* Assignee Selection View */}
+          {filterView === "assignee" && (
+            <>
+              <SheetHeader className="pb-2 flex-shrink-0">
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      setFilterView("main");
+                      setAssigneeSearch("");
+                    }}
+                    className="p-1 -ml-1 rounded-md hover:bg-muted"
+                  >
+                    <ChevronRight className="h-5 w-5 rotate-180" />
+                  </button>
+                  <SheetTitle>Filter by Assignee</SheetTitle>
+                </div>
+              </SheetHeader>
+
+              {/* Search Input */}
+              <div className="flex items-center gap-2 px-1 py-2 border-b mb-2 flex-shrink-0">
+                <Search className="h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search people..."
+                  value={assigneeSearch}
+                  onChange={(e) => setAssigneeSearch(e.target.value)}
+                  className="h-9 border-0 p-0 shadow-none focus-visible:ring-0 text-base"
+                />
+                {assigneeSearch && (
+                  <button
+                    onClick={() => setAssigneeSearch("")}
+                    className="p-1 rounded-md hover:bg-muted"
+                  >
+                    <X className="h-4 w-4 text-muted-foreground" />
+                  </button>
+                )}
+              </div>
+
+              <div className="overflow-y-auto flex-1 space-y-1">
+                {/* All Assignees option */}
+                <button
+                  onClick={() => {
+                    onAssigneesChange?.([]);
+                    setFilterView("main");
+                    setAssigneeSearch("");
+                  }}
+                  className={cn(
+                    "flex items-center gap-3 w-full p-3 rounded-lg transition-colors",
+                    selectedAssigneeIds.length === 0
+                      ? "bg-primary/10 text-primary"
+                      : "hover:bg-muted"
+                  )}
+                >
+                  <Users className="h-5 w-5" />
+                  <span className="flex-1 text-left font-medium">All Assignees</span>
+                  {selectedAssigneeIds.length === 0 && <Check className="h-5 w-5" />}
+                </button>
+
+                {/* Quick Filters */}
+                <div className="border-t pt-1 mt-1">
+                  {/* Assigned to me */}
+                  <button
+                    onClick={() => handleToggleAssignee(ASSIGNEE_FILTER_ASSIGNED_TO_ME)}
+                    className={cn(
+                      "flex items-center gap-3 w-full p-3 rounded-lg transition-colors",
+                      selectedAssigneeIds.includes(ASSIGNEE_FILTER_ASSIGNED_TO_ME)
+                        ? "bg-primary/10 text-primary"
+                        : "hover:bg-muted"
+                    )}
+                  >
+                    <UserCheck className="h-5 w-5" />
+                    <span className="flex-1 text-left font-medium">Assigned to me</span>
+                    <span className="text-xs text-muted-foreground tabular-nums mr-1">{assignedToMeCount}</span>
+                    {selectedAssigneeIds.includes(ASSIGNEE_FILTER_ASSIGNED_TO_ME) && (
+                      <Check className="h-5 w-5" />
+                    )}
+                  </button>
+
+                  {/* Unassigned */}
+                  <button
+                    onClick={() => handleToggleAssignee(ASSIGNEE_FILTER_UNASSIGNED)}
+                    className={cn(
+                      "flex items-center gap-3 w-full p-3 rounded-lg transition-colors",
+                      selectedAssigneeIds.includes(ASSIGNEE_FILTER_UNASSIGNED)
+                        ? "bg-primary/10 text-primary"
+                        : "hover:bg-muted"
+                    )}
+                  >
+                    <UserX className="h-5 w-5" />
+                    <span className="flex-1 text-left font-medium">Unassigned</span>
+                    <span className="text-xs text-muted-foreground tabular-nums mr-1">{unassignedCount}</span>
+                    {selectedAssigneeIds.includes(ASSIGNEE_FILTER_UNASSIGNED) && (
+                      <Check className="h-5 w-5" />
+                    )}
+                  </button>
+                </div>
+
+                {/* People List */}
+                {filteredAssigneeProfiles.length > 0 && (
+                  <div className="border-t pt-1 mt-1">
+                    {filteredAssigneeProfiles.map((profile) => {
+                      const isSelected = selectedAssigneeIds.includes(profile.id);
+                      const count = taskCountByAssignee.get(profile.id) ?? 0;
+                      const isDisabled = disableZeroCount && count === 0;
+
+                      return (
+                        <button
+                          key={profile.id}
+                          onClick={() => !isDisabled && handleToggleAssignee(profile.id)}
+                          disabled={isDisabled}
+                          className={cn(
+                            "flex items-center gap-3 w-full p-3 rounded-lg transition-colors",
+                            isDisabled
+                              ? "opacity-40 cursor-not-allowed"
+                              : isSelected
+                                ? "bg-primary/10 text-primary"
+                                : "hover:bg-muted"
+                          )}
+                        >
+                          <Avatar size="sm" className="h-6 w-6">
+                            {profile.avatar_url && (
+                              <AvatarImage src={profile.avatar_url} alt={getDisplayName(profile)} />
+                            )}
+                            <AvatarFallback className="text-[9px]">
+                              {getProfileInitials(profile)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="flex-1 text-left font-medium truncate">
+                            {getDisplayName(profile)}
+                          </span>
+                          <span className="text-xs text-muted-foreground tabular-nums mr-1">{count}</span>
+                          {isSelected && <Check className="h-5 w-5" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {filteredAssigneeProfiles.length === 0 && assigneeSearch && (
+                  <p className="text-center text-sm text-muted-foreground py-8">
+                    No people found
+                  </p>
+                )}
               </div>
             </>
           )}

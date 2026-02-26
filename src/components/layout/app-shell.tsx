@@ -14,7 +14,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useRecoveryState } from "@/hooks/use-recovery";
 import { cn } from "@/lib/utils";
 import type { ViewMode } from "./header";
-import type { Project } from "@/types";
+import type { Profile, Project, TaskWithProject } from "@/types";
 import type { TaskSortField, TaskSortDirection } from "@/lib/task-sort";
 
 // Context for search dialog trigger
@@ -66,6 +66,13 @@ interface AppShellProps {
   sortField?: TaskSortField;
   sortDirection?: TaskSortDirection;
   onSortChange?: (field: TaskSortField, direction: TaskSortDirection) => void;
+  // Assignee filter props
+  assigneeProfiles?: Profile[];
+  assigneeTasks?: TaskWithProject[];
+  selectedAssigneeIds?: string[];
+  onAssigneesChange?: (assigneeIds: string[]) => void;
+  currentUserId?: string | null;
+  disableZeroCount?: boolean;
 }
 
 /**
@@ -96,6 +103,12 @@ export function AppShell({
   sortField,
   sortDirection,
   onSortChange,
+  assigneeProfiles,
+  assigneeTasks,
+  selectedAssigneeIds,
+  onAssigneesChange,
+  currentUserId,
+  disableZeroCount,
 }: AppShellProps) {
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
@@ -230,6 +243,12 @@ export function AppShell({
           sortField={sortField}
           sortDirection={sortDirection}
           onSortChange={onSortChange}
+          assigneeProfiles={assigneeProfiles}
+          assigneeTasks={assigneeTasks}
+          selectedAssigneeIds={selectedAssigneeIds}
+          onAssigneesChange={onAssigneesChange}
+          currentUserId={currentUserId}
+          disableZeroCount={disableZeroCount}
         />
 
         {/* Shortcuts dialog */}

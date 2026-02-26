@@ -7,7 +7,7 @@ import type { ViewMode } from "@/components/layout";
 import { KanbanBoard } from "@/components/board";
 import { TaskDialog, QuickAddTask, TaskListView, TaskSortSelect } from "@/components/task";
 import { parseSortOptionKey, type TaskSortField, type TaskSortDirection } from "@/lib/task-sort";
-import { ProjectFilter } from "@/components/filters";
+import { ProjectFilter, AssigneeFilter, ASSIGNEE_FILTER_ASSIGNED_TO_ME, ASSIGNEE_FILTER_UNASSIGNED } from "@/components/filters";
 import { useTasksByStatus, useTaskMutations } from "@/hooks/use-tasks";
 import { useRealtimeTasksGlobal } from "@/hooks/use-realtime-tasks";
 import { useProjects } from "@/hooks/use-projects";
@@ -83,12 +83,37 @@ export default function TasksPage() {
 
   // Filter state - now supports multiple projects
   const [selectedProjectIds, setSelectedProjectIds] = useState<string[]>([]);
+  const [selectedAssigneeIds, setSelectedAssigneeIds] = useState<string[]>([]);
 
-  // Filter tasks by selected projects
-  const filteredTasks = useMemo(() => {
+  // Stage 1: Filter tasks by selected projects
+  const projectFilteredTasks = useMemo(() => {
     if (selectedProjectIds.length === 0) return tasks;
     return tasks.filter((task) => task.project_id && selectedProjectIds.includes(task.project_id));
   }, [tasks, selectedProjectIds]);
+
+  // Stage 2: Filter by assignee
+  const filteredTasks = useMemo(() => {
+    if (selectedAssigneeIds.length === 0) return projectFilteredTasks;
+    return projectFilteredTasks.filter((task) =>
+      selectedAssigneeIds.some((id) => {
+        if (id === ASSIGNEE_FILTER_ASSIGNED_TO_ME) return task.assignee_id === user?.id;
+        if (id === ASSIGNEE_FILTER_UNASSIGNED) return task.assignee_id === null;
+        return task.assignee_id === id;
+      })
+    );
+  }, [projectFilteredTasks, selectedAssigneeIds, user?.id]);
+
+  // Scope assignee profiles to selected projects (when project filter is active)
+  const currentUserId = user?.id ?? null;
+  const assigneeFilterProfiles = useMemo(() => {
+    if (selectedProjectIds.length === 0) return profiles;
+    const relevantAssigneeIds = new Set<string>();
+    for (const task of projectFilteredTasks) {
+      if (task.assignee_id) relevantAssigneeIds.add(task.assignee_id);
+    }
+    if (currentUserId) relevantAssigneeIds.add(currentUserId);
+    return profiles.filter((p) => relevantAssigneeIds.has(p.id));
+  }, [profiles, selectedProjectIds, projectFilteredTasks, currentUserId]);
 
   // Dialog states
   const [showTaskDialog, setShowTaskDialog] = useState(false);
@@ -283,6 +308,11 @@ export default function TasksPage() {
       sortField={sortField}
       sortDirection={sortDirection}
       onSortChange={handleSortChange}
+      assigneeProfiles={assigneeFilterProfiles}
+      assigneeTasks={projectFilteredTasks}
+      selectedAssigneeIds={selectedAssigneeIds}
+      onAssigneesChange={setSelectedAssigneeIds}
+      currentUserId={user?.id ?? null}
     >
       <Header
         title="Tasks"
@@ -296,11 +326,20 @@ export default function TasksPage() {
       <div className="p-4 md:p-6">
         {/* Filters and sorting - desktop only, mobile uses bottom nav filter sheet */}
         <div className="mb-4 hidden items-center justify-between gap-2 lg:flex">
-          <ProjectFilter
-            projects={projects as Project[]}
-            selectedProjectIds={selectedProjectIds}
-            onProjectsChange={setSelectedProjectIds}
-          />
+          <div className="flex items-center gap-2">
+            <ProjectFilter
+              projects={projects as Project[]}
+              selectedProjectIds={selectedProjectIds}
+              onProjectsChange={setSelectedProjectIds}
+            />
+            <AssigneeFilter
+              profiles={assigneeFilterProfiles}
+              tasks={projectFilteredTasks}
+              selectedAssigneeIds={selectedAssigneeIds}
+              onAssigneesChange={setSelectedAssigneeIds}
+              currentUserId={user?.id ?? null}
+            />
+          </div>
           <TaskSortSelect
             field={sortField}
             direction={sortDirection}

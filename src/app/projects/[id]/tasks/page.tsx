@@ -9,6 +9,7 @@ import type { ViewMode } from "@/components/layout";
 import { KanbanBoard } from "@/components/board";
 import { TaskDialog, QuickAddTask, TaskListView, TaskSortSelect } from "@/components/task";
 import { parseSortOptionKey, type TaskSortField, type TaskSortDirection } from "@/lib/task-sort";
+import { AssigneeFilter, ASSIGNEE_FILTER_ASSIGNED_TO_ME, ASSIGNEE_FILTER_UNASSIGNED } from "@/components/filters";
 import { Button } from "@/components/ui/button";
 import { useProject } from "@/hooks/use-projects";
 import { useTaskMutations } from "@/hooks/use-tasks";
@@ -95,6 +96,21 @@ export default function ProjectTasksPage() {
       project: project as Project,
     }));
   }, [project]);
+
+  // Assignee filter state
+  const [selectedAssigneeIds, setSelectedAssigneeIds] = useState<string[]>([]);
+
+  // Filter tasks by assignee
+  const filteredTasks = useMemo(() => {
+    if (selectedAssigneeIds.length === 0) return tasks;
+    return tasks.filter((task) =>
+      selectedAssigneeIds.some((id) => {
+        if (id === ASSIGNEE_FILTER_ASSIGNED_TO_ME) return task.assignee_id === user?.id;
+        if (id === ASSIGNEE_FILTER_UNASSIGNED) return task.assignee_id === null;
+        return task.assignee_id === id;
+      })
+    );
+  }, [tasks, selectedAssigneeIds, user?.id]);
 
   // Dialog states
   const [showTaskDialog, setShowTaskDialog] = useState(false);
@@ -358,6 +374,12 @@ export default function ProjectTasksPage() {
       sortField={sortField}
       sortDirection={sortDirection}
       onSortChange={handleSortChange}
+      assigneeProfiles={profiles}
+      assigneeTasks={tasks}
+      selectedAssigneeIds={selectedAssigneeIds}
+      onAssigneesChange={setSelectedAssigneeIds}
+      currentUserId={user?.id ?? null}
+      disableZeroCount={true}
     >
       {/* Top navigation bar */}
       <div className="border-b px-4 py-2 flex items-center justify-between bg-background">
@@ -391,8 +413,16 @@ export default function ProjectTasksPage() {
       />
 
       <div className="p-4 md:p-6">
-        {/* Sort selector - desktop only, mobile uses bottom nav filter sheet */}
-        <div className="mb-4 hidden justify-end lg:flex">
+        {/* Filters and sorting - desktop only, mobile uses bottom nav filter sheet */}
+        <div className="mb-4 hidden items-center justify-between gap-2 lg:flex">
+          <AssigneeFilter
+            profiles={profiles}
+            tasks={tasks}
+            selectedAssigneeIds={selectedAssigneeIds}
+            onAssigneesChange={setSelectedAssigneeIds}
+            currentUserId={user?.id ?? null}
+            disableZeroCount={true}
+          />
           <TaskSortSelect
             field={sortField}
             direction={sortDirection}
@@ -402,7 +432,7 @@ export default function ProjectTasksPage() {
 
         {viewMode === "board" ? (
           <KanbanBoard
-            tasks={tasks}
+            tasks={filteredTasks}
             projects={[project as Project]}
             onTasksChange={setTasks}
             onTaskMove={handleTaskMove}
@@ -417,7 +447,7 @@ export default function ProjectTasksPage() {
           />
         ) : (
           <TaskListView
-            tasks={tasks}
+            tasks={filteredTasks}
             onTaskClick={handleOpenDetails}
             onStatusToggle={handleStatusToggle}
             onAddTask={handleAddTask}
