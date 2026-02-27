@@ -37,6 +37,9 @@ export type {
   ActivityLog,
   ActivityLogInsert,
   ActivityLogUpdate,
+  Section,
+  SectionInsert,
+  SectionUpdate,
 } from "./database";
 
 import type {

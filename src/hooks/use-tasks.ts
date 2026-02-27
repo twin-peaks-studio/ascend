@@ -225,6 +225,8 @@ export function useTaskMutations() {
           position: maxPosition + 1,
           due_date: validated.due_date ?? null,
           assignee_id: validated.assignee_id ?? null,
+          section_id: validated.section_id ?? null,
+          section_position: validated.section_position ?? 0,
           created_by: user.id,
         };
 

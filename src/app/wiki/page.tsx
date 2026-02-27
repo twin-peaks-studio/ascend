@@ -212,6 +212,45 @@ const sections: WikiSection[] = [
     ],
   },
   {
+    id: "sections",
+    icon: Layers,
+    title: "Sections",
+    description: "Organize tasks into groups within a project.",
+    content: [
+      {
+        heading: "What are Sections?",
+        paragraphs: [
+          "Sections let you group tasks within a project's list view. They appear as collapsible groups with headers that you can name, reorder, and manage. Sections are purely structural \u2014 they don't add metadata to tasks, they just help you visually organize your work.",
+        ],
+      },
+      {
+        heading: "Creating Sections",
+        paragraphs: [
+          "Click the \"Add section\" button at the bottom of the task list to create a new section. Type a name and press Enter. Sections are available in the list view of any project \u2014 they don't appear in the Kanban board view.",
+        ],
+      },
+      {
+        heading: "Organizing Tasks",
+        list: [
+          "Drag tasks between sections to move them",
+          "Drag tasks within a section to reorder them",
+          "Drag section headers to reorder sections",
+          "Click the collapse arrow to hide a section's tasks",
+          "Tasks without a section appear at the top of the list",
+        ],
+      },
+      {
+        heading: "Managing Sections",
+        list: [
+          "Click a section name to rename it",
+          "Use the section menu (\u2026) to delete a section",
+          "Deleting a section makes its tasks unsectioned (tasks are not deleted)",
+        ],
+        tip: "Sections only appear in the list view, not in the Kanban board view.",
+      },
+    ],
+  },
+  {
     id: "projects",
     icon: FolderKanban,
     title: "Projects",
