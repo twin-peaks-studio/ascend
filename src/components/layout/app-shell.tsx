@@ -73,6 +73,9 @@ interface AppShellProps {
   onAssigneesChange?: (assigneeIds: string[]) => void;
   currentUserId?: string | null;
   disableZeroCount?: boolean;
+  // Show/hide completed tasks
+  showCompleted?: boolean;
+  onShowCompletedChange?: (show: boolean) => void;
 }
 
 /**
@@ -109,6 +112,8 @@ export function AppShell({
   onAssigneesChange,
   currentUserId,
   disableZeroCount,
+  showCompleted,
+  onShowCompletedChange,
 }: AppShellProps) {
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
@@ -249,6 +254,8 @@ export function AppShell({
           onAssigneesChange={onAssigneesChange}
           currentUserId={currentUserId}
           disableZeroCount={disableZeroCount}
+          showCompleted={showCompleted}
+          onShowCompletedChange={onShowCompletedChange}
         />
 
         {/* Shortcuts dialog */}

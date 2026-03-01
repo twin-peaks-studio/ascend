@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -19,6 +19,7 @@ import { KanbanColumn } from "./kanban-column";
 import { TaskCardDragOverlay } from "@/components/task";
 import type { TaskWithProject, TaskStatus, Project } from "@/types";
 import { sortTasks, type TaskSortField, type TaskSortDirection } from "@/lib/task-sort";
+import { cn } from "@/lib/utils";
 
 interface KanbanBoardProps {
   tasks: TaskWithProject[];
@@ -39,6 +40,8 @@ interface KanbanBoardProps {
   sortField?: TaskSortField;
   /** Sort direction for tasks within columns (default: asc) */
   sortDirection?: TaskSortDirection;
+  /** Whether to show the Done column (default: true) */
+  showCompleted?: boolean;
 }
 
 const COLUMNS: { id: TaskStatus; title: string }[] = [
@@ -59,8 +62,15 @@ export function KanbanBoard({
   onMarkDuplicate,
   sortField = "position",
   sortDirection = "asc",
+  showCompleted = true,
 }: KanbanBoardProps) {
   const [activeTask, setActiveTask] = useState<TaskWithProject | null>(null);
+
+  // Determine which columns to render based on showCompleted
+  const visibleColumns = useMemo(
+    () => (showCompleted ? COLUMNS : COLUMNS.filter((col) => col.id !== "done")),
+    [showCompleted]
+  );
 
   // Configure drag sensors
   // MouseSensor for desktop - immediate drag with small distance threshold
@@ -234,12 +244,14 @@ export function KanbanBoard({
       onDragEnd={handleDragEnd}
     >
       <div
-        className={[
+        className={cn(
           "flex h-[calc(100vh-10rem)] flex-nowrap gap-4 overflow-x-auto overflow-y-hidden pb-2",
-          "md:grid md:grid-cols-3 md:overflow-visible md:pb-0",
-        ].join(" ")}
+          visibleColumns.length === 3
+            ? "md:grid md:grid-cols-3 md:overflow-visible md:pb-0"
+            : "md:grid md:grid-cols-2 md:overflow-visible md:pb-0"
+        )}
       >
-        {COLUMNS.map((column) => (
+        {visibleColumns.map((column) => (
           <div
             key={column.id}
             className="flex h-full min-w-[280px] shrink-0 flex-col md:min-w-0"

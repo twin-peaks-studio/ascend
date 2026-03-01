@@ -32,6 +32,7 @@ import {
   StickyNote,
   MousePointerClick,
   RefreshCw,
+  Eye,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -54,6 +55,22 @@ interface ChangelogEntry {
 }
 
 const changelog: ChangelogEntry[] = [
+  {
+    date: "March 1, 2026",
+    version: "0.15.0",
+    title: "Hide Completed Tasks by Default",
+    description:
+      "Completed tasks are now hidden by default across all task views, with a filter toggle to show or hide them on demand.",
+    features: [
+      {
+        icon: Eye,
+        title: "Hide Completed Tasks by Default",
+        description:
+          "Completed tasks are no longer shown by default on the Tasks and Project Tasks pages. Toggle the 'Completed' filter button to show or hide them. Your preference is saved per page.",
+        tag: "new",
+      },
+    ],
+  },
   {
     date: "February 26, 2026",
     version: "0.14.0",

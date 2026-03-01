@@ -20,6 +20,7 @@ import {
   Users,
   UserCheck,
   UserX,
+  Eye,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -87,6 +88,9 @@ interface MobileBottomNavProps {
   onAssigneesChange?: (assigneeIds: string[]) => void;
   currentUserId?: string | null;
   disableZeroCount?: boolean;
+  // Show/hide completed tasks
+  showCompleted?: boolean;
+  onShowCompletedChange?: (show: boolean) => void;
 }
 
 type FilterView = "main" | "project" | "sort" | "assignee";
@@ -107,6 +111,8 @@ export function MobileBottomNav({
   onAssigneesChange,
   currentUserId,
   disableZeroCount = false,
+  showCompleted = false,
+  onShowCompletedChange,
 }: MobileBottomNavProps) {
   const pathname = usePathname();
   const [showSettings, setShowSettings] = useState(false);
@@ -154,8 +160,12 @@ export function MobileBottomNav({
     if (sortField !== "position" || sortDirection !== "asc") {
       count += 1;
     }
+    // Count showing completed tasks as an active (non-default) state
+    if (showCompleted) {
+      count += 1;
+    }
     return count;
-  }, [selectedProjectIds, selectedAssigneeIds, sortField, sortDirection]);
+  }, [selectedProjectIds, selectedAssigneeIds, sortField, sortDirection, showCompleted]);
 
   // Get the current sort option label
   const currentSortLabel = useMemo(() => {
@@ -373,6 +383,26 @@ export function MobileBottomNav({
                     </button>
                   )}
 
+                  {/* Show Completed Tasks Toggle */}
+                  {onShowCompletedChange && (
+                    <button
+                      onClick={() => onShowCompletedChange(!showCompleted)}
+                      className={cn(
+                        "flex items-center gap-3 w-full p-3 rounded-lg transition-colors",
+                        showCompleted ? "bg-primary/10 text-primary" : "hover:bg-muted"
+                      )}
+                    >
+                      <Eye className="h-5 w-5 text-muted-foreground" />
+                      <div className="flex-1 text-left">
+                        <p className="font-medium">Completed Tasks</p>
+                        <p className="text-xs text-muted-foreground">
+                          {showCompleted ? "Showing" : "Hidden"}
+                        </p>
+                      </div>
+                      {showCompleted && <Check className="h-5 w-5" />}
+                    </button>
+                  )}
+
                   {/* Sort Row */}
                   {onSortChange && (
                     <button
@@ -397,6 +427,7 @@ export function MobileBottomNav({
                         onProjectsChange?.([]);
                         onAssigneesChange?.([]);
                         onSortChange?.("position", "asc");
+                        onShowCompletedChange?.(false);
                       }}
                       className="flex items-center gap-3 w-full p-3 rounded-lg transition-colors text-destructive hover:bg-destructive/10"
                     >

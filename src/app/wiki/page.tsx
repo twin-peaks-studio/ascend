@@ -197,6 +197,14 @@ const sections: WikiSection[] = [
         ],
       },
       {
+        heading: "Showing and Hiding Completed Tasks",
+        paragraphs: [
+          "Completed tasks (status: Done) are hidden by default on both the global Tasks page and individual project task pages. This keeps your views focused on active work.",
+          "To show completed tasks, click the 'Completed' toggle button in the filter bar (desktop), or toggle 'Completed Tasks' in the mobile filter sheet. The setting is saved per page so your preference persists when you navigate away and return.",
+          "Note: The search feature always includes completed tasks regardless of this filter setting, so you can still find completed work through search.",
+        ],
+      },
+      {
         heading: "Task Actions",
         list: [
           "Click a task to open its dedicated detail page (/tasks/[id])",

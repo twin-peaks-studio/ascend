@@ -47,67 +47,62 @@ Task view preferences are persisted in localStorage so they survive page navigat
 - `tasks-sort` / `project-tasks-sort` — sort field and direction
 - `tasks-project-filter` — selected project IDs (global tasks page)
 - `tasks-assignee-filter` / `project-tasks-assignee-filter` — selected assignee filter IDs
+- `tasks-show-completed` / `project-tasks-show-completed` — whether completed (done) tasks are visible
 
 When adding new filterable state to task pages, follow this pattern: initialize with a `useState` lazy initializer that reads from localStorage, and persist on every change via a `useCallback` handler.
 
-## Release Process
+**When you add a new localStorage key:** add it to the table above and document it in the Pre-Deployment Checklist step 3 (Technical Documentation).
 
-### Changelog Updates
-**IMPORTANT:** Whenever a new feature is committed, the public changelog must be updated.
+## Pre-Deployment Checklist
 
-1. Open `src/app/changelog/page.tsx`
-2. Add a new entry to the `changelog` array (or update the current version's entry) with:
-   - `date` — The release date (e.g., "February 5, 2026")
-   - `version` — Semantic version string
-   - `title` — A short headline for this release
-   - `description` — One sentence summarizing the release
-   - `features` — Array of feature objects, each with an `icon` (Lucide), `title`, `description`, and `tag` ("new", "improved", or "fix")
-3. If a new feature introduces a core workflow change, also update the wiki at `src/app/wiki/page.tsx` to document how the feature works.
+**IMPORTANT:** Before considering any feature or bug fix complete, run through every step below. All four documentation layers are required — not optional.
 
-### Wiki Updates
-When adding a major new feature:
-- Add or update the relevant section in the `sections` array in `src/app/wiki/page.tsx`
-- Include headings, paragraphs, lists, and tips that explain how to use the feature
-- Keep the language clear and user-facing (this is public documentation)
+### 1. Changelog (`src/app/changelog/page.tsx`)
+Add a new entry to the `changelog` array (or append to the current version's `features` array):
+- `date` — The release date (e.g., "March 1, 2026")
+- `version` — Semantic version string (increment patch for fixes, minor for features)
+- `title` — Short headline for this release
+- `description` — One sentence summarizing what changed and why
+- `features[]` — Each with an `icon` (Lucide), `title`, `description`, and `tag` ("new", "improved", or "fix")
 
-## Tech Debt & Feature Wrap-up Checklist
+### 2. User-Facing Documentation (`src/app/wiki/page.tsx`)
+For any feature that introduces a new interaction or workflow visible to users:
+- Add or update the relevant section in the `sections` array
+- Include headings, step-by-step paragraphs, bullet lists, and tips
+- Write in plain user-facing language (this is public documentation)
+- Cover edge cases the user might encounter (e.g., "Search always includes completed tasks regardless of this filter")
 
-**IMPORTANT:** When cleaning up tech debt or completing a new feature/architecture change, always verify network efficiency:
+### 3. Technical Documentation (`CLAUDE.md`)
+Update this file whenever a pattern, constraint, or architectural decision changes:
+- **New localStorage keys** → add to the Persisted UI State table
+- **New consistency rules** → add to the Consistency Rules section
+- **New architectural patterns** → add to Technical Patterns
+- **New local dev quirks** → document them so future sessions don't re-debug the same issues
 
-### Network Request Audit
-1. **Check for duplicate requests**: Open browser DevTools Network tab and navigate between pages. Each navigation should make a reasonable number of requests (typically 5-15, not 100+).
-2. **Verify request deduplication**: Multiple components using the same hook should result in ONE network request, not one per component. React Query handles this automatically.
-3. **Check for infinite loops**: Watch for rapidly repeating requests in the Network tab. This usually indicates a dependency array bug in `useCallback` or `useEffect`.
+### 4. Network & Performance Audit
+Before shipping, verify the feature doesn't introduce regressions:
 
-### Common Pitfalls to Avoid
-1. **Never include derived state in useCallback dependencies**:
-   ```typescript
-   // BAD - creates infinite loop
-   const fetchData = useCallback(() => { ... }, [data.length]);
+**Network request audit:**
+1. Open DevTools Network tab and navigate between pages — each navigation should make a reasonable number of requests (typically 5–15, not 100+)
+2. Multiple components using the same hook should result in ONE request (React Query deduplication)
+3. Watch for rapidly repeating requests — indicates a `useCallback`/`useEffect` dependency array bug
 
-   // GOOD - stable dependencies only
-   const fetchData = useCallback(() => { ... }, [userId]);
-   ```
+**Common pitfalls to avoid:**
+```typescript
+// BAD — derived state in dependency creates infinite loop
+const fetchData = useCallback(() => { ... }, [data.length]);
 
-2. **Never include object references in dependencies when the object changes on each render**:
-   ```typescript
-   // BAD - object reference changes every render
-   const fetchItem = useCallback(() => { ... }, [item]);
+// GOOD — stable primitive dependency
+const fetchData = useCallback(() => { ... }, [userId]);
+```
 
-   // GOOD - use primitive identifier
-   const fetchItem = useCallback(() => { ... }, [itemId]);
-   ```
-
-3. **Prefer React Query over manual fetch/state management** - it handles caching, deduplication, and background refetching automatically.
-
-### Scalability Check
-Before completing a feature, verify data fetching scales properly:
-- Does the query fetch only what's needed? (e.g., team members, not ALL users)
-- Are there N+1 query patterns that will degrade with more data?
+**Scalability check:**
+- Does the query fetch only what's needed?
+- Are there N+1 patterns that will degrade with more data?
 - Is caching configured appropriately (`staleTime`, `gcTime`)?
 
-### Dev Server Health
-If the dev server becomes unresponsive ("Compiling..." stuck, high CPU):
-1. Check Network tab for rapid repeated requests (infinite loop symptom)
-2. Review recent changes to `useCallback`/`useEffect` dependency arrays
-3. Look for state that changes → triggers fetch → changes state loops
+**Dev server health:**
+If the dev server gets stuck ("Compiling...", high CPU):
+1. Check Network tab for rapid repeated requests (infinite loop)
+2. Review recent `useCallback`/`useEffect` dependency arrays
+3. Look for state-changes-trigger-fetch-trigger-state-change loops

@@ -2,10 +2,13 @@
 
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import { Eye } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { AppShell, Header } from "@/components/layout";
 import type { ViewMode } from "@/components/layout";
 import { KanbanBoard } from "@/components/board";
 import { TaskDialog, QuickAddTask, TaskListView, TaskSortSelect } from "@/components/task";
+import { Button } from "@/components/ui/button";
 import { parseSortOptionKey, type TaskSortField, type TaskSortDirection } from "@/lib/task-sort";
 import { ProjectFilter, AssigneeFilter, ASSIGNEE_FILTER_ASSIGNED_TO_ME, ASSIGNEE_FILTER_UNASSIGNED } from "@/components/filters";
 import { useTasksByStatus, useTaskMutations } from "@/hooks/use-tasks";
@@ -107,6 +110,17 @@ export default function TasksPage() {
     localStorage.setItem("tasks-assignee-filter", JSON.stringify(ids));
   }, []);
 
+  // Show/hide completed tasks state - persisted in localStorage, hidden by default
+  const [showCompleted, setShowCompleted] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return localStorage.getItem("tasks-show-completed") === "true";
+  });
+
+  const handleShowCompletedChange = useCallback((show: boolean) => {
+    setShowCompleted(show);
+    localStorage.setItem("tasks-show-completed", show ? "true" : "false");
+  }, []);
+
   // Stage 1: Filter tasks by selected projects
   const projectFilteredTasks = useMemo(() => {
     if (selectedProjectIds.length === 0) return tasks;
@@ -114,7 +128,7 @@ export default function TasksPage() {
   }, [tasks, selectedProjectIds]);
 
   // Stage 2: Filter by assignee
-  const filteredTasks = useMemo(() => {
+  const assigneeFilteredTasks = useMemo(() => {
     if (selectedAssigneeIds.length === 0) return projectFilteredTasks;
     return projectFilteredTasks.filter((task) =>
       selectedAssigneeIds.some((id) => {
@@ -124,6 +138,12 @@ export default function TasksPage() {
       })
     );
   }, [projectFilteredTasks, selectedAssigneeIds, user?.id]);
+
+  // Stage 3: Filter out completed tasks (unless showCompleted is true)
+  const filteredTasks = useMemo(() => {
+    if (showCompleted) return assigneeFilteredTasks;
+    return assigneeFilteredTasks.filter((task) => task.status !== "done");
+  }, [assigneeFilteredTasks, showCompleted]);
 
   // Scope assignee profiles to selected projects (when project filter is active)
   const currentUserId = user?.id ?? null;
@@ -335,6 +355,8 @@ export default function TasksPage() {
       selectedAssigneeIds={selectedAssigneeIds}
       onAssigneesChange={handleAssigneesChange}
       currentUserId={user?.id ?? null}
+      showCompleted={showCompleted}
+      onShowCompletedChange={handleShowCompletedChange}
     >
       <Header
         title="Tasks"
@@ -361,6 +383,15 @@ export default function TasksPage() {
               onAssigneesChange={handleAssigneesChange}
               currentUserId={user?.id ?? null}
             />
+            <Button
+              variant="outline"
+              size="sm"
+              className={cn("h-8 gap-1.5 text-xs", showCompleted && "bg-primary/10 border-primary/30")}
+              onClick={() => handleShowCompletedChange(!showCompleted)}
+            >
+              <Eye className="h-3.5 w-3.5" />
+              Completed
+            </Button>
           </div>
           <TaskSortSelect
             field={sortField}
@@ -402,6 +433,7 @@ export default function TasksPage() {
             onMarkDuplicate={handleMarkDuplicate}
             sortField={sortField}
             sortDirection={sortDirection}
+            showCompleted={showCompleted}
           />
         ) : (
           <TaskListView

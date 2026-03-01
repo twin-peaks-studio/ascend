@@ -3,7 +3,8 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Eye } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { AppShell, Header } from "@/components/layout";
 import type { ViewMode } from "@/components/layout";
 import { KanbanBoard } from "@/components/board";
@@ -132,8 +133,19 @@ export default function ProjectTasksPage() {
     localStorage.setItem("project-tasks-assignee-filter", JSON.stringify(ids));
   }, []);
 
+  // Show/hide completed tasks state - persisted in localStorage, hidden by default
+  const [showCompleted, setShowCompleted] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return localStorage.getItem("project-tasks-show-completed") === "true";
+  });
+
+  const handleShowCompletedChange = useCallback((show: boolean) => {
+    setShowCompleted(show);
+    localStorage.setItem("project-tasks-show-completed", show ? "true" : "false");
+  }, []);
+
   // Filter tasks by assignee
-  const filteredTasks = useMemo(() => {
+  const assigneeFilteredTasks = useMemo(() => {
     if (selectedAssigneeIds.length === 0) return tasks;
     return tasks.filter((task) =>
       selectedAssigneeIds.some((id) => {
@@ -143,6 +155,12 @@ export default function ProjectTasksPage() {
       })
     );
   }, [tasks, selectedAssigneeIds, user?.id]);
+
+  // Filter out completed tasks (unless showCompleted is true)
+  const filteredTasks = useMemo(() => {
+    if (showCompleted) return assigneeFilteredTasks;
+    return assigneeFilteredTasks.filter((task) => task.status !== "done");
+  }, [assigneeFilteredTasks, showCompleted]);
 
   // Collapsed sections state - persisted in localStorage
   const [collapsedSectionIds, setCollapsedSectionIds] = useState<Set<string>>(() => {
@@ -506,6 +524,8 @@ export default function ProjectTasksPage() {
       onAssigneesChange={handleAssigneesChange}
       currentUserId={user?.id ?? null}
       disableZeroCount={true}
+      showCompleted={showCompleted}
+      onShowCompletedChange={handleShowCompletedChange}
     >
       {/* Top navigation bar */}
       <div className="border-b px-4 py-2 flex items-center justify-between bg-background">
@@ -541,14 +561,25 @@ export default function ProjectTasksPage() {
       <div className="p-4 md:p-6">
         {/* Filters and sorting - desktop only, mobile uses bottom nav filter sheet */}
         <div className="mb-4 hidden items-center justify-between gap-2 lg:flex">
-          <AssigneeFilter
-            profiles={profiles}
-            tasks={tasks}
-            selectedAssigneeIds={selectedAssigneeIds}
-            onAssigneesChange={handleAssigneesChange}
-            currentUserId={user?.id ?? null}
-            disableZeroCount={true}
-          />
+          <div className="flex items-center gap-2">
+            <AssigneeFilter
+              profiles={profiles}
+              tasks={tasks}
+              selectedAssigneeIds={selectedAssigneeIds}
+              onAssigneesChange={handleAssigneesChange}
+              currentUserId={user?.id ?? null}
+              disableZeroCount={true}
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              className={cn("h-8 gap-1.5 text-xs", showCompleted && "bg-primary/10 border-primary/30")}
+              onClick={() => handleShowCompletedChange(!showCompleted)}
+            >
+              <Eye className="h-3.5 w-3.5" />
+              Completed
+            </Button>
+          </div>
           <TaskSortSelect
             field={sortField}
             direction={sortDirection}
@@ -570,6 +601,7 @@ export default function ProjectTasksPage() {
             onMarkDuplicate={handleMarkDuplicate}
             sortField={sortField}
             sortDirection={sortDirection}
+            showCompleted={showCompleted}
           />
         ) : (
           <SectionedTaskListView
