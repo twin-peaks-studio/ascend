@@ -19,6 +19,7 @@ interface TaskDialogProps {
   defaultStatus?: TaskStatus;
   defaultAssigneeId?: string | null;
   defaultProjectId?: string | null;
+  defaultSectionId?: string | null;
   onSubmit: (data: CreateTaskInput | UpdateTaskInput) => Promise<void>;
   loading?: boolean;
 }
@@ -32,6 +33,7 @@ export function TaskDialog({
   defaultStatus = "todo",
   defaultAssigneeId,
   defaultProjectId,
+  defaultSectionId,
   onSubmit,
   loading = false,
 }: TaskDialogProps) {

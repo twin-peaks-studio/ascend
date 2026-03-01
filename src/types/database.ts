@@ -84,6 +84,8 @@ export type Database = {
           is_duplicate: boolean;
           is_archived: boolean;
           position: number;
+          section_id: string | null;
+          section_position: number;
           source_type: "manual" | "ai_extraction";
           created_by: string;
           created_at: string;
@@ -101,6 +103,8 @@ export type Database = {
           is_duplicate?: boolean;
           is_archived?: boolean;
           position?: number;
+          section_id?: string | null;
+          section_position?: number;
           source_type?: "manual" | "ai_extraction";
           created_by: string;
           created_at?: string;
@@ -118,6 +122,8 @@ export type Database = {
           is_duplicate?: boolean;
           is_archived?: boolean;
           position?: number;
+          section_id?: string | null;
+          section_position?: number;
           source_type?: "manual" | "ai_extraction";
           created_by?: string;
           created_at?: string;
@@ -597,6 +603,41 @@ export type Database = {
           }
         ];
       };
+      sections: {
+        Row: {
+          id: string;
+          project_id: string;
+          name: string;
+          position: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          project_id: string;
+          name: string;
+          position?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          project_id?: string;
+          name?: string;
+          position?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "sections_project_id_fkey";
+            columns: ["project_id"];
+            isOneToOne: false;
+            referencedRelation: "projects";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
@@ -661,6 +702,10 @@ export type TimeEntryUpdate = UpdateTables<"time_entries">;
 export type ActivityLog = Tables<"activity_log">;
 export type ActivityLogInsert = InsertTables<"activity_log">;
 export type ActivityLogUpdate = UpdateTables<"activity_log">;
+
+export type Section = Tables<"sections">;
+export type SectionInsert = InsertTables<"sections">;
+export type SectionUpdate = UpdateTables<"sections">;
 
 // Entity type for polymorphic relationships (time entries, etc.)
 export type TimeTrackingEntityType = "task" | "note" | "project";

@@ -119,6 +119,8 @@ export const createTaskSchema = z.object({
   position: z.number().int().min(0).default(0),
   due_date: z.string().datetime().nullable().optional(),
   assignee_id: z.string().uuid("Invalid assignee ID").nullable().optional(),
+  section_id: z.string().uuid("Invalid section ID").nullable().optional(),
+  section_position: z.number().int().min(0).optional(),
 });
 
 /**
@@ -135,6 +137,8 @@ export const updateTaskSchema = z.object({
   position: z.number().int().min(0).optional(),
   due_date: z.string().datetime().nullable().optional(),
   assignee_id: z.string().uuid("Invalid assignee ID").nullable().optional(),
+  section_id: z.string().uuid("Invalid section ID").nullable().optional(),
+  section_position: z.number().int().min(0).optional(),
 });
 
 /**
@@ -144,6 +148,27 @@ export const updateTaskPositionSchema = z.object({
   id: z.string().uuid("Invalid task ID"),
   status: taskStatusSchema,
   position: z.number().int().min(0),
+});
+
+// ============================================
+// Section Schemas
+// ============================================
+
+/**
+ * Schema for creating a new section
+ */
+export const createSectionSchema = z.object({
+  project_id: z.string().uuid("Invalid project ID"),
+  name: safeRequiredString(100),
+  position: z.number().int().min(0).default(0),
+});
+
+/**
+ * Schema for updating an existing section
+ */
+export const updateSectionSchema = z.object({
+  name: safeRequiredString(100).optional(),
+  position: z.number().int().min(0).optional(),
 });
 
 // ============================================
@@ -229,6 +254,9 @@ export type UpdateProjectInput = z.infer<typeof updateProjectSchema>;
 export type CreateTaskInput = z.infer<typeof createTaskSchema>;
 export type UpdateTaskInput = z.infer<typeof updateTaskSchema>;
 export type UpdateTaskPositionInput = z.infer<typeof updateTaskPositionSchema>;
+
+export type CreateSectionInput = z.infer<typeof createSectionSchema>;
+export type UpdateSectionInput = z.infer<typeof updateSectionSchema>;
 
 export type CreateDocumentInput = z.infer<typeof createDocumentSchema>;
 export type UpdateDocumentInput = z.infer<typeof updateDocumentSchema>;

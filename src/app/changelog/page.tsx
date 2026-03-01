@@ -55,6 +55,29 @@ interface ChangelogEntry {
 
 const changelog: ChangelogEntry[] = [
   {
+    date: "February 26, 2026",
+    version: "0.14.0",
+    title: "Sections for Task Organization",
+    description:
+      "Group tasks into named sections within your project list view for better visual organization and workflow clarity.",
+    features: [
+      {
+        icon: Layers,
+        title: "Task Sections",
+        description:
+          "Create named sections to group tasks in the project list view. Organize your work into logical groups like 'Setup', 'API', 'QA' and more.",
+        tag: "new",
+      },
+      {
+        icon: GripVertical,
+        title: "Drag & Drop in List View",
+        description:
+          "Drag and drop tasks to reorder them within sections, move them between sections, and reorder sections themselves.",
+        tag: "new",
+      },
+    ],
+  },
+  {
     date: "February 11, 2026",
     version: "0.13.2",
     title: "Deletion & Data Consistency Fixes",

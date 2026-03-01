@@ -7,13 +7,15 @@ import { ArrowLeft } from "lucide-react";
 import { AppShell, Header } from "@/components/layout";
 import type { ViewMode } from "@/components/layout";
 import { KanbanBoard } from "@/components/board";
-import { TaskDialog, QuickAddTask, TaskListView, TaskSortSelect } from "@/components/task";
+import { TaskDialog, QuickAddTask, SectionedTaskListView, TaskSortSelect } from "@/components/task";
 import { parseSortOptionKey, type TaskSortField, type TaskSortDirection } from "@/lib/task-sort";
 import { AssigneeFilter, ASSIGNEE_FILTER_ASSIGNED_TO_ME, ASSIGNEE_FILTER_UNASSIGNED } from "@/components/filters";
 import { Button } from "@/components/ui/button";
 import { useProject } from "@/hooks/use-projects";
 import { useTaskMutations } from "@/hooks/use-tasks";
+import { useSections, useSectionMutations } from "@/hooks/use-sections";
 import { useRealtimeTasksForProject } from "@/hooks/use-realtime-tasks";
+import { useRealtimeSections } from "@/hooks/use-realtime-sections";
 import { useProjectMembers } from "@/hooks/use-project-members";
 import { useIsMobile } from "@/hooks/use-media-query";
 import { useAuth } from "@/hooks/use-auth";
@@ -40,8 +42,19 @@ export default function ProjectTasksPage() {
     loading: mutationLoading,
   } = useTaskMutations();
 
-  // Enable real-time task updates for this project
+  // Section hooks
+  const { sections, refetch: refetchSections } = useSections(projectId);
+  const {
+    createSection,
+    updateSection,
+    deleteSection: deleteSectionMutation,
+    reorderSections,
+    moveTaskToSection,
+  } = useSectionMutations();
+
+  // Enable real-time updates
   useRealtimeTasksForProject(projectId, user?.id ?? null);
+  useRealtimeSections(projectId);
 
   // View mode state (board or list) - persisted in localStorage
   const [viewMode, setViewMode] = useState<ViewMode>("list");
@@ -131,25 +144,60 @@ export default function ProjectTasksPage() {
     );
   }, [tasks, selectedAssigneeIds, user?.id]);
 
+  // Collapsed sections state - persisted in localStorage
+  const [collapsedSectionIds, setCollapsedSectionIds] = useState<Set<string>>(() => {
+    if (typeof window === 'undefined') return new Set();
+    try {
+      const stored = localStorage.getItem(`project-${projectId}-collapsed-sections`);
+      return stored ? new Set(JSON.parse(stored)) : new Set();
+    } catch { return new Set(); }
+  });
+
+  const handleToggleSectionCollapse = useCallback((sectionId: string) => {
+    setCollapsedSectionIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(sectionId)) next.delete(sectionId);
+      else next.add(sectionId);
+      localStorage.setItem(
+        `project-${projectId}-collapsed-sections`,
+        JSON.stringify([...next])
+      );
+      return next;
+    });
+  }, [projectId]);
+
   // Dialog states
   const [showTaskDialog, setShowTaskDialog] = useState(false);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [editingTask, setEditingTask] = useState<TaskWithProject | null>(null);
   const [defaultStatus, setDefaultStatus] = useState<TaskStatus>("todo");
+  const [defaultSectionId, setDefaultSectionId] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [deleteSectionConfirm, setDeleteSectionConfirm] = useState<string | null>(null);
 
   // Handle task creation
   const handleCreateTask = useCallback(
     async (data: CreateTaskInput | UpdateTaskInput) => {
+      // Compute section_position for tasks created in a section
+      let sectionPosition = 0;
+      if (defaultSectionId && project) {
+        const sectionTasks = project.tasks.filter(
+          (t) => t.section_id === defaultSectionId
+        );
+        sectionPosition = sectionTasks.length;
+      }
+
       const result = await createTask({
         ...data,
         project_id: projectId,
+        section_id: defaultSectionId,
+        section_position: defaultSectionId ? sectionPosition : 0,
       } as CreateTaskInput);
       if (result) {
         refetch();
       }
     },
-    [createTask, refetch, projectId]
+    [createTask, refetch, projectId, defaultSectionId, project]
   );
 
   // Handle task update
@@ -276,8 +324,9 @@ export default function ProjectTasksPage() {
   );
 
   // Handle add task (from column header or list view)
-  const handleAddTask = useCallback((status: TaskStatus) => {
+  const handleAddTask = useCallback((status: TaskStatus, sectionId?: string | null) => {
     setDefaultStatus(status);
+    setDefaultSectionId(sectionId ?? null);
     setEditingTask(null);
     if (isMobile) {
       setShowQuickAdd(true);
@@ -332,8 +381,66 @@ export default function ProjectTasksPage() {
     [createTask, refetch, projectId]
   );
 
+  // Section handlers
+  const handleCreateSection = useCallback(
+    async (name: string) => {
+      const position = sections.length;
+      await createSection({ project_id: projectId, name, position });
+      refetchSections();
+    },
+    [createSection, projectId, sections.length, refetchSections]
+  );
+
+  const handleRenameSection = useCallback(
+    async (sectionId: string, name: string) => {
+      await updateSection(sectionId, projectId, { name });
+    },
+    [updateSection, projectId]
+  );
+
+  const handleDeleteSectionConfirm = useCallback(async () => {
+    if (!deleteSectionConfirm) return;
+    await deleteSectionMutation(deleteSectionConfirm, projectId);
+    setDeleteSectionConfirm(null);
+    refetch();
+  }, [deleteSectionConfirm, deleteSectionMutation, projectId, refetch]);
+
+  const handleSectionReorder = useCallback(
+    async (updates: Array<{ id: string; position: number }>) => {
+      return reorderSections(projectId, updates);
+    },
+    [reorderSections, projectId]
+  );
+
+  const handleTaskMoveToSection = useCallback(
+    async (
+      taskId: string,
+      sectionId: string | null,
+      sectionPosition: number
+    ) => {
+      const success = await moveTaskToSection(taskId, sectionId, sectionPosition);
+      if (success) {
+        // Update project cache optimistically
+        setProject((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            tasks: prev.tasks.map((t) =>
+              t.id === taskId
+                ? { ...t, section_id: sectionId, section_position: sectionPosition }
+                : t
+            ),
+          };
+        });
+      }
+      return success;
+    },
+    [moveTaskToSection, setProject]
+  );
+
   const handleQuickCreate = () => {
     setDefaultStatus("todo");
+    setDefaultSectionId(null);
     setEditingTask(null);
     if (isMobile) {
       setShowQuickAdd(true);
@@ -465,11 +572,19 @@ export default function ProjectTasksPage() {
             sortDirection={sortDirection}
           />
         ) : (
-          <TaskListView
+          <SectionedTaskListView
             tasks={filteredTasks}
+            sections={sections}
+            collapsedSectionIds={collapsedSectionIds}
+            onToggleSectionCollapse={handleToggleSectionCollapse}
             onTaskClick={handleOpenDetails}
             onStatusToggle={handleStatusToggle}
             onAddTask={handleAddTask}
+            onCreateSection={handleCreateSection}
+            onRenameSection={handleRenameSection}
+            onDeleteSection={(id) => setDeleteSectionConfirm(id)}
+            onTaskMove={handleTaskMoveToSection}
+            onSectionReorder={handleSectionReorder}
             sortField={sortField}
             sortDirection={sortDirection}
           />
@@ -481,7 +596,10 @@ export default function ProjectTasksPage() {
         open={showTaskDialog}
         onOpenChange={(open) => {
           setShowTaskDialog(open);
-          if (!open) setEditingTask(null);
+          if (!open) {
+            setEditingTask(null);
+            setDefaultSectionId(null);
+          }
         }}
         projects={[project as Project]}
         profiles={profiles}
@@ -489,6 +607,7 @@ export default function ProjectTasksPage() {
         defaultStatus={defaultStatus}
         defaultAssigneeId={user?.id ?? null}
         defaultProjectId={projectId}
+        defaultSectionId={defaultSectionId}
         onSubmit={editingTask ? handleUpdateTask : handleCreateTask}
         loading={mutationLoading}
       />
@@ -496,22 +615,35 @@ export default function ProjectTasksPage() {
       {/* Quick add task drawer (mobile) */}
       <QuickAddTask
         open={showQuickAdd}
-        onOpenChange={setShowQuickAdd}
+        onOpenChange={(open) => {
+          setShowQuickAdd(open);
+          if (!open) setDefaultSectionId(null);
+        }}
         onSubmit={handleQuickAddSubmit}
         projects={[project as Project]}
         profiles={profiles}
         loading={mutationLoading}
         defaultAssigneeId={user?.id ?? null}
         defaultProjectId={projectId}
+        defaultSectionId={defaultSectionId}
       />
 
-      {/* Delete confirmation dialog */}
+      {/* Delete task confirmation dialog */}
       <DeleteConfirmationDialog
         open={!!deleteConfirm}
         onOpenChange={(open) => !open && setDeleteConfirm(null)}
         onConfirm={handleDeleteConfirm}
         title="Delete Task"
         description="Are you sure you want to delete this task? This action cannot be undone."
+      />
+
+      {/* Delete section confirmation dialog */}
+      <DeleteConfirmationDialog
+        open={!!deleteSectionConfirm}
+        onOpenChange={(open) => !open && setDeleteSectionConfirm(null)}
+        onConfirm={handleDeleteSectionConfirm}
+        title="Delete Section"
+        description="Are you sure you want to delete this section? Tasks in this section will become unsectioned. This action cannot be undone."
       />
     </AppShell>
   );

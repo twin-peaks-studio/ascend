@@ -43,6 +43,7 @@ interface QuickAddTaskProps {
   loading?: boolean;
   defaultAssigneeId?: string | null;
   defaultProjectId?: string | null;
+  defaultSectionId?: string | null;
 }
 
 /**
