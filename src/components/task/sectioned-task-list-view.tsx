@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useRef } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -86,6 +86,7 @@ export function SectionedTaskListView({
 }: SectionedTaskListViewProps) {
   const [activeTask, setActiveTask] = useState<TaskWithProject | null>(null);
   const [activeSectionId, setActiveSectionId] = useState<string | null>(null);
+  const pendingScrollRestore = useRef<number | null>(null);
 
   // Configure drag sensors (same as kanban board)
   const sensors = useSensors(
@@ -299,7 +300,17 @@ export function SectionedTaskListView({
           newPosition = overIndex >= 0 ? overIndex : filteredTasks.length;
         }
 
+        // Preserve scroll position across the re-render caused by the task move
+        const scrollY = window.scrollY;
+        pendingScrollRestore.current = scrollY;
         await onTaskMove(activeId, targetSectionId, newPosition);
+        // Restore after React re-renders the DOM
+        requestAnimationFrame(() => {
+          if (pendingScrollRestore.current !== null) {
+            window.scrollTo(0, pendingScrollRestore.current);
+            pendingScrollRestore.current = null;
+          }
+        });
       }
     },
     [
@@ -384,6 +395,11 @@ export function SectionedTaskListView({
         onDragEnd={handleDragEnd}
       >
         <div className="space-y-3">
+          {/* Add section at top */}
+          {onCreateSection && (
+            <SectionInlineCreate onSubmit={onCreateSection} />
+          )}
+
           {/* Unsectioned tasks */}
           {unsectionedTasks.length > 0 && (
             <div className="bg-card rounded-lg border">
@@ -526,12 +542,6 @@ export function SectionedTaskListView({
         </DragOverlay>
       </DndContext>
 
-      {/* Add section button */}
-      {onCreateSection && (
-        <div className="mt-2">
-          <SectionInlineCreate onSubmit={onCreateSection} />
-        </div>
-      )}
     </div>
   );
 }
