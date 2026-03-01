@@ -395,11 +395,6 @@ export function SectionedTaskListView({
         onDragEnd={handleDragEnd}
       >
         <div className="space-y-3">
-          {/* Add section at top */}
-          {onCreateSection && (
-            <SectionInlineCreate onSubmit={onCreateSection} />
-          )}
-
           {/* Unsectioned tasks */}
           {unsectionedTasks.length > 0 && (
             <div className="bg-card rounded-lg border">
@@ -542,6 +537,12 @@ export function SectionedTaskListView({
         </DragOverlay>
       </DndContext>
 
+      {/* Add section button */}
+      {onCreateSection && (
+        <div className="mt-2">
+          <SectionInlineCreate onSubmit={onCreateSection} />
+        </div>
+      )}
     </div>
   );
 }
