@@ -164,9 +164,10 @@ export function SectionedTaskListView({
     []
   );
 
-  // Helper: extract section ID from sortable ID
+  // Helper: extract section ID from sortable or droppable ID
   const extractSectionId = useCallback((id: string): string => {
-    return id.replace("section-", "");
+    if (id.startsWith("section-drop-")) return id.slice("section-drop-".length);
+    return id.slice("section-".length);
   }, []);
 
   // Handle drag start
@@ -238,8 +239,8 @@ export function SectionedTaskListView({
       const activeId = active.id as string;
       const overId = over.id as string;
 
-      // Handle section reordering
-      if (isSectionId(activeId) && isSectionId(overId)) {
+      // Handle section reordering (only for section sortable IDs, not droppable containers)
+      if (isSectionId(activeId) && isSectionId(overId) && !overId.startsWith("section-drop-")) {
         const activeSid = extractSectionId(activeId);
         const overSid = extractSectionId(overId);
 
