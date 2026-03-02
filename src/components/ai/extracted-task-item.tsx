@@ -167,7 +167,7 @@ export function ExtractedTaskItem({
                   onChange={(e) => onUpdate({ description: e.target.value })}
                   onBlur={() => setIsEditingDescription(false)}
                   className="text-xs min-h-[60px] resize-none"
-                  maxLength={500}
+                  maxLength={1000}
                 />
               ) : (
                 <button

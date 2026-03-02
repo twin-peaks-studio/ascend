@@ -41,6 +41,18 @@ This project uses React Query (`@tanstack/react-query`) for data fetching. Key p
 - Query keys are defined in each hook file (e.g., `projectKeys`, `taskKeys`, `noteKeys`)
 - **Prefer `setQueriesData` over `invalidateQueries`** for update/archive/flag mutations — in-place cache updates preserve list order and avoid unnecessary refetches. Only use `invalidateQueries` when fresh server-generated data is needed (e.g., after `createTask` which needs a new ID and position). See `deleteTask()` and `updateTask()` in `src/hooks/use-tasks.ts` for the canonical pattern.
 
+### AI Task Extraction — `sourceText` Field
+
+The AI task extraction pipeline (`src/lib/ai/`) includes a `sourceText` field that carries the verbatim excerpt from the source content that prompted each task. The field flows through:
+
+1. **Prompt** (`src/lib/ai/prompts.ts`) — `SYSTEM_PROMPT` instructs the AI to return `sourceText` alongside each task
+2. **Validation** (`src/lib/ai/validate-extraction.ts`) — `extractedTaskSchema` validates `sourceText: z.string().max(300).nullable()`
+3. **Type** (`src/lib/ai/types.ts`) — `RawExtractedTask.sourceText: string | null`
+4. **Assembly** (`src/hooks/use-task-extraction.ts`, `toClientTasks()`) — `sourceText` is merged into the task `description` as `"\n\nOriginal Content: {sourceText}"` before the task reaches the review dialog. The client-side `ExtractedTask.description` already contains the merged text; `sourceText` is otherwise inert on the client.
+5. **Persistence** — The merged `description` is saved to the `tasks` table. No schema migration needed — the column is `text` with a 5000-char app-side limit.
+
+**Do not move the assembly step** to `createSelectedTasks()` — `toClientTasks()` is the correct place because the user reviews and can edit the full merged description during the review step.
+
 ### Persisted UI State (localStorage)
 Task view preferences are persisted in localStorage so they survive page navigation (e.g., `/tasks` → `/tasks/[id]` → back):
 - `tasks-view-mode` / `project-tasks-view-mode` — board or list layout

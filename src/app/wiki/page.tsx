@@ -466,6 +466,7 @@ const sections: WikiSection[] = [
       {
         heading: "Smart Features",
         list: [
+          "Source Attribution — Each task description includes an \"Original Content:\" section with the verbatim excerpt from your note that the task was derived from",
           "Duplicate Prevention — The AI checks existing project tasks to avoid creating duplicates",
           "Context Awareness — Considers the project name and description for better extraction",
           "Priority Inference — Urgency language like \"ASAP\", \"critical\", or \"blocking\" results in higher priorities",

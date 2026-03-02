@@ -33,6 +33,8 @@ export interface RawExtractedTask {
   priority: "low" | "medium" | "high" | "urgent";
   suggestedDueDate: string | null;
   confidence: number;
+  /** Verbatim excerpt from the source content that prompted this task */
+  sourceText: string | null;
 }
 
 // Client-side extracted task with UI state

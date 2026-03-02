@@ -36,14 +36,25 @@ function generateId(): string {
 }
 
 /**
- * Convert raw AI tasks to client tasks with UI state
+ * Convert raw AI tasks to client tasks with UI state.
+ * Merges sourceText into the description so the user reviews
+ * and edits the full combined text as one field.
  */
 function toClientTasks(rawTasks: RawExtractedTask[]): ExtractedTask[] {
-  return rawTasks.map((task) => ({
-    ...task,
-    id: generateId(),
-    selected: true, // Select all by default
-  }));
+  return rawTasks.map((task) => {
+    const mergedDescription = task.sourceText
+      ? [task.description, `Original Content: ${task.sourceText}`]
+          .filter(Boolean)
+          .join("\n\n")
+      : task.description;
+
+    return {
+      ...task,
+      description: mergedDescription,
+      id: generateId(),
+      selected: true, // Select all by default
+    };
+  });
 }
 
 /**

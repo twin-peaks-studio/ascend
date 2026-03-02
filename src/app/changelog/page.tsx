@@ -57,6 +57,22 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: "March 1, 2026",
+    version: "0.15.2",
+    title: "AI Task Extraction Now Includes Source Context",
+    description:
+      "Each AI-extracted task now includes the original excerpt from your note that prompted it, so you always know where a task came from.",
+    features: [
+      {
+        icon: Sparkles,
+        title: "Source Attribution in Extracted Tasks",
+        description:
+          "When AI extracts tasks from a note, each task's description now includes an \"Original Content:\" section with the verbatim phrase or sentence from your note that the task was derived from. This makes it easy to trace any task back to its origin. The text is fully editable in the review dialog before tasks are created.",
+        tag: "improved",
+      },
+    ],
+  },
+  {
+    date: "March 1, 2026",
     version: "0.15.1",
     title: "Improved Date & Time Picker",
     description:
