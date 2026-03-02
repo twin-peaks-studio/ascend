@@ -607,6 +607,7 @@ export default function ProjectTasksPage() {
           <SectionedTaskListView
             tasks={filteredTasks}
             sections={sections}
+            profiles={profiles}
             collapsedSectionIds={collapsedSectionIds}
             onToggleSectionCollapse={handleToggleSectionCollapse}
             onTaskClick={handleOpenDetails}

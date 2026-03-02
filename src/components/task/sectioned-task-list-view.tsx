@@ -30,7 +30,7 @@ import {
   type TaskSortField,
   type TaskSortDirection,
 } from "@/lib/task-sort";
-import type { TaskWithProject, TaskStatus, Section } from "@/types";
+import type { TaskWithProject, TaskStatus, Section, Profile } from "@/types";
 
 const UNSECTIONED_ID = "__unsectioned__";
 
@@ -55,6 +55,7 @@ interface SectionedTaskListViewProps {
   ) => Promise<boolean>;
   sortField?: TaskSortField;
   sortDirection?: TaskSortDirection;
+  profiles?: Profile[];
 }
 
 function DroppableContainer({
@@ -83,6 +84,7 @@ export function SectionedTaskListView({
   onSectionReorder,
   sortField = "position",
   sortDirection = "asc",
+  profiles,
 }: SectionedTaskListViewProps) {
   const [activeTask, setActiveTask] = useState<TaskWithProject | null>(null);
   const [activeSectionId, setActiveSectionId] = useState<string | null>(null);
@@ -146,6 +148,11 @@ export function SectionedTaskListView({
   const sectionSortableIds = useMemo(
     () => sections.map((s) => `section-${s.id}`),
     [sections]
+  );
+
+  const profileMap = useMemo(
+    () => new Map((profiles ?? []).map((p) => [p.id, p])),
+    [profiles]
   );
 
   // Helper: find which section a task belongs to
@@ -357,6 +364,7 @@ export function SectionedTaskListView({
                       task: TaskWithProject | import("@/types").Task
                     ) => void
                   }
+                  assignee={task.assignee_id ? (profileMap.get(task.assignee_id) ?? null) : null}
                 />
               ))}
             </div>
@@ -418,6 +426,7 @@ export function SectionedTaskListView({
                           task: TaskWithProject | import("@/types").Task
                         ) => void
                       }
+                      assignee={task.assignee_id ? (profileMap.get(task.assignee_id) ?? null) : null}
                     />
                   ))}
                 </SortableContext>
@@ -494,6 +503,7 @@ export function SectionedTaskListView({
                                     | import("@/types").Task
                                 ) => void
                               }
+                              assignee={task.assignee_id ? (profileMap.get(task.assignee_id) ?? null) : null}
                             />
                           ))
                         ) : (
