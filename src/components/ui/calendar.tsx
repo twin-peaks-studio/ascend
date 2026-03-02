@@ -19,6 +19,9 @@ function Calendar({
 }: CalendarProps) {
   // Show 12 months for scrolling (6 before, current, 5 after)
   const numberOfMonths = 12;
+  // Extract selected safely — DayPickerProps is a discriminated union; 'selected'
+  // only exists on mode="single"|"multiple"|"range", not on mode=undefined.
+  const selected = 'selected' in props ? props.selected : undefined;
 
   // Calculate date range - start 6 months ago to allow past date selection
   const { startMonth, endMonth, defaultMonth } = React.useMemo(() => {
@@ -59,7 +62,7 @@ function Calendar({
       const { scrollHeight, clientHeight } = container;
       container.scrollTop = (scrollHeight - clientHeight) / 2;
     }
-  }, [props.selected]);
+  }, [selected]);
 
   // Handle wheel events explicitly to ensure scrolling works in popovers
   const handleWheel = React.useCallback((e: React.WheelEvent<HTMLDivElement>) => {
