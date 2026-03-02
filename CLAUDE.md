@@ -46,7 +46,7 @@ This project uses React Query (`@tanstack/react-query`) for data fetching. Key p
 The AI task extraction pipeline (`src/lib/ai/`) includes a `sourceText` field that carries the verbatim excerpt from the source content that prompted each task. The field flows through:
 
 1. **Prompt** (`src/lib/ai/prompts.ts`) — `SYSTEM_PROMPT` instructs the AI to return `sourceText` alongside each task
-2. **Validation** (`src/lib/ai/validate-extraction.ts`) — `extractedTaskSchema` validates `sourceText: z.string().max(300).nullable()`
+2. **Validation** (`src/lib/ai/validate-extraction.ts`) — `extractedTaskSchema` validates `sourceText: z.string().max(2000).nullable()`
 3. **Type** (`src/lib/ai/types.ts`) — `RawExtractedTask.sourceText: string | null`
 4. **Assembly** (`src/hooks/use-task-extraction.ts`, `toClientTasks()`) — `sourceText` is merged into the task `description` as `"\n\nOriginal Content: {sourceText}"` before the task reaches the review dialog. The client-side `ExtractedTask.description` already contains the merged text; `sourceText` is otherwise inert on the client.
 5. **Persistence** — The merged `description` is saved to the `tasks` table. No schema migration needed — the column is `text` with a 5000-char app-side limit.

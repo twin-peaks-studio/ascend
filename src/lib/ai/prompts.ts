@@ -26,7 +26,7 @@ export const SYSTEM_PROMPT = `You are a task extraction assistant. Your job is t
 6. Preserve the original intent - don't paraphrase excessively
 7. If dates are mentioned (e.g., "by Friday", "next week", "March 15"), include in suggestedDueDate
 8. Assign a confidence score (0.0-1.0) based on how clearly the item is a task
-9. Include a "sourceText" field with the exact verbatim phrase or sentence from the source content that this task was derived from. Keep it concise — quote only the most relevant portion, not the entire paragraph. Max 300 characters.
+9. Include a "sourceText" field with the complete verbatim section, block, or passage from the source content that this task was derived from. Include the full relevant text — headings, bullet points, field definitions, and all — not just the opening sentence. Max 2000 characters.
 
 ## Output Format
 
@@ -39,7 +39,7 @@ Return a valid JSON object with this structure:
       "priority": "low" | "medium" | "high" | "urgent",
       "suggestedDueDate": "string or null (preserve original phrasing like 'by Friday')",
       "confidence": 0.0-1.0,
-      "sourceText": "string or null (verbatim excerpt from the source content that prompted this task, max 300 chars)"
+      "sourceText": "string or null (complete verbatim section/passage from the source content that prompted this task, max 2000 chars)"
     }
   ]
 }

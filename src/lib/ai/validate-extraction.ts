@@ -45,7 +45,7 @@ export const extractedTaskSchema = z.object({
   priority: taskPrioritySchema,
   suggestedDueDate: z.string().max(100).nullable(),
   confidence: z.number().min(0).max(1),
-  sourceText: z.string().max(300).nullable(),
+  sourceText: z.string().max(2000).nullable(),
 });
 
 /**
