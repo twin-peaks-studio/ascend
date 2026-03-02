@@ -133,7 +133,7 @@ export async function POST(
           },
           body: JSON.stringify({
             model: CLAUDE_MODEL,
-            max_tokens: 4096,
+            max_tokens: 16384,
             system: SYSTEM_PROMPT,
             messages: [{ role: "user", content: userPrompt }],
           }),
