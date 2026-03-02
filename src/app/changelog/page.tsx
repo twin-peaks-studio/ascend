@@ -57,6 +57,22 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: "March 1, 2026",
+    version: "0.15.1",
+    title: "Improved Date & Time Picker",
+    description:
+      "The date picker now scrolls to the selected date on open, uses 12-hour time format, and requires an explicit Save to commit changes.",
+    features: [
+      {
+        icon: Clock,
+        title: "Improved Date & Time Picker",
+        description:
+          "Calendar automatically scrolls to the selected date (or today) when opened. Time now uses 12-hour format with a tappable AM/PM toggle. A Save button confirms your selection before committing — clicking outside or pressing Escape discards changes.",
+        tag: "improved",
+      },
+    ],
+  },
+  {
+    date: "March 1, 2026",
     version: "0.15.0",
     title: "Hide Completed Tasks by Default",
     description:

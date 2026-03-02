@@ -242,9 +242,12 @@ export default function TaskDetailPage() {
         setPendingDueDate(null);
         return;
       }
-      // Preserve time from pending date
+      // Preserve time from pending date; default to current time on first pick
       if (pendingDueDate) {
         date.setHours(pendingDueDate.getHours(), pendingDueDate.getMinutes(), 0, 0);
+      } else {
+        const now = new Date();
+        date.setHours(now.getHours(), Math.floor(now.getMinutes() / 5) * 5, 0, 0);
       }
       setPendingDueDate(date);
     },
@@ -255,18 +258,24 @@ export default function TaskDetailPage() {
     setPendingDueDate(date);
   }, []);
 
+  // Extracted save logic shared by desktop and mobile Save buttons
+  const handleSaveDueDate = useCallback(async () => {
+    if (!task) return;
+    const newValue = pendingDueDate?.toISOString() || null;
+    if (newValue !== (task.due_date || null)) {
+      await handleUpdate({ due_date: newValue });
+    }
+  }, [pendingDueDate, task, handleUpdate]);
+
   const handleDatePickerOpenChange = useCallback(
-    async (open: boolean) => {
-      if (!open && datePickerOpen && task) {
-        // Popover is closing — save the pending value
-        const newValue = pendingDueDate?.toISOString() || null;
-        if (newValue !== (task.due_date || null)) {
-          await handleUpdate({ due_date: newValue });
-        }
+    (open: boolean) => {
+      if (!open && datePickerOpen) {
+        // Discard pending — reset to last committed value
+        setPendingDueDate(task?.due_date ? new Date(task.due_date) : null);
       }
       setDatePickerOpen(open);
     },
-    [datePickerOpen, pendingDueDate, task, handleUpdate]
+    [datePickerOpen, task]
   );
 
   const handleClearDueDate = useCallback(async () => {
@@ -276,16 +285,13 @@ export default function TaskDetailPage() {
     setMobileDateExpanded(false);
   }, [handleUpdate]);
 
-  const handleMobileDateToggle = useCallback(async () => {
-    if (mobileDateExpanded && task) {
-      // Collapsing — save the pending value
-      const newValue = pendingDueDate?.toISOString() || null;
-      if (newValue !== (task.due_date || null)) {
-        await handleUpdate({ due_date: newValue });
-      }
+  const handleMobileDateToggle = useCallback(() => {
+    if (mobileDateExpanded) {
+      // Discard pending — reset to last committed value
+      setPendingDueDate(task?.due_date ? new Date(task.due_date) : null);
     }
     setMobileDateExpanded((prev) => !prev);
-  }, [mobileDateExpanded, pendingDueDate, task, handleUpdate]);
+  }, [mobileDateExpanded, task]);
 
   const handleDelete = useCallback(async () => {
     if (!task) return;
@@ -585,18 +591,25 @@ export default function TaskDetailPage() {
                     <>
                       <div className="border-t" />
                       <TimePicker value={pendingDueDate} onChange={handleDueTimeChange} />
-                      {pendingDueDate && (
-                        <div className="p-2 border-t">
+                      <div className="flex gap-2 p-2 border-t">
+                        {pendingDueDate && (
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="w-full"
+                            className="flex-1 text-muted-foreground"
                             onClick={handleClearDueDate}
                           >
-                            Clear date
+                            Clear
                           </Button>
-                        </div>
-                      )}
+                        )}
+                        <Button
+                          size="sm"
+                          className="flex-1"
+                          onClick={async () => { await handleSaveDueDate(); setMobileDateExpanded(false); }}
+                        >
+                          Save
+                        </Button>
+                      </div>
                     </>
                   }
                 />
@@ -822,18 +835,25 @@ export default function TaskDetailPage() {
                     <>
                       <div className="border-t" />
                       <TimePicker value={pendingDueDate} onChange={handleDueTimeChange} />
-                      {pendingDueDate && (
-                        <div className="p-2 border-t">
+                      <div className="flex gap-2 p-2 border-t">
+                        {pendingDueDate && (
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="w-full"
+                            className="flex-1 text-muted-foreground"
                             onClick={handleClearDueDate}
                           >
-                            Clear date
+                            Clear
                           </Button>
-                        </div>
-                      )}
+                        )}
+                        <Button
+                          size="sm"
+                          className="flex-1"
+                          onClick={async () => { await handleSaveDueDate(); setDatePickerOpen(false); }}
+                        >
+                          Save
+                        </Button>
+                      </div>
                     </>
                   }
                 />

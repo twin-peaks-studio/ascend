@@ -33,14 +33,33 @@ function Calendar({
   const scrollRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
-    // Scroll to approximately the middle (current month) on mount
-    if (scrollRef.current) {
-      const scrollHeight = scrollRef.current.scrollHeight;
-      const clientHeight = scrollRef.current.clientHeight;
-      // Scroll to roughly 50% (where current month should be)
-      scrollRef.current.scrollTop = (scrollHeight - clientHeight) / 2;
+    if (!scrollRef.current) return;
+    const container = scrollRef.current;
+
+    // DayPicker v9 sets data-day="YYYY-MM-DD" on the gridcell <td> for each day.
+    // Prefer the selected cell in its OWN month (:not([data-outside])) so we scroll
+    // to the correct month, not to the adjacent month where it appears as an outside day.
+    const todayStr = new Date().toISOString().slice(0, 10);
+
+    const target =
+      (container.querySelector('[aria-selected="true"]:not([data-outside])') as HTMLElement | null) ||
+      (container.querySelector('[aria-selected="true"]') as HTMLElement | null) ||
+      (container.querySelector(`[data-day="${todayStr}"]:not([data-outside])`) as HTMLElement | null) ||
+      (container.querySelector(`[data-day="${todayStr}"]`) as HTMLElement | null);
+
+    if (target) {
+      // Traverse up to the month container (parent of the month_grid <table>)
+      // so the month header is always visible, regardless of which row the date is in
+      const monthTable = target.closest('table');
+      const monthEl = (monthTable?.parentElement as HTMLElement | null) ?? target;
+      // Use offsetTop (relative to this container as offsetParent via position:relative)
+      // so the calculation is independent of where the Popover sits in the viewport.
+      container.scrollTop = monthEl.offsetTop - 8;
+    } else {
+      const { scrollHeight, clientHeight } = container;
+      container.scrollTop = (scrollHeight - clientHeight) / 2;
     }
-  }, []);
+  }, [props.selected]);
 
   // Handle wheel events explicitly to ensure scrolling works in popovers
   const handleWheel = React.useCallback((e: React.WheelEvent<HTMLDivElement>) => {
@@ -72,7 +91,7 @@ function Calendar({
       onWheel={handleWheel}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
-      className={cn("max-h-[200px] overflow-y-scroll overscroll-contain", calendarFooter && "max-h-[240px]")}
+      className={cn("relative max-h-[220px] overflow-y-scroll overscroll-contain", calendarFooter && "max-h-[300px]")}
       style={{
         WebkitOverflowScrolling: 'touch',
         touchAction: 'pan-y',

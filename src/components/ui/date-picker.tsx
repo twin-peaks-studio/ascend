@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { format } from "date-fns";
-import { CalendarIcon, X } from "lucide-react";
+import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -29,27 +29,57 @@ export function DatePicker({
   disabled = false,
 }: DatePickerProps) {
   const [open, setOpen] = React.useState(false);
+  const [pendingDate, setPendingDate] = React.useState<Date | null | undefined>(value);
+
+  // Sync pending when value changes externally (while popover is closed)
+  const prevValueRef = React.useRef(value);
+  if (prevValueRef.current !== value) {
+    prevValueRef.current = value;
+    if (!open) setPendingDate(value);
+  }
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (nextOpen) {
+      // Seed pending from committed value on open
+      setPendingDate(value);
+    }
+    setOpen(nextOpen);
+  };
 
   const handleSelect = (date: Date | undefined) => {
     if (!date) {
-      onChange(null);
-      setOpen(false);
+      setPendingDate(null);
       return;
     }
-    // Preserve existing time when changing the date
-    if (value) {
-      date.setHours(value.getHours(), value.getMinutes(), 0, 0);
+    // Preserve existing time; default to current time on first pick
+    const source = pendingDate ?? value;
+    if (source) {
+      date.setHours(source.getHours(), source.getMinutes(), 0, 0);
+    } else {
+      const now = new Date();
+      date.setHours(now.getHours(), Math.floor(now.getMinutes() / 5) * 5, 0, 0);
     }
-    onChange(date);
+    setPendingDate(date);
   };
 
   const handleTimeChange = (date: Date) => {
-    onChange(date);
+    setPendingDate(date);
   };
 
-  const handleClear = (e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleSave = () => {
+    onChange(pendingDate ?? null);
+    setOpen(false);
+  };
+
+  const handleClear = () => {
+    setPendingDate(null);
     onChange(null);
+    setOpen(false);
+  };
+
+  const handleDiscard = () => {
+    setPendingDate(value);
+    setOpen(false);
   };
 
   const formatDisplay = (date: Date) => {
@@ -58,7 +88,7 @@ export function DatePicker({
   };
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
@@ -71,24 +101,38 @@ export function DatePicker({
         >
           <CalendarIcon className="mr-2 h-4 w-4" />
           {value ? formatDisplay(value) : <span>{placeholder}</span>}
-          {value && (
-            <X
-              className="ml-auto h-4 w-4 opacity-50 hover:opacity-100"
-              onClick={handleClear}
-            />
-          )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0" align="start">
+      <PopoverContent
+        className="w-auto p-0"
+        align="start"
+        onEscapeKeyDown={handleDiscard}
+        onInteractOutside={handleDiscard}
+      >
         <Calendar
           mode="single"
-          selected={value || undefined}
+          selected={pendingDate || undefined}
           onSelect={handleSelect}
           initialFocus
           calendarFooter={
             <>
               <div className="border-t" />
-              <TimePicker value={value} onChange={handleTimeChange} />
+              <TimePicker value={pendingDate} onChange={handleTimeChange} />
+              <div className="flex gap-2 p-2 border-t">
+                {pendingDate && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="flex-1 text-muted-foreground"
+                    onClick={handleClear}
+                  >
+                    Clear
+                  </Button>
+                )}
+                <Button size="sm" className="flex-1" onClick={handleSave}>
+                  Save
+                </Button>
+              </div>
             </>
           }
         />

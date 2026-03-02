@@ -94,23 +94,32 @@ export function PropertiesPanel({
       setPendingDueDate(null);
       return;
     }
+    // Preserve time from pending date; default to current time on first pick
     if (pendingDueDate) {
       date.setHours(pendingDueDate.getHours(), pendingDueDate.getMinutes(), 0, 0);
+    } else {
+      const now = new Date();
+      date.setHours(now.getHours(), Math.floor(now.getMinutes() / 5) * 5, 0, 0);
     }
     setPendingDueDate(date);
   };
 
   const handleDueTimeChange = (date: Date) => {
-    // If no date selected yet, the TimePicker creates a Date based on today
     setPendingDueDate(date);
   };
 
   const handleDatePickerOpenChange = (open: boolean) => {
     if (!open && datePickerOpen) {
-      // Save on close
-      onDueDateChange(pendingDueDate);
+      // Discard pending — reset to last committed value
+      setPendingDueDate(project.due_date ? new Date(project.due_date) : null);
     }
     setDatePickerOpen(open);
+  };
+
+  // Save logic moved from handleDatePickerOpenChange into explicit Save button
+  const handleSaveProjectDueDate = () => {
+    onDueDateChange(pendingDueDate);
+    setDatePickerOpen(false);
   };
 
   const handleClearProjectDueDate = () => {
@@ -294,6 +303,25 @@ export function PropertiesPanel({
                   <>
                     <div className="border-t" />
                     <TimePicker value={pendingDueDate} onChange={handleDueTimeChange} />
+                    <div className="flex gap-2 p-2 border-t">
+                      {pendingDueDate && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="flex-1 text-muted-foreground"
+                          onClick={handleClearProjectDueDate}
+                        >
+                          Clear
+                        </Button>
+                      )}
+                      <Button
+                        size="sm"
+                        className="flex-1"
+                        onClick={handleSaveProjectDueDate}
+                      >
+                        Save
+                      </Button>
+                    </div>
                   </>
                 }
               />

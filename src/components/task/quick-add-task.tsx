@@ -225,8 +225,12 @@ function QuickAddTaskForm({
                       setDueDate(null);
                       return;
                     }
+                    // Preserve existing time; default to current time on first pick
                     if (dueDate) {
                       date.setHours(dueDate.getHours(), dueDate.getMinutes(), 0, 0);
+                    } else {
+                      const now = new Date();
+                      date.setHours(now.getHours(), Math.floor(now.getMinutes() / 5) * 5, 0, 0);
                     }
                     setDueDate(date);
                   }}
@@ -238,21 +242,28 @@ function QuickAddTaskForm({
                         value={dueDate}
                         onChange={(date) => setDueDate(date)}
                       />
-                      {dueDate && (
-                        <div className="p-2 border-t">
+                      <div className="flex gap-2 p-2 border-t">
+                        {dueDate && (
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="w-full"
+                            className="flex-1 text-muted-foreground"
                             onClick={() => {
                               setDueDate(null);
                               setDatePickerOpen(false);
                             }}
                           >
-                            Clear date
+                            Clear
                           </Button>
-                        </div>
-                      )}
+                        )}
+                        <Button
+                          size="sm"
+                          className="flex-1"
+                          onClick={() => setDatePickerOpen(false)}
+                        >
+                          Done
+                        </Button>
+                      </div>
                     </>
                   }
                 />
