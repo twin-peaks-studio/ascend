@@ -59,6 +59,20 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: "March 3, 2026",
+    version: "0.16.4",
+    title: "Bug Fix — Estimate My Day",
+    description: "Fixed the Estimate My Day feature failing with a validation error when tasks had long descriptions.",
+    features: [
+      {
+        icon: Brain,
+        title: "Estimate My Day — Long Description Fix",
+        description: "Estimate My Day now works correctly even when tasks have long descriptions (e.g. from AI extraction). Descriptions are trimmed before being sent to the AI so they no longer exceed the API's validation limit.",
+        tag: "fix",
+      },
+    ],
+  },
+  {
+    date: "March 3, 2026",
     version: "0.16.3",
     title: "Bug Fix — Mobile Date Picker (New Task)",
     description: "Fixed the date picker in the new task drawer not saving the due date on mobile when no date had been previously selected.",

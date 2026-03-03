@@ -48,7 +48,10 @@ export function useTaskEstimation() {
       const payload = tasks.map((t) => ({
         id: t.id,
         title: t.title,
-        description: t.description ?? null,
+        // Truncate to 500 chars — the prompt only uses slice(0,300) and
+        // the API schema enforces max(1000). Avoids 400 errors on tasks
+        // with long descriptions (e.g. "Original Content: …" appended).
+        description: t.description ? t.description.slice(0, 500) : null,
         priority: t.priority,
         projectName: t.project?.title ?? null,
       }));
