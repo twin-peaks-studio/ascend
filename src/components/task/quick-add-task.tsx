@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useLayoutEffect, useEffect } from "react";
+import { useState, useRef, useCallback, useLayoutEffect, useEffect } from "react";
 import {
   Calendar,
   Flag,
@@ -109,6 +109,7 @@ function QuickAddTaskForm({
 
   // UI state for popovers
   const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const dueDateBeforeOpen = useRef<Date | null>(null);
   const [priorityOpen, setPriorityOpen] = useState(false);
   const [assigneeOpen, setAssigneeOpen] = useState(false);
   const [projectOpen, setProjectOpen] = useState(false);
@@ -116,6 +117,18 @@ function QuickAddTaskForm({
 
   // Refs
   const titleInputRef = useRef<HTMLInputElement>(null);
+
+  const handleDatePickerOpenChange = useCallback((open: boolean) => {
+    if (open) {
+      dueDateBeforeOpen.current = dueDate; // save for potential revert on dismiss
+      if (!dueDate) {
+        const d = new Date();
+        d.setHours(d.getHours(), Math.floor(d.getMinutes() / 5) * 5, 0, 0);
+        setDueDate(d);
+      }
+    }
+    setDatePickerOpen(open);
+  }, [dueDate]);
 
   // Focus title input on mount
   useLayoutEffect(() => {
@@ -201,7 +214,7 @@ function QuickAddTaskForm({
         <div className="mt-4 -mx-4 px-4 overflow-x-auto">
           <div className="flex items-center gap-2 pb-2">
             {/* Date chip */}
-            <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+            <Popover open={datePickerOpen} onOpenChange={handleDatePickerOpenChange}>
               <PopoverTrigger asChild>
                 <button
                   type="button"
@@ -216,7 +229,12 @@ function QuickAddTaskForm({
                   <span>{dueDate ? formatDueDate(dueDate) : "Date"}</span>
                 </button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
+              <PopoverContent
+                className="w-auto p-0"
+                align="start"
+                onInteractOutside={() => { setDueDate(dueDateBeforeOpen.current); setDatePickerOpen(false); }}
+                onEscapeKeyDown={() => { setDueDate(dueDateBeforeOpen.current); setDatePickerOpen(false); }}
+              >
                 <CalendarComponent
                   mode="single"
                   selected={dueDate || undefined}

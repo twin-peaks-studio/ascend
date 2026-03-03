@@ -154,7 +154,7 @@ export default function TaskDetailPage() {
   const [prevDueDate, setPrevDueDate] = useState<string | null>(task?.due_date ?? null);
   if (task && task.due_date !== prevDueDate) {
     setPrevDueDate(task.due_date);
-    if (!datePickerOpen) {
+    if (!datePickerOpen && !mobileDateExpanded) {
       setPendingDueDate(task.due_date ? new Date(task.due_date) : null);
     }
   }

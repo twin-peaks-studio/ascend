@@ -58,6 +58,26 @@ interface ChangelogEntry {
 
 const changelog: ChangelogEntry[] = [
   {
+    date: "March 3, 2026",
+    version: "0.16.3",
+    title: "Bug Fix — Mobile Date Picker (New Task)",
+    description: "Fixed the date picker in the new task drawer not saving the due date on mobile when no date had been previously selected.",
+    features: [
+      {
+        icon: Smartphone,
+        title: "Mobile Date Picker — New Task",
+        description: "Tapping the Date chip when creating a new task now seeds today's date so clicking Done correctly saves it. Dismissing the picker without confirming no longer commits an accidental date.",
+        tag: "fix",
+      },
+      {
+        icon: Calendar,
+        title: "Mobile Date Picker — Task Detail",
+        description: "Fixed an edge case where a background data refresh while the mobile date picker was open could silently reset the selected date before Save was tapped.",
+        tag: "fix",
+      },
+    ],
+  },
+  {
     date: "March 2, 2026",
     version: "0.16.2",
     title: "No Project Filter",
