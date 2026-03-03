@@ -7,6 +7,7 @@ import {
   Moon,
   LayoutDashboard,
   CheckSquare,
+  CalendarDays,
   FolderKanban,
   FileText,
   Timer,
@@ -216,6 +217,55 @@ const sections: WikiSection[] = [
       },
       {
         tip: "On mobile, long-press a task card for 300ms before dragging. This prevents accidental reordering while scrolling.",
+      },
+    ],
+  },
+  {
+    id: "today",
+    icon: CalendarDays,
+    title: "Today",
+    description: "A focused daily view of everything due today and overdue.",
+    content: [
+      {
+        heading: "Overview",
+        paragraphs: [
+          "The Today page (/today) shows every task that is due today or overdue (and not yet completed), grouped by project. It's designed to give you a single, distraction-free view of exactly what needs your attention right now.",
+        ],
+      },
+      {
+        heading: "Task Grouping",
+        paragraphs: [
+          "Tasks are automatically grouped by their parent project. Each group shows a colored dot matching the project color, the project name, and a count of tasks in that group. Tasks without a project appear in a 'No Project' group at the bottom. Within each group, overdue tasks are listed first, then tasks are sorted by priority.",
+        ],
+      },
+      {
+        heading: "Overdue Badge",
+        paragraphs: [
+          "Any task with a due date before today shows a red 'Overdue' badge inline. The header also shows a red badge with the total overdue count so you can see at a glance how many items need urgent attention.",
+        ],
+      },
+      {
+        heading: "Quick Actions on Each Task",
+        list: [
+          "Status circle — Click to mark the task done. It disappears from the Today view immediately.",
+          "Reschedule — Click the calendar icon to open the reschedule popover. Choose Tomorrow, This Weekend (Saturday), or Next Week (Monday +7 days), or pick a custom date. Rescheduled tasks disappear from Today once their new date is no longer today.",
+          "Open task — Click anywhere on the row to navigate to the full task detail page.",
+          "Re-estimate — After AI estimates have been run, a refresh icon appears on each row to re-run estimation for just that one task.",
+        ],
+      },
+      {
+        heading: "AI Day Estimation",
+        paragraphs: [
+          "Click 'Estimate My Day' in the header to send all of today's tasks to Claude for time estimation. Claude returns a realistic time estimate for each task and an overall Day Summary showing: total estimated time, how many hours remain in your day, and a completion likelihood percentage.",
+          "The Day Summary banner uses color coding: green (≥70% likely to complete), amber (40–70%), and red (<40%). The banner can be collapsed to save space. Individual task estimates appear as small badges (e.g., '~30m', '~1.5h') on each row.",
+        ],
+        tip: "Estimates are conservative by design — Claude accounts for context-switching overhead when you have many tasks. Re-running estimation with 'Re-estimate' on an individual task re-sends just that task to get a fresh estimate.",
+      },
+      {
+        heading: "Empty State",
+        paragraphs: [
+          "When you have no tasks due today or overdue, the page shows a 'You're all caught up!' message. Enjoy the moment.",
+        ],
       },
     ],
   },

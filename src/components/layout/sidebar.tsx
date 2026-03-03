@@ -12,6 +12,7 @@ import {
   PanelLeft,
   MessageSquarePlus,
   Newspaper,
+  CalendarDays,
 } from "lucide-react";
 import { AscendLogo } from "@/components/ascend-logo";
 import { cn } from "@/lib/utils";
@@ -31,6 +32,11 @@ const navItems: NavItem[] = [
     href: "/",
     label: "Dashboard",
     icon: LayoutDashboard,
+  },
+  {
+    href: "/today",
+    label: "Today",
+    icon: CalendarDays,
   },
   {
     href: "/tasks",

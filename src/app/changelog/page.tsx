@@ -33,6 +33,7 @@ import {
   MousePointerClick,
   RefreshCw,
   Eye,
+  CalendarDays,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -55,6 +56,32 @@ interface ChangelogEntry {
 }
 
 const changelog: ChangelogEntry[] = [
+  {
+    date: "March 2, 2026",
+    version: "0.16.0",
+    title: "Today Page — Daily Focus View",
+    description: "A dedicated Today page shows all tasks due today and overdue, grouped by project, with AI-powered time estimates and a day completion likelihood score.",
+    features: [
+      {
+        icon: CalendarDays,
+        title: "Today Page",
+        description: "New /today page in the sidebar and mobile nav shows only what needs your attention today — tasks due today plus any overdue tasks, grouped by project.",
+        tag: "new",
+      },
+      {
+        icon: Sparkles,
+        title: "AI Day Estimation",
+        description: "Click 'Estimate My Day' to get AI-powered time estimates for each task and an overall completion likelihood based on your remaining hours.",
+        tag: "new",
+      },
+      {
+        icon: RefreshCw,
+        title: "Quick Reschedule",
+        description: "Reschedule any task directly from the Today view — choose Tomorrow, This Weekend, Next Week, or pick a custom date without opening the task.",
+        tag: "new",
+      },
+    ],
+  },
   {
     date: "March 1, 2026",
     version: "0.15.2",

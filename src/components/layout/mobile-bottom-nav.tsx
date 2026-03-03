@@ -21,6 +21,7 @@ import {
   UserCheck,
   UserX,
   Eye,
+  CalendarDays,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -55,6 +56,11 @@ const navItems: NavItem[] = [
     icon: LayoutDashboard,
   },
   {
+    href: "/today",
+    label: "Today",
+    icon: CalendarDays,
+  },
+  {
     href: "/tasks",
     label: "Tasks",
     icon: CheckSquare,
@@ -63,11 +69,6 @@ const navItems: NavItem[] = [
     href: "/projects",
     label: "Projects",
     icon: FolderKanban,
-  },
-  {
-    href: "/settings",
-    label: "Settings",
-    icon: Settings,
   },
 ];
 

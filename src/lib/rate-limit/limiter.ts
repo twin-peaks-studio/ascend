@@ -121,6 +121,9 @@ export const rateLimitConfigs = {
   // AI extraction endpoint: 5 requests per minute (expensive operation)
   aiExtraction: { requests: 5, window: 60 },
 
+  // AI task estimation endpoint: 10 requests per minute
+  aiEstimation: { requests: 10, window: 60 },
+
   // Email sending: 5 requests per minute
   emailSend: { requests: 5, window: 60 },
 

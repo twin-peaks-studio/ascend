@@ -53,6 +53,23 @@ The AI task extraction pipeline (`src/lib/ai/`) includes a `sourceText` field th
 
 **Do not move the assembly step** to `createSelectedTasks()` — `toClientTasks()` is the correct place because the user reviews and can edit the full merged description during the review step.
 
+### Today Page (`/today`)
+
+The Today page shows tasks due today and overdue tasks (status ≠ "done"), grouped by project. Key files:
+
+- **`src/app/today/page.tsx`** — main page; contains `TodayTaskRow` inline component
+- **`src/hooks/use-today-tasks.ts`** — client-side filter on `useTasks()`; groups by project, sorts overdue-first then by priority weight
+- **`src/hooks/use-task-estimation.ts`** — manages AI estimation state; stores estimates in a `Map<string, TaskEstimate>`
+- **`src/app/api/ai/estimate-tasks/route.ts`** — Claude API route; accepts `{tasks, remainingMinutesInDay}`, returns `{estimates, summary}`
+- **`src/components/today/reschedule-popover.tsx`** — quick chips (Tomorrow / This Weekend / Next Week) + inline DatePicker
+- **`src/components/today/day-summary-banner.tsx`** — collapsible banner with color-coded completion likelihood bar
+
+The Today page has no persisted filter state — it is always date-scoped (today + overdue). No localStorage keys needed.
+
+Rate limit for AI estimation: `aiEstimation: { requests: 10, window: 60 }` in `src/lib/rate-limit/limiter.ts`.
+
+`remainingMinutesInDay` is calculated as minutes from `now` until 10 PM and sent to Claude so it can compute completion likelihood.
+
 ### Persisted UI State (localStorage)
 Task view preferences are persisted in localStorage so they survive page navigation (e.g., `/tasks` → `/tasks/[id]` → back):
 - `tasks-view-mode` / `project-tasks-view-mode` — board or list layout
