@@ -34,6 +34,7 @@ import {
   RefreshCw,
   Eye,
   CalendarDays,
+  FolderX,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -56,6 +57,20 @@ interface ChangelogEntry {
 }
 
 const changelog: ChangelogEntry[] = [
+  {
+    date: "March 2, 2026",
+    version: "0.16.2",
+    title: "No Project Filter",
+    description: "Filter the global task list to show only personal or one-off tasks not assigned to any project.",
+    features: [
+      {
+        icon: FolderX,
+        title: "No Project Filter",
+        description: "The Project filter on the tasks page now includes a \"No Project\" option, letting you quickly view all tasks that aren't tied to any project.",
+        tag: "new",
+      },
+    ],
+  },
   {
     date: "March 2, 2026",
     version: "0.16.1",

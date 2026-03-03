@@ -10,7 +10,7 @@ import { KanbanBoard } from "@/components/board";
 import { TaskDialog, QuickAddTask, TaskListView, TaskSortSelect } from "@/components/task";
 import { Button } from "@/components/ui/button";
 import { parseSortOptionKey, type TaskSortField, type TaskSortDirection } from "@/lib/task-sort";
-import { ProjectFilter, AssigneeFilter, ASSIGNEE_FILTER_ASSIGNED_TO_ME, ASSIGNEE_FILTER_UNASSIGNED } from "@/components/filters";
+import { ProjectFilter, PROJECT_FILTER_NO_PROJECT, AssigneeFilter, ASSIGNEE_FILTER_ASSIGNED_TO_ME, ASSIGNEE_FILTER_UNASSIGNED } from "@/components/filters";
 import { useTasksByStatus, useTaskMutations } from "@/hooks/use-tasks";
 import { useRealtimeTasksGlobal } from "@/hooks/use-realtime-tasks";
 import { useProjects } from "@/hooks/use-projects";
@@ -124,7 +124,10 @@ export default function TasksPage() {
   // Stage 1: Filter tasks by selected projects
   const projectFilteredTasks = useMemo(() => {
     if (selectedProjectIds.length === 0) return tasks;
-    return tasks.filter((task) => task.project_id && selectedProjectIds.includes(task.project_id));
+    return tasks.filter((task) => {
+      const key = task.project_id ?? PROJECT_FILTER_NO_PROJECT;
+      return selectedProjectIds.includes(key);
+    });
   }, [tasks, selectedProjectIds]);
 
   // Stage 2: Filter by assignee
@@ -373,6 +376,7 @@ export default function TasksPage() {
           <div className="flex items-center gap-2">
             <ProjectFilter
               projects={projects as Project[]}
+              tasks={tasks}
               selectedProjectIds={selectedProjectIds}
               onProjectsChange={handleProjectsChange}
             />

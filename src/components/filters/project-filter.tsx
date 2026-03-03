@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Check, ChevronDown, FolderKanban, Search, X } from "lucide-react";
+import { Check, ChevronDown, FolderKanban, FolderX, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -10,21 +10,33 @@ import {
 } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import type { Project } from "@/types";
+import type { Project, TaskWithProject } from "@/types";
+
+export const PROJECT_FILTER_NO_PROJECT = "__no-project__";
 
 interface ProjectFilterProps {
   projects: Project[];
+  tasks: TaskWithProject[];
   selectedProjectIds: string[];
   onProjectsChange: (projectIds: string[]) => void;
 }
 
 export function ProjectFilter({
   projects,
+  tasks,
   selectedProjectIds,
   onProjectsChange,
 }: ProjectFilterProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
+
+  const isNoProjectSelected = selectedProjectIds.includes(PROJECT_FILTER_NO_PROJECT);
+
+  // Count tasks with no project
+  const noProjectCount = useMemo(
+    () => tasks.filter((t) => !t.project_id).length,
+    [tasks]
+  );
 
   // Filter and sort projects - selected ones at the top
   const filteredProjects = useMemo(() => {
@@ -55,6 +67,8 @@ export function ProjectFilter({
     [projects, selectedProjectIds]
   );
 
+  const totalSelectedCount = selectedProjects.length + (isNoProjectSelected ? 1 : 0);
+
   const handleToggle = (projectId: string) => {
     if (selectedProjectIds.includes(projectId)) {
       onProjectsChange(selectedProjectIds.filter((id) => id !== projectId));
@@ -78,18 +92,23 @@ export function ProjectFilter({
           size="sm"
           className={cn(
             "h-9 gap-2 px-3",
-            selectedProjectIds.length > 0 && "bg-primary/10 border-primary/30"
+            totalSelectedCount > 0 && "bg-primary/10 border-primary/30"
           )}
         >
-          {selectedProjects.length > 0 ? (
+          {totalSelectedCount > 0 ? (
             <>
-              {selectedProjects.length === 1 ? (
+              {totalSelectedCount === 1 && selectedProjects.length === 1 ? (
                 <>
                   <div
                     className="h-3 w-3 rounded-sm"
                     style={{ backgroundColor: selectedProjects[0].color }}
                   />
                   <span className="max-w-[120px] truncate">{selectedProjects[0].title}</span>
+                </>
+              ) : totalSelectedCount === 1 && isNoProjectSelected ? (
+                <>
+                  <FolderX className="h-3 w-3" />
+                  <span>No Project</span>
                 </>
               ) : (
                 <>
@@ -102,7 +121,7 @@ export function ProjectFilter({
                       />
                     ))}
                   </div>
-                  <span>{selectedProjects.length} projects</span>
+                  <span>{totalSelectedCount} projects</span>
                 </>
               )}
               <span
@@ -138,7 +157,7 @@ export function ProjectFilter({
             onChange={(e) => setSearch(e.target.value)}
             className="h-8 border-0 p-0 shadow-none focus-visible:ring-0"
           />
-          {selectedProjects.length > 0 && (
+          {totalSelectedCount > 0 && (
             <button
               onClick={handleClearAll}
               className="text-xs text-muted-foreground hover:text-foreground whitespace-nowrap"
@@ -163,28 +182,46 @@ export function ProjectFilter({
             {selectedProjectIds.length === 0 && <Check className="h-4 w-4" />}
           </button>
 
-          {filteredProjects.length > 0 ? (
-            filteredProjects.map((project) => {
-              const isSelected = selectedProjectIds.includes(project.id);
-              return (
-                <button
-                  key={project.id}
-                  onClick={() => handleToggle(project.id)}
-                  className={cn(
-                    "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-muted",
-                    isSelected && "bg-muted"
-                  )}
-                >
-                  <div
-                    className="h-4 w-4 rounded-sm"
-                    style={{ backgroundColor: project.color }}
-                  />
-                  <span className="flex-1 truncate text-left">{project.title}</span>
-                  {isSelected && <Check className="h-4 w-4" />}
-                </button>
-              );
-            })
-          ) : (
+          {/* No Project option */}
+          <button
+            onClick={() => handleToggle(PROJECT_FILTER_NO_PROJECT)}
+            className={cn(
+              "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-muted",
+              isNoProjectSelected && "bg-muted"
+            )}
+          >
+            <FolderX className="h-4 w-4 text-muted-foreground" />
+            <span className="flex-1 text-left">No Project</span>
+            <span className="text-xs text-muted-foreground tabular-nums">{noProjectCount}</span>
+            {isNoProjectSelected && <Check className="h-4 w-4" />}
+          </button>
+
+          {filteredProjects.length > 0 && (
+            <div className="mt-1 border-t pt-1">
+              {filteredProjects.map((project) => {
+                const isSelected = selectedProjectIds.includes(project.id);
+                return (
+                  <button
+                    key={project.id}
+                    onClick={() => handleToggle(project.id)}
+                    className={cn(
+                      "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-muted",
+                      isSelected && "bg-muted"
+                    )}
+                  >
+                    <div
+                      className="h-4 w-4 rounded-sm"
+                      style={{ backgroundColor: project.color }}
+                    />
+                    <span className="flex-1 truncate text-left">{project.title}</span>
+                    {isSelected && <Check className="h-4 w-4" />}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {filteredProjects.length === 0 && search.trim() && (
             <div className="px-2 py-4 text-center text-sm text-muted-foreground">
               No projects found
             </div>

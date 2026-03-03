@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   CheckSquare,
   FolderKanban,
+  FolderX,
   Plus,
   LayoutGrid,
   List,
@@ -39,6 +40,7 @@ import {
   type TaskSortDirection,
 } from "@/lib/task-sort";
 import { ASSIGNEE_FILTER_ASSIGNED_TO_ME, ASSIGNEE_FILTER_UNASSIGNED } from "@/components/filters/assignee-filter";
+import { PROJECT_FILTER_NO_PROJECT } from "@/components/filters/project-filter";
 import { getProfileInitials, getDisplayName } from "@/lib/profile-utils";
 import type { ViewMode } from "./header";
 import type { Profile, Project, TaskWithProject } from "@/types";
@@ -196,11 +198,15 @@ export function MobileBottomNav({
     }
   };
 
+  const isNoProjectSelected = selectedProjectIds.includes(PROJECT_FILTER_NO_PROJECT);
+
   // Get project summary text
   const getProjectSummaryText = () => {
-    if (selectedProjects.length === 0) return "All projects";
-    if (selectedProjects.length === 1) return selectedProjects[0].title;
-    return `${selectedProjects.length} projects`;
+    const totalSelected = selectedProjects.length + (isNoProjectSelected ? 1 : 0);
+    if (totalSelected === 0) return "All projects";
+    if (totalSelected === 1 && isNoProjectSelected) return "No Project";
+    if (totalSelected === 1) return selectedProjects[0].title;
+    return `${totalSelected} projects`;
   };
 
   // Assignee filter helpers
@@ -542,6 +548,21 @@ export function MobileBottomNav({
                   <FolderKanban className="h-5 w-5" />
                   <span className="flex-1 text-left font-medium">All Projects</span>
                   {selectedProjectIds.length === 0 && <Check className="h-5 w-5" />}
+                </button>
+
+                {/* No Project option */}
+                <button
+                  onClick={() => handleToggleProject(PROJECT_FILTER_NO_PROJECT)}
+                  className={cn(
+                    "flex items-center gap-3 w-full p-3 rounded-lg transition-colors",
+                    isNoProjectSelected
+                      ? "bg-primary/10 text-primary"
+                      : "hover:bg-muted"
+                  )}
+                >
+                  <FolderX className="h-5 w-5" />
+                  <span className="flex-1 text-left font-medium">No Project</span>
+                  {isNoProjectSelected && <Check className="h-5 w-5" />}
                 </button>
 
                 {filteredProjects.map((project) => {

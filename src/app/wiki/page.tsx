@@ -195,6 +195,7 @@ const sections: WikiSection[] = [
         heading: "Filtering Tasks",
         paragraphs: [
           "On the global Tasks page, filter by one or more projects to focus on specific work. Multi-select projects from the filter dropdown. On mobile, filters are integrated into the floating action button's sheet.",
+          "The Project filter includes a \"No Project\" option that shows only personal or one-off tasks not assigned to any project. You can combine \"No Project\" with specific projects to see both sets together. You can also filter by assignee — use \"Assigned to me\" or \"Unassigned\" as quick filters, or select specific team members.",
         ],
       },
       {
