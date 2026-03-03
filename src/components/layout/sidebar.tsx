@@ -147,6 +147,7 @@ function NavLinks({ pathname, projects, isCollapsed }: NavLinksProps) {
 export function Sidebar({ onShowFeedback }: SidebarProps) {
   const pathname = usePathname();
   const { projects } = useProjects();
+  const activeProjects = projects.filter((p) => p.status !== "archived");
   const { isCollapsed, toggleSidebar } = useSidebar();
 
   return (
@@ -168,7 +169,7 @@ export function Sidebar({ onShowFeedback }: SidebarProps) {
         </div>
 
         {/* Navigation */}
-        <NavLinks pathname={pathname} projects={projects} isCollapsed={isCollapsed} />
+        <NavLinks pathname={pathname} projects={activeProjects} isCollapsed={isCollapsed} />
 
         {/* Bottom section */}
         <div className="border-t p-4 space-y-2">

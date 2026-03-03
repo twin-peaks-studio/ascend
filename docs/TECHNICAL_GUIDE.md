@@ -2416,4 +2416,39 @@ npx shadcn@latest add <component>
 
 ---
 
-*Last updated: February 2026*
+## Feature Architecture Notes
+
+### AI Task Extraction — `sourceText` Field
+
+The AI task extraction pipeline (`src/lib/ai/`) includes a `sourceText` field that carries the verbatim excerpt from the source content that prompted each task. The field flows through:
+
+1. **Prompt** (`src/lib/ai/prompts.ts`) — `SYSTEM_PROMPT` instructs the AI to return `sourceText` alongside each task
+2. **Validation** (`src/lib/ai/validate-extraction.ts`) — `extractedTaskSchema` validates `sourceText: z.string().max(2000).nullable()`
+3. **Type** (`src/lib/ai/types.ts`) — `RawExtractedTask.sourceText: string | null`
+4. **Assembly** (`src/hooks/use-task-extraction.ts`, `toClientTasks()`) — `sourceText` is merged into the task `description` as `"\n\nOriginal Content: {sourceText}"` before the task reaches the review dialog. The client-side `ExtractedTask.description` already contains the merged text; `sourceText` is otherwise inert on the client.
+5. **Persistence** — The merged `description` is saved to the `tasks` table. No schema migration needed — the column is `text` with a 5000-char app-side limit.
+
+**Do not move the assembly step** to `createSelectedTasks()` — `toClientTasks()` is the correct place because the user reviews and can edit the full merged description during the review step.
+
+---
+
+### Today Page (`/today`)
+
+The Today page shows tasks due today and overdue tasks (status ≠ "done"), grouped by project. Key files:
+
+- **`src/app/today/page.tsx`** — main page; contains `TodayTaskRow` inline component
+- **`src/hooks/use-today-tasks.ts`** — client-side filter on `useTasks()`; groups by project, sorts overdue-first then by priority weight
+- **`src/hooks/use-task-estimation.ts`** — manages AI estimation state; stores estimates in a `Map<string, TaskEstimate>`
+- **`src/app/api/ai/estimate-tasks/route.ts`** — Claude API route; accepts `{tasks, remainingMinutesInDay}`, returns `{estimates, summary}`
+- **`src/components/today/reschedule-popover.tsx`** — quick chips (Tomorrow / This Weekend / Next Week) + inline DatePicker
+- **`src/components/today/day-summary-banner.tsx`** — collapsible banner with color-coded completion likelihood bar
+
+The Today page has no persisted filter state — it is always date-scoped (today + overdue). No localStorage keys needed.
+
+Rate limit for AI estimation: `aiEstimation: { requests: 10, window: 60 }` in `src/lib/rate-limit/limiter.ts`.
+
+`remainingMinutesInDay` is calculated as minutes from `now` until 10 PM and sent to Claude so it can compute completion likelihood. Task descriptions are truncated to 500 chars before being sent (the API schema enforces `max(1000)` and the prompt only uses the first 300 chars anyway).
+
+---
+
+*Last updated: March 2026*

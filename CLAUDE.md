@@ -41,34 +41,11 @@ This project uses React Query (`@tanstack/react-query`) for data fetching. Key p
 - Query keys are defined in each hook file (e.g., `projectKeys`, `taskKeys`, `noteKeys`)
 - **Prefer `setQueriesData` over `invalidateQueries`** for update/archive/flag mutations — in-place cache updates preserve list order and avoid unnecessary refetches. Only use `invalidateQueries` when fresh server-generated data is needed (e.g., after `createTask` which needs a new ID and position). See `deleteTask()` and `updateTask()` in `src/hooks/use-tasks.ts` for the canonical pattern.
 
-### AI Task Extraction — `sourceText` Field
+### Project Status & Sidebar Filtering
 
-The AI task extraction pipeline (`src/lib/ai/`) includes a `sourceText` field that carries the verbatim excerpt from the source content that prompted each task. The field flows through:
+Projects have a `status` field (`"active" | "completed" | "archived"`). The sidebar (`src/components/layout/sidebar.tsx`) filters out archived projects before rendering — if you add new status values, update this filter accordingly.
 
-1. **Prompt** (`src/lib/ai/prompts.ts`) — `SYSTEM_PROMPT` instructs the AI to return `sourceText` alongside each task
-2. **Validation** (`src/lib/ai/validate-extraction.ts`) — `extractedTaskSchema` validates `sourceText: z.string().max(2000).nullable()`
-3. **Type** (`src/lib/ai/types.ts`) — `RawExtractedTask.sourceText: string | null`
-4. **Assembly** (`src/hooks/use-task-extraction.ts`, `toClientTasks()`) — `sourceText` is merged into the task `description` as `"\n\nOriginal Content: {sourceText}"` before the task reaches the review dialog. The client-side `ExtractedTask.description` already contains the merged text; `sourceText` is otherwise inert on the client.
-5. **Persistence** — The merged `description` is saved to the `tasks` table. No schema migration needed — the column is `text` with a 5000-char app-side limit.
-
-**Do not move the assembly step** to `createSelectedTasks()` — `toClientTasks()` is the correct place because the user reviews and can edit the full merged description during the review step.
-
-### Today Page (`/today`)
-
-The Today page shows tasks due today and overdue tasks (status ≠ "done"), grouped by project. Key files:
-
-- **`src/app/today/page.tsx`** — main page; contains `TodayTaskRow` inline component
-- **`src/hooks/use-today-tasks.ts`** — client-side filter on `useTasks()`; groups by project, sorts overdue-first then by priority weight
-- **`src/hooks/use-task-estimation.ts`** — manages AI estimation state; stores estimates in a `Map<string, TaskEstimate>`
-- **`src/app/api/ai/estimate-tasks/route.ts`** — Claude API route; accepts `{tasks, remainingMinutesInDay}`, returns `{estimates, summary}`
-- **`src/components/today/reschedule-popover.tsx`** — quick chips (Tomorrow / This Weekend / Next Week) + inline DatePicker
-- **`src/components/today/day-summary-banner.tsx`** — collapsible banner with color-coded completion likelihood bar
-
-The Today page has no persisted filter state — it is always date-scoped (today + overdue). No localStorage keys needed.
-
-Rate limit for AI estimation: `aiEstimation: { requests: 10, window: 60 }` in `src/lib/rate-limit/limiter.ts`.
-
-`remainingMinutesInDay` is calculated as minutes from `now` until 10 PM and sent to Claude so it can compute completion likelihood.
+**Local dev gotcha:** Archiving or completing a project fires a `"project/completed"` Inngest event to cancel due-date reminders. In local dev, Inngest isn't running, so the console will always log `ERROR: Failed to send Inngest events` with a 500. This is expected and non-fatal — the status saves correctly regardless.
 
 ### Persisted UI State (localStorage)
 Task view preferences are persisted in localStorage so they survive page navigation (e.g., `/tasks` → `/tasks/[id]` → back):
@@ -101,12 +78,17 @@ For any feature that introduces a new interaction or workflow visible to users:
 - Write in plain user-facing language (this is public documentation)
 - Cover edge cases the user might encounter (e.g., "Search always includes completed tasks regardless of this filter")
 
-### 3. Technical Documentation (`CLAUDE.md`)
-Update this file whenever a pattern, constraint, or architectural decision changes:
+### 3. Technical Documentation
+Two files to keep up to date:
+
+**`CLAUDE.md`** — development rules, patterns, and gotchas that apply project-wide:
 - **New localStorage keys** → add to the Persisted UI State table
 - **New consistency rules** → add to the Consistency Rules section
-- **New architectural patterns** → add to Technical Patterns
+- **New dev patterns** → add to Technical Patterns
 - **New local dev quirks** → document them so future sessions don't re-debug the same issues
+
+**`docs/TECHNICAL_GUIDE.md`** — feature-specific implementation details (data flow, key files, constraints):
+- **New feature with non-obvious architecture** → add a section under "Feature Architecture Notes" explaining how it works, which files own what, and any hard constraints (e.g. "do not move X to Y")
 
 ### 4. Network & Performance Audit
 Before shipping, verify the feature doesn't introduce regressions:

@@ -368,6 +368,20 @@ const sections: WikiSection[] = [
           "Each project has its own dedicated tasks page at /projects/[id]/tasks with independent Kanban/list views, sorting, and preferences — separate from the global tasks page.",
         ],
       },
+      {
+        heading: "Archiving & Reactivating Projects",
+        paragraphs: [
+          "Archiving a project removes it from the sidebar and the Active tab, but preserves all of its data — tasks, notes, documents, and activity history remain fully intact and searchable.",
+          "To archive a project, open its detail page and change the Status to \"Archived\" in the Properties panel on the right. To reactivate it later, open the project (find it under the Archived tab on the Projects page) and set the Status back to \"Active\".",
+        ],
+        list: [
+          "Archived projects do not appear in the left sidebar",
+          "All tasks, notes, and resources are preserved — nothing is deleted",
+          "Archived projects are accessible via the Archived tab on the Projects page",
+          "Reactivation is instant — change Status back to Active and the project reappears in the sidebar",
+        ],
+        tip: "Archiving is a soft operation. Use it for completed or on-hold projects you want out of the way without losing any history.",
+      },
     ],
   },
   {
