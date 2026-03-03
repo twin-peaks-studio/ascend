@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { format } from "date-fns";
 import {
   Circle,
@@ -16,16 +16,25 @@ import { Button } from "@/components/ui/button";
 import { useTodayTasks } from "@/hooks/use-today-tasks";
 import { useTaskMutations } from "@/hooks/use-tasks";
 import { useTaskEstimation, formatEstimate } from "@/hooks/use-task-estimation";
+import { QuickAddTask } from "@/components/task";
 import { ReschedulePopover } from "@/components/today/reschedule-popover";
 import { DaySummaryBanner } from "@/components/today/day-summary-banner";
 import { PRIORITY_CIRCLE_COLORS } from "@/components/task/task-list-view";
 import { isOverdue } from "@/lib/date-utils";
+import { useProjects } from "@/hooks/use-projects";
+import { useProfiles } from "@/hooks/use-profiles";
+import { useAuth } from "@/hooks/use-auth";
 import type { TaskWithProject } from "@/types";
+import type { CreateTaskInput } from "@/lib/validation";
 
 export default function TodayPage() {
   const router = useRouter();
   const { groups, totalCount, overdueCount, loading } = useTodayTasks();
-  const { updateTask } = useTaskMutations();
+  const { updateTask, createTask, loading: mutationLoading } = useTaskMutations();
+  const { projects } = useProjects();
+  const { profiles } = useProfiles();
+  const { user } = useAuth();
+  const [showQuickAdd, setShowQuickAdd] = useState(false);
   const {
     estimateAll,
     estimateOne,
@@ -61,10 +70,21 @@ export default function TodayPage() {
     [router]
   );
 
+  const handleQuickAddSubmit = useCallback(
+    async (data: CreateTaskInput) => {
+      await createTask(data);
+    },
+    [createTask]
+  );
+
+  const handleAddTask = useCallback(() => {
+    setShowQuickAdd(true);
+  }, []);
+
   const todayLabel = format(new Date(), "EEE, MMM d");
 
   return (
-    <AppShell>
+    <AppShell onAddTask={handleAddTask}>
       <div className="flex flex-col min-h-full">
         {/* Header */}
         <div className="sticky top-0 z-10 bg-background border-b">
@@ -179,6 +199,17 @@ export default function TodayPage() {
             ))}
         </div>
       </div>
+
+      {/* Quick add task drawer (mobile) */}
+      <QuickAddTask
+        open={showQuickAdd}
+        onOpenChange={setShowQuickAdd}
+        onSubmit={handleQuickAddSubmit}
+        projects={projects}
+        profiles={profiles}
+        loading={mutationLoading}
+        defaultAssigneeId={user?.id ?? null}
+      />
     </AppShell>
   );
 }

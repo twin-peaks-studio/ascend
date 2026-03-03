@@ -214,7 +214,7 @@ function QuickAddTaskForm({
         <div className="mt-4 -mx-4 px-4 overflow-x-auto">
           <div className="flex items-center gap-2 pb-2">
             {/* Date chip */}
-            <Popover open={datePickerOpen} onOpenChange={handleDatePickerOpenChange}>
+            <Popover open={datePickerOpen} onOpenChange={handleDatePickerOpenChange} modal={false}>
               <PopoverTrigger asChild>
                 <button
                   type="button"
@@ -289,7 +289,7 @@ function QuickAddTaskForm({
             </Popover>
 
             {/* Priority chip */}
-            <Popover open={priorityOpen} onOpenChange={setPriorityOpen}>
+            <Popover open={priorityOpen} onOpenChange={setPriorityOpen} modal={false}>
               <PopoverTrigger asChild>
                 <button
                   type="button"
@@ -328,7 +328,7 @@ function QuickAddTaskForm({
 
             {/* Assignee chip */}
             {assignableProfiles.length > 0 && (
-              <Popover open={assigneeOpen} onOpenChange={setAssigneeOpen}>
+              <Popover open={assigneeOpen} onOpenChange={setAssigneeOpen} modal={false}>
                 <PopoverTrigger asChild>
                   {selectedAssignee ? (
                     <button
@@ -415,7 +415,7 @@ function QuickAddTaskForm({
       {/* Bottom bar with project selector and send button */}
       <div className="flex items-center justify-between px-4 py-3 border-t border-border/40 bg-muted/30">
         {/* Project selector */}
-        <Popover open={projectOpen} onOpenChange={setProjectOpen}>
+        <Popover open={projectOpen} onOpenChange={setProjectOpen} modal={false}>
           <PopoverTrigger asChild>
             <button
               type="button"

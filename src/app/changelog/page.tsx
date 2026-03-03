@@ -59,6 +59,26 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: "March 3, 2026",
+    version: "0.16.5",
+    title: "Bug Fix — Mobile Today Page Task Creation",
+    description: "Fixed the + button on the Today page not opening the task creation drawer on mobile, and improved the smoothness of field interactions inside the drawer.",
+    features: [
+      {
+        icon: CalendarDays,
+        title: "Today Page — Create Tasks on Mobile",
+        description: "The floating + button on the Today page now correctly opens the quick-add task drawer. Previously tapping it had no effect.",
+        tag: "fix",
+      },
+      {
+        icon: Smartphone,
+        title: "Quick Add Drawer — Smoother Field Interactions",
+        description: "Tapping the Date, Priority, Assignee, and Project chips inside the task creation drawer no longer causes the drawer to jump or reset. Fixed by preventing popover focus traps from conflicting with the drawer.",
+        tag: "fix",
+      },
+    ],
+  },
+  {
+    date: "March 3, 2026",
     version: "0.16.4",
     title: "Bug Fix — Estimate My Day",
     description: "Fixed the Estimate My Day feature failing with a validation error when tasks had long descriptions.",

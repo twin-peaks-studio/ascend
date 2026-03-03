@@ -246,6 +246,14 @@ const sections: WikiSection[] = [
         ],
       },
       {
+        heading: "Adding a New Task",
+        paragraphs: [
+          "On mobile, tap the blue + button in the bottom-right corner to open the quick-add drawer. Enter a task name, optionally set a due date (defaults to today), priority, assignee, and project, then tap the send button to create it.",
+          "Tasks created with today's date will appear in the Today view immediately. Tasks created without a due date will not appear on Today — set a due date if you want them here.",
+        ],
+        tip: "Set the due date to today when creating a task from the Today page if you want it to show up in this view right away.",
+      },
+      {
         heading: "Quick Actions on Each Task",
         list: [
           "Status circle — Click to mark the task done. It disappears from the Today view immediately.",
