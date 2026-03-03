@@ -16,6 +16,7 @@ import { logger } from "@/lib/logger/logger";
 import { useAuth } from "@/hooks/use-auth";
 import { singleTaskKeys } from "@/hooks/use-task";
 import { projectKeys } from "@/hooks/use-projects";
+import { noteKeys } from "@/hooks/use-notes";
 import {
   notifyTaskAssigned,
   notifyTaskUnassigned,
@@ -410,6 +411,14 @@ export function useTaskMutations() {
         );
         queryClient.setQueriesData(
           { queryKey: projectKeys.details() },
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (old: any) => {
+            if (!old?.tasks) return old;
+            return { ...old, tasks: old.tasks.map((t: Task) => t.id === taskId ? { ...t, ...updateData } : t) };
+          }
+        );
+        queryClient.setQueriesData(
+          { queryKey: noteKeys.details() },
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           (old: any) => {
             if (!old?.tasks) return old;

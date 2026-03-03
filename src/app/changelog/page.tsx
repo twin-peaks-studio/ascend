@@ -58,6 +58,26 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: "March 2, 2026",
+    version: "0.16.1",
+    title: "Bug Fixes — Date Picker & Priority Sync",
+    description: "Fixed two bugs: the date/time picker now saves correctly when no prior due date was set, and priority changes on a task now immediately reflect in linked note task lists.",
+    features: [
+      {
+        icon: Calendar,
+        title: "Date Picker Save Fixed",
+        description: "Opening the date picker on a task with no due date now seeds today's date and current time as the default, so clicking Save without changing anything correctly sets the due date.",
+        tag: "fix",
+      },
+      {
+        icon: RefreshCw,
+        title: "Priority Sync in Note Task Lists",
+        description: "Changing a task's priority and navigating back to a note's linked task list now immediately shows the updated priority, regardless of how quickly you navigate back.",
+        tag: "fix",
+      },
+    ],
+  },
+  {
+    date: "March 2, 2026",
     version: "0.16.0",
     title: "Today Page — Daily Focus View",
     description: "A dedicated Today page shows all tasks due today and overdue, grouped by project, with AI-powered time estimates and a day completion likelihood score.",

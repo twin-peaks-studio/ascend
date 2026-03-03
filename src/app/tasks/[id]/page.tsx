@@ -269,13 +269,19 @@ export default function TaskDetailPage() {
 
   const handleDatePickerOpenChange = useCallback(
     (open: boolean) => {
-      if (!open && datePickerOpen) {
+      if (open) {
+        if (!pendingDueDate) {
+          const d = new Date();
+          d.setHours(d.getHours(), Math.floor(d.getMinutes() / 5) * 5, 0, 0);
+          setPendingDueDate(d);
+        }
+      } else if (datePickerOpen) {
         // Discard pending — reset to last committed value
         setPendingDueDate(task?.due_date ? new Date(task.due_date) : null);
       }
       setDatePickerOpen(open);
     },
-    [datePickerOpen, task]
+    [datePickerOpen, pendingDueDate, task]
   );
 
   const handleClearDueDate = useCallback(async () => {
@@ -289,9 +295,13 @@ export default function TaskDetailPage() {
     if (mobileDateExpanded) {
       // Discard pending — reset to last committed value
       setPendingDueDate(task?.due_date ? new Date(task.due_date) : null);
+    } else if (!pendingDueDate) {
+      const d = new Date();
+      d.setHours(d.getHours(), Math.floor(d.getMinutes() / 5) * 5, 0, 0);
+      setPendingDueDate(d);
     }
     setMobileDateExpanded((prev) => !prev);
-  }, [mobileDateExpanded, task]);
+  }, [mobileDateExpanded, pendingDueDate, task]);
 
   const handleDelete = useCallback(async () => {
     if (!task) return;

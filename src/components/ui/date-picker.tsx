@@ -40,8 +40,13 @@ export function DatePicker({
 
   const handleOpenChange = (nextOpen: boolean) => {
     if (nextOpen) {
-      // Seed pending from committed value on open
-      setPendingDate(value);
+      if (value) {
+        setPendingDate(value);
+      } else {
+        const d = new Date();
+        d.setHours(d.getHours(), Math.floor(d.getMinutes() / 5) * 5, 0, 0);
+        setPendingDate(d);
+      }
     }
     setOpen(nextOpen);
   };
