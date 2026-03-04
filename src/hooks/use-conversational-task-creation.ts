@@ -39,7 +39,7 @@ export interface ProposedTask {
   priority: "low" | "medium" | "high" | "urgent";
   /** yyyy-MM-dd — converted to ISO datetime at creation time */
   dueDate: string | null;
-  /** Project to assign this task to (per-task, overrides page context) */
+  /** Project inherited from the page URL context — not editable per-task in the UI */
   projectId: string | null;
   /** Assignee user ID — null means "assign to me" (current user) */
   assigneeId: string | null;
@@ -94,7 +94,6 @@ export function useConversationalTaskCreation() {
   const [turnCount, setTurnCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [createdCount, setCreatedCount] = useState(0);
-  const [confirmationMessage, setConfirmationMessage] = useState("");
 
   const { createTask } = useTaskMutations();
   const queryClient = useQueryClient();
@@ -180,7 +179,6 @@ export function useConversationalTaskCreation() {
           }));
 
           setProposedTasks(proposed);
-          setConfirmationMessage(successData.message);
           setStatus("reviewing");
         }
       } catch (err) {
@@ -273,7 +271,6 @@ export function useConversationalTaskCreation() {
     setTurnCount(0);
     setError(null);
     setCreatedCount(0);
-    setConfirmationMessage("");
   }, []);
 
   /**
@@ -287,7 +284,6 @@ export function useConversationalTaskCreation() {
     setTurnCount(0);
     setError(null);
     setCreatedCount(0);
-    setConfirmationMessage("");
   }, []);
 
   const selectedCount = proposedTasks.filter((t) => t.selected).length;
@@ -300,7 +296,6 @@ export function useConversationalTaskCreation() {
     error,
     createdCount,
     selectedCount,
-    confirmationMessage,
     sendMessage,
     updateTask,
     toggleSelection,

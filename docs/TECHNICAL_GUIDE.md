@@ -2418,6 +2418,28 @@ npx shadcn@latest add <component>
 
 ## Feature Architecture Notes
 
+### Conversational AI Task Creation (`/api/ai/chat-task-creation`)
+
+The "Create with AI" feature lets users describe tasks in plain language through a multi-turn chat modal. Key files:
+
+- **`src/app/api/ai/chat-task-creation/route.ts`** — API route; accepts `{messages, context, turnCount}`, returns `{type:"question"}` or `{type:"tasks", tasks:[...]}`
+- **`src/hooks/use-conversational-task-creation.ts`** — state machine hook managing the full conversation lifecycle
+- **`src/components/ai/conversational-task-modal.tsx`** — full-screen Radix Dialog; renders chat bubbles and inline task proposal cards
+
+**State machine:** `idle → chatting ↔ waiting → reviewing → creating → done` (plus `error` from any async state).
+
+**Project context detection:** The modal is rendered from the sidebar, outside any page route segment, so it cannot use `useParams()`. Instead it reads `usePathname()` and regex-matches `/projects/[id]` to detect project context. This is intentional — do not refactor to `useParams()`.
+
+**Turn limit:** `turnCount` is incremented on every user message and sent to the API. When `turnCount >= 3` the system prompt instructs the AI to propose tasks rather than ask another question. At `turnCount >= 5` the UI shows a hint to the user.
+
+**Date handling:** The client computes today's date as `YYYY-MM-DD` and sends it as `clientDate` in the request body. The API uses this instead of `new Date().toISOString()` (UTC) to avoid timezone skew — e.g. if the server clock is a day ahead of the user's local time.
+
+**Task assignment:** All proposed tasks inherit `projectId` from the page URL context and `assigneeId` from the current user. There is no per-task project picker in the UI — all tasks in a session go to the same project. After creation, `confirmCreate()` collects all unique `projectId` values and invalidates `projectKeys.detail(pid)` for each so project pages refresh immediately.
+
+**Rate limit:** `aiTaskCreation: { requests: 5, window: 60 }` bucket in `src/lib/rate-limit/limiter.ts`. Shared only with this route.
+
+---
+
 ### AI Task Extraction — `sourceText` Field
 
 The AI task extraction pipeline (`src/lib/ai/`) includes a `sourceText` field that carries the verbatim excerpt from the source content that prompted each task. The field flows through:
