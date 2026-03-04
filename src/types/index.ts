@@ -79,11 +79,11 @@ export interface NoteWithProject extends DBNote {
 }
 
 /**
- * Note with all relations loaded (project and linked tasks)
+ * Note with all relations loaded (project and linked tasks with assignees)
  */
 export interface NoteWithRelations extends DBNote {
   project: DBProject | null;
-  tasks: DBTask[];
+  tasks: TaskWithProject[];
 }
 
 /**

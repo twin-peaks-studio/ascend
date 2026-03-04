@@ -59,6 +59,34 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: "March 3, 2026",
+    version: "0.16.7",
+    title: "Bug Fix — Assignee Avatar Updates Immediately After Change",
+    description: "Changing a task's assignee and navigating back to the task list now reflects the change instantly without needing a manual page refresh.",
+    features: [
+      {
+        icon: RefreshCw,
+        title: "Assignee Change — Instant List Update",
+        description: "After changing a task's assignee on the task detail page and going back, the global task list and note task list now immediately show the correct avatar (or no avatar if unassigned). Previously the old avatar remained until a full page refresh.",
+        tag: "fix",
+      },
+    ],
+  },
+  {
+    date: "March 3, 2026",
+    version: "0.16.6",
+    title: "Improved — Consistent Task List Design Across the App",
+    description: "Tasks linked to notes now display identically to tasks everywhere else in the app — same priority circle, due date, description, and assignee avatar.",
+    features: [
+      {
+        icon: List,
+        title: "Note Tasks — Unified Design",
+        description: "Tasks in the notes section now show the same priority-colored circle, due date, description preview, and assignee avatar as the global task list and project views.",
+        tag: "improved",
+      },
+    ],
+  },
+  {
+    date: "March 3, 2026",
     version: "0.16.5",
     title: "Bug Fix — Mobile Today Page Task Creation",
     description: "Fixed the + button on the Today page not opening the task creation drawer on mobile, and improved the smoothness of field interactions inside the drawer.",

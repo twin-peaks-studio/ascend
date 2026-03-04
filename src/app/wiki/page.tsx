@@ -422,9 +422,9 @@ const sections: WikiSection[] = [
           "At the bottom of each note, you'll find a \"Tasks from Note\" section where you can:",
         ],
         list: [
-          "Create new tasks directly from the note (they're automatically linked)",
-          "View all tasks linked to this note with status toggles",
-          "Unlink tasks that are no longer relevant",
+          "Create new tasks directly from the note (they're automatically linked to the project)",
+          "View all tasks linked to this note — including their priority, due date, description, and assignee — with status toggles",
+          "Click any task to open its full detail page",
         ],
       },
       {

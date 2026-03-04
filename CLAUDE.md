@@ -16,6 +16,18 @@ Fixing a bug in one location while missing it in another leads to multiple fix i
 
 ## Consistency Rules
 
+### Task List Row Component (`TaskListItem`)
+All task list surfaces in the app use `TaskListItem` from `src/components/task/task-list-view.tsx` as the single source of truth for how task rows look and behave. When modifying the visual design or behaviour of task rows, make the change **in `TaskListItem`** — not by adding a parallel custom row in each page.
+
+Current surfaces using `TaskListItem` (all render identically):
+- `/tasks` (global task page) via `TaskListView` / `SectionedTaskListView`
+- `/projects/[id]` and `/projects/[id]/tasks` via `SectionedTaskListView`
+- `/projects/[id]/notes/[noteId]` — uses `TaskListItem` directly
+
+The `/today` page uses a custom `TodayTaskRow` (intentionally different — shows Reschedule and Re-estimate actions) and is **not** a candidate for `TaskListItem`.
+
+**Design principle:** `TaskListItem` only accepts behavioural props (`onTaskClick`, `onStatusToggle`, `assignee` fallback). Never add display-toggle props (`showAssignee`, `compact`, etc.) — if data is missing, fix the query upstream instead.
+
 ### Task Editing Experience
 When implementing changes to the task details dialog or task editing functionality on either the **project page** (`/projects/[id]`) or the **tasks page** (`/tasks`), always ask the user if the change should also apply to the other page. The task editing experience must be consistent across both pages.
 
@@ -40,6 +52,7 @@ This project uses React Query (`@tanstack/react-query`) for data fetching. Key p
 - `refetchOnWindowFocus: true` handles mobile backgrounding recovery automatically
 - Query keys are defined in each hook file (e.g., `projectKeys`, `taskKeys`, `noteKeys`)
 - **Prefer `setQueriesData` over `invalidateQueries`** for update/archive/flag mutations — in-place cache updates preserve list order and avoid unnecessary refetches. Only use `invalidateQueries` when fresh server-generated data is needed (e.g., after `createTask` which needs a new ID and position). See `deleteTask()` and `updateTask()` in `src/hooks/use-tasks.ts` for the canonical pattern.
+- **Exception — joined relation objects:** When a mutation changes a foreign key (e.g. `assignee_id`), the in-place `setQueriesData` spread only updates the ID field, not the full joined relation object (e.g. `assignee: Profile`). In these cases, follow the `setQueriesData` call with `invalidateQueries` on the affected list caches so they refetch the full object on next mount. See `updateTask()` in `src/hooks/use-tasks.ts` for the pattern.
 
 ### Project Status & Sidebar Filtering
 

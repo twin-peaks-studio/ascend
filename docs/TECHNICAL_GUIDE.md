@@ -2451,4 +2451,31 @@ Rate limit for AI estimation: `aiEstimation: { requests: 10, window: 60 }` in `s
 
 ---
 
+### Task List Component Architecture (`TaskListItem`)
+
+All task list surfaces use `TaskListItem` (`src/components/task/task-list-view.tsx`) as the single source of truth for task row rendering. All three surfaces render identically: `/tasks`, `/projects/[id]` (and `/tasks` subpage), and `/projects/[id]/notes/[noteId]`.
+
+The component accepts `Task | TaskWithProject` (union type) and resolves the assignee via:
+
+```ts
+const taskAssignee = ('assignee' in task && task.assignee) ? task.assignee : assignee;
+```
+
+This means:
+- When the task comes from a Supabase query that joins `assignee:profiles(*)`, the assignee is pulled from the task itself (`TaskWithProject`)
+- When the task is a plain `Task` (no relation loaded), the caller can pass an `assignee?: Profile` prop as a fallback
+
+**Key props:**
+- `onTaskClick` — row click handler (navigates to task detail)
+- `onStatusToggle` — status circle click handler (optimistic toggle)
+- `assignee` — fallback assignee for plain `Task` types
+
+**Design rule:** `TaskListItem` only accepts behavioural props. Never add display-toggle props — if data is missing on a given surface, fix the query upstream.
+
+**Notes page:** `note.tasks` is typed as `TaskWithProject[]`. The `fetchNoteWithRelations` query includes `assignee:profiles(*)` and `project:projects(*)` so assignee avatars render correctly, identical to all other task list surfaces.
+
+**Assignee cache invalidation:** `updateTask()` uses `setQueriesData` for most fields (fast, in-place, no refetch). However, when `assignee_id` changes, the spread only updates the scalar ID — not the full `assignee: Profile` object that `TaskListItem` uses to render the avatar. So after the `setQueriesData` calls, `updateTask()` also calls `invalidateQueries` on `taskKeys.lists()` and `noteKeys.details()`. This marks those caches stale so they refetch with the correct profile object when the user navigates back to the list. The project detail cache (`projectKeys.details()`) already benefits from the same pattern.
+
+---
+
 *Last updated: March 2026*

@@ -14,19 +14,9 @@ import { getClient } from "@/lib/supabase/client-manager";
 import { withTimeout, TIMEOUTS } from "@/lib/utils/with-timeout";
 import { logger } from "@/lib/logger/logger";
 import { useAuth } from "@/hooks/use-auth";
-import type { Note, NoteWithRelations, Task } from "@/types";
+import type { Note, NoteWithRelations, Task, TaskWithProject } from "@/types";
 import type { NoteInsert, NoteUpdate, NoteTaskInsert } from "@/types/database";
 import { taskKeys } from "@/hooks/use-tasks";
-
-/**
- * Type for the junction table query result when fetching tasks linked to a note.
- * Supabase returns this shape when we select `task:tasks(*)` from note_tasks.
- */
-interface NoteTaskJoinResult {
-  task_id: string;
-  task: Task | null;
-}
-
 import {
   createNoteSchema,
   updateNoteSchema,
@@ -34,6 +24,15 @@ import {
   type UpdateNoteInput,
 } from "@/lib/validation";
 import { toast } from "sonner";
+
+/**
+ * Type for the junction table query result when fetching tasks linked to a note.
+ * Supabase returns this shape when we select `task:tasks(*, assignee:profiles(*), project:projects(*))` from note_tasks.
+ */
+interface NoteTaskJoinResult {
+  task_id: string;
+  task: TaskWithProject | null;
+}
 
 // Query keys for cache management
 export const noteKeys = {
@@ -92,7 +91,7 @@ async function fetchNoteWithRelations(noteId: string): Promise<NoteWithRelations
       .from("note_tasks")
       .select(`
         task_id,
-        task:tasks(*, project:projects(*))
+        task:tasks(*, assignee:profiles(*), project:projects(*))
       `)
       .eq("note_id", noteId),
     TIMEOUTS.DATA_QUERY,
@@ -105,7 +104,7 @@ async function fetchNoteWithRelations(noteId: string): Promise<NoteWithRelations
   const joinResults = (noteTasksResult.data || []) as unknown as NoteTaskJoinResult[];
   const tasks = joinResults
     .map((nt) => nt.task)
-    .filter((task): task is Task => task !== null && !task.is_archived);
+    .filter((task): task is TaskWithProject => task !== null && !task.is_archived);
 
   return {
     ...noteResult.data,
@@ -449,50 +448,12 @@ export function useNoteMutations() {
     [queryClient]
   );
 
-  /**
-   * Unlink a task from a note (keeps the task, just removes the link)
-   */
-  const unlinkTaskFromNote = useCallback(
-    async (noteId: string, taskId: string): Promise<boolean> => {
-      try {
-        setLoading(true);
-        const supabase = getClient();
-
-        const { error } = await supabase
-          .from("note_tasks")
-          .delete()
-          .eq("note_id", noteId)
-          .eq("task_id", taskId);
-
-        if (error) throw error;
-
-        // Invalidate note detail cache
-        queryClient.invalidateQueries({ queryKey: noteKeys.detail(noteId) });
-
-        toast.success("Task unlinked from note");
-        return true;
-      } catch (err) {
-        logger.error("Error unlinking task", {
-          noteId,
-          taskId,
-          error: err
-        });
-        toast.error("Failed to unlink task");
-        return false;
-      } finally {
-        setLoading(false);
-      }
-    },
-    [queryClient]
-  );
-
   return {
     createNote,
     updateNote,
     deleteNote,
     createTaskFromNote,
     linkTaskToNote,
-    unlinkTaskFromNote,
     loading,
   };
 }

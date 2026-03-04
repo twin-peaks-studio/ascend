@@ -144,6 +144,7 @@ export function TaskListItem({ task, onTaskClick, onStatusToggle, assignee }: Ta
           </AvatarFallback>
         </Avatar>
       )}
+
     </div>
   );
 }

@@ -428,6 +428,14 @@ export function useTaskMutations() {
         // Invalidate single task cache (detail page needs fresh joined data)
         queryClient.invalidateQueries({ queryKey: singleTaskKeys.detail(taskId) });
 
+        // When assignee changes, the in-place spread above only updates assignee_id,
+        // not the full assignee Profile object that TaskListItem uses for the avatar.
+        // Invalidate list/note caches so they refetch fresh assignee data on next mount.
+        if ("assignee_id" in validated) {
+          queryClient.invalidateQueries({ queryKey: taskKeys.lists() });
+          queryClient.invalidateQueries({ queryKey: noteKeys.details() });
+        }
+
         return updatedTask;
       } catch (err: unknown) {
         const supabaseError = err as {

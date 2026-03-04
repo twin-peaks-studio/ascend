@@ -6,10 +6,8 @@ import Link from "next/link";
 import {
   ArrowLeft,
   Trash2,
-  Check,
   ChevronDown,
   ChevronRight,
-  Unlink,
   Sparkles,
 } from "lucide-react";
 import { AppShell } from "@/components/layout";
@@ -21,11 +19,10 @@ import { useProject } from "@/hooks/use-projects";
 import { useNote, useNoteMutations } from "@/hooks/use-notes";
 import { useTaskMutations } from "@/hooks/use-tasks";
 import { QuickAddNoteTask } from "@/components/note";
+import { TaskListItem } from "@/components/task";
 import { TaskExtractionDialog } from "@/components/ai";
 import { useTaskExtraction } from "@/hooks/use-task-extraction";
-import { cn } from "@/lib/utils";
-import type { Task, TaskStatus } from "@/types";
-import { PRIORITY_DISPLAY_SHORT } from "@/types";
+import type { Task, TaskStatus, TaskWithProject } from "@/types";
 
 export default function NoteDetailPage() {
   const params = useParams();
@@ -39,10 +36,9 @@ export default function NoteDetailPage() {
     updateNote,
     deleteNote,
     createTaskFromNote,
-    unlinkTaskFromNote,
     loading: noteMutationLoading,
   } = useNoteMutations();
-  const { updateTask, deleteTask } = useTaskMutations();
+  const { updateTask } = useTaskMutations();
 
   // Task extraction hook
   const taskExtraction = useTaskExtraction();
@@ -54,9 +50,6 @@ export default function NoteDetailPage() {
   const [showTasks, setShowTasks] = useState(true);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-
-  // Task delete confirmation state
-  const [deleteTaskConfirm, setDeleteTaskConfirm] = useState<string | null>(null);
 
   // Task extraction dialog state
   const [showExtractionDialog, setShowExtractionDialog] = useState(false);
@@ -125,7 +118,7 @@ export default function NoteDetailPage() {
 
   // Handle task status toggle
   const handleTaskStatusToggle = useCallback(
-    async (task: Task) => {
+    async (task: Task | TaskWithProject) => {
       const newStatus: TaskStatus = task.status === "done" ? "todo" : "done";
       const result = await updateTask(task.id, { status: newStatus });
       if (result) {
@@ -163,7 +156,9 @@ export default function NoteDetailPage() {
             ...prev,
             content: content, // Preserve current content state
             title: title, // Preserve current title state
-            tasks: [newTask, ...prev.tasks],
+            // newTask is a plain Task; add project/assignee stubs for type compatibility.
+            // The note query refetch will replace this with the full TaskWithProject.
+            tasks: [{ ...newTask, project: null, assignee: null } as TaskWithProject, ...prev.tasks],
           };
         });
       }
@@ -171,52 +166,13 @@ export default function NoteDetailPage() {
     [note, noteId, projectId, createTaskFromNote, setNote, content, title]
   );
 
-  // Handle unlink task from note
-  const handleUnlinkTask = useCallback(
-    async (taskId: string) => {
-      const success = await unlinkTaskFromNote(noteId, taskId);
-      if (success) {
-        // Remove task from local state, preserving current content/title
-        setNote((prev) => {
-          if (!prev) return prev;
-          return {
-            ...prev,
-            content: content,
-            title: title,
-            tasks: prev.tasks.filter((t) => t.id !== taskId),
-          };
-        });
-      }
-    },
-    [noteId, unlinkTaskFromNote, setNote, content, title]
-  );
-
   // Handle opening task details - navigate to task page
   const handleOpenTaskDetails = useCallback(
-    (task: Task) => {
+    (task: Task | TaskWithProject) => {
       router.push(`/tasks/${task.id}`);
     },
     [router]
   );
-
-  // Handle task delete confirmation
-  const handleDeleteTaskConfirm = useCallback(async () => {
-    if (!deleteTaskConfirm) return;
-    const success = await deleteTask(deleteTaskConfirm);
-    if (success) {
-      // Remove task from local state, preserving current content/title
-      setNote((prev) => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          content: content,
-          title: title,
-          tasks: prev.tasks.filter((t) => t.id !== deleteTaskConfirm),
-        };
-      });
-    }
-    setDeleteTaskConfirm(null);
-  }, [deleteTaskConfirm, deleteTask, setNote, content, title]);
 
   // Handle delete note
   const handleDelete = useCallback(async () => {
@@ -369,74 +325,15 @@ export default function NoteDetailPage() {
             <div className="space-y-3">
               {/* Task list - no limit, shows all tasks */}
               {note.tasks.length > 0 && (
-                <div className="border rounded-lg divide-y">
-                  {note.tasks.map((task) => {
-                    const priorityConfig = PRIORITY_DISPLAY_SHORT[task.priority];
-                    const isCompleted = task.status === "done";
-
-                    return (
-                      <div
-                        key={task.id}
-                        className="flex items-center gap-3 p-3 hover:bg-muted/30 group"
-                      >
-                        {/* Status toggle */}
-                        <button
-                          type="button"
-                          onClick={() => handleTaskStatusToggle(task)}
-                          className={cn(
-                            "flex-shrink-0 h-5 w-5 rounded-full border-2 flex items-center justify-center transition-colors",
-                            isCompleted
-                              ? "bg-primary border-primary text-primary-foreground"
-                              : "border-muted-foreground/50 hover:border-primary"
-                          )}
-                        >
-                          {isCompleted && <Check className="h-3 w-3" />}
-                        </button>
-
-                        {/* Task info - clickable to open details */}
-                        <button
-                          type="button"
-                          onClick={() => handleOpenTaskDetails(task)}
-                          className="flex-1 min-w-0 text-left hover:bg-muted/50 rounded px-1 -mx-1 py-0.5 transition-colors"
-                        >
-                          <p
-                            className={cn(
-                              "text-sm font-medium truncate",
-                              isCompleted && "line-through text-muted-foreground"
-                            )}
-                          >
-                            {task.title}
-                          </p>
-                          {task.description && (
-                            <p className="text-xs text-muted-foreground truncate">
-                              {task.description}
-                            </p>
-                          )}
-                        </button>
-
-                        {/* Priority badge */}
-                        <span
-                          className={cn(
-                            "text-xs font-medium",
-                            priorityConfig.color
-                          )}
-                        >
-                          {priorityConfig.label}
-                        </span>
-
-                        {/* Unlink button */}
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground"
-                          onClick={() => handleUnlinkTask(task.id)}
-                          title="Unlink task from note"
-                        >
-                          <Unlink className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    );
-                  })}
+                <div className="rounded-lg border bg-card overflow-hidden">
+                  {note.tasks.map((task) => (
+                    <TaskListItem
+                      key={task.id}
+                      task={task}
+                      onTaskClick={handleOpenTaskDetails}
+                      onStatusToggle={handleTaskStatusToggle}
+                    />
+                  ))}
                 </div>
               )}
 
@@ -476,15 +373,6 @@ export default function NoteDetailPage() {
         onConfirm={handleDelete}
         title="Delete Note"
         description={`Are you sure you want to delete "${note.title}"? This action cannot be undone. Tasks linked to this note will remain but will be unlinked.`}
-      />
-
-      {/* Delete Task Confirmation */}
-      <DeleteConfirmationDialog
-        open={!!deleteTaskConfirm}
-        onOpenChange={(open) => !open && setDeleteTaskConfirm(null)}
-        onConfirm={handleDeleteTaskConfirm}
-        title="Delete Task"
-        description="Are you sure you want to delete this task? This action cannot be undone."
       />
 
       {/* AI Task Extraction Dialog */}
