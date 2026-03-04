@@ -480,7 +480,11 @@ export function ConversationalTaskModal({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="w-[95vw] max-w-2xl h-[85dvh] flex flex-col p-0 gap-0 overflow-hidden">
+      <DialogContent className="
+          flex flex-col p-0 gap-0 overflow-hidden
+          w-full h-dvh rounded-none
+          sm:w-[95vw] sm:max-w-2xl sm:h-[85dvh] sm:rounded-lg
+        ">
         {/* Header */}
         <DialogHeader className="px-5 py-4 border-b shrink-0">
           <DialogTitle className="flex items-center gap-2 text-base">
