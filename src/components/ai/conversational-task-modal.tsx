@@ -42,16 +42,11 @@ import {
   type ProposedTask,
   type PageContext,
 } from "@/hooks/use-conversational-task-creation";
+import { PRIORITY_DISPLAY_SHORT } from "@/types";
 
 // ─── Priority helpers ──────────────────────────────────────────────────────────
 
-const PRIORITY_LABELS: Record<string, string> = {
-  urgent: "Urgent",
-  high: "High",
-  medium: "Medium",
-  low: "Low",
-};
-
+// Use app-standard P1/P2/P3/P4 labels (matches the rest of the app)
 const PRIORITY_COLORS: Record<string, string> = {
   urgent: "text-red-500 bg-red-500/10",
   high: "text-orange-500 bg-orange-500/10",
@@ -183,9 +178,9 @@ function TaskProposalCard({ task, onUpdate, onToggle, currentUser, clientDate }:
 
       {/* Meta row + description — hidden when task is deselected */}
       {/* Meta row: 3 columns — Priority | Due date | Assignee */}
-      <div className={cn("grid grid-cols-3 gap-3 px-3 py-3 pl-11", !task.selected && "hidden")}>
+      <div className={cn("grid grid-cols-3 gap-2 px-3 py-3 pl-11", !task.selected && "hidden")}>
         {/* Priority */}
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-col gap-1 min-w-0">
           <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
             Priority
           </span>
@@ -195,25 +190,25 @@ function TaskProposalCard({ task, onUpdate, onToggle, currentUser, clientDate }:
               onUpdate(task.id, { priority: e.target.value as ProposedTask["priority"] })
             }
             className={cn(
-              "text-sm font-medium px-2 py-1.5 rounded-md border border-border cursor-pointer w-full",
+              "text-sm font-medium px-2 py-1.5 rounded-md border border-border cursor-pointer w-full min-w-0",
               "focus:outline-none focus:ring-1 focus:ring-ring",
               PRIORITY_COLORS[task.priority]
             )}
           >
             {(["urgent", "high", "medium", "low"] as const).map((p) => (
               <option key={p} value={p}>
-                {PRIORITY_LABELS[p]}
+                {PRIORITY_DISPLAY_SHORT[p].label}
               </option>
             ))}
           </select>
         </div>
 
         {/* Due date */}
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-col gap-1 min-w-0">
           <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
             Due date
           </span>
-          <div className="relative">
+          <div className="relative min-w-0">
             {/* Styled button shows human-readable label */}
             <button
               type="button"
@@ -227,7 +222,7 @@ function TaskProposalCard({ task, onUpdate, onToggle, currentUser, clientDate }:
                 }
               }}
               className={cn(
-                "text-sm border border-border rounded-md px-2 py-1.5 cursor-pointer w-full text-left",
+                "text-sm border border-border rounded-md px-2 py-1.5 cursor-pointer w-full text-left truncate",
                 "focus:outline-none focus:ring-1 focus:ring-ring hover:border-ring transition-colors",
                 task.dueDate ? "text-foreground" : "text-muted-foreground"
               )}
@@ -248,7 +243,7 @@ function TaskProposalCard({ task, onUpdate, onToggle, currentUser, clientDate }:
         </div>
 
         {/* Assignee */}
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-col gap-1 min-w-0">
           <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
             Assignee
           </span>
