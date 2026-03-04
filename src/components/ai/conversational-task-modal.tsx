@@ -59,6 +59,33 @@ const PRIORITY_COLORS: Record<string, string> = {
   low: "text-muted-foreground bg-muted",
 };
 
+// ─── Due date display helper ───────────────────────────────────────────────────
+
+/**
+ * Returns a human-readable label for a yyyy-MM-dd date string.
+ * "Today", "Tomorrow", "Mar 5", or "Mar 5, 2027" for other years.
+ */
+function formatDueDateLabel(dueDate: string, clientDate: string): string {
+  const tomorrow = (() => {
+    const d = new Date(`${clientDate}T00:00:00`);
+    d.setDate(d.getDate() + 1);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  })();
+
+  if (dueDate === clientDate) return "Today";
+  if (dueDate === tomorrow) return "Tomorrow";
+
+  const date = new Date(`${dueDate}T00:00:00`);
+  const currentYear = new Date(`${clientDate}T00:00:00`).getFullYear();
+  if (date.getFullYear() === currentYear) {
+    return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  }
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
 // ─── Task Proposal Card ────────────────────────────────────────────────────────
 
 interface TaskProposalCardProps {
@@ -66,12 +93,14 @@ interface TaskProposalCardProps {
   onUpdate: (id: string, updates: Partial<ProposedTask>) => void;
   onToggle: (id: string) => void;
   currentUser: { id: string; email?: string | null } | null;
+  clientDate: string;
 }
 
-function TaskProposalCard({ task, onUpdate, onToggle, currentUser }: TaskProposalCardProps) {
+function TaskProposalCard({ task, onUpdate, onToggle, currentUser, clientDate }: TaskProposalCardProps) {
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleValue, setTitleValue] = useState(task.title);
   const titleInputRef = useRef<HTMLInputElement>(null);
+  const dueDateInputRef = useRef<HTMLInputElement>(null);
   const [descriptionValue, setDescriptionValue] = useState(task.description ?? "");
 
   useEffect(() => {
@@ -184,17 +213,38 @@ function TaskProposalCard({ task, onUpdate, onToggle, currentUser }: TaskProposa
           <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
             Due date
           </span>
-          <input
-            type="date"
-            value={task.dueDate ?? ""}
-            onChange={(e) => onUpdate(task.id, { dueDate: e.target.value || null })}
-            className={cn(
-              "text-sm bg-transparent border border-border rounded-md px-2 py-1.5 cursor-pointer w-full",
-              "focus:outline-none focus:ring-1 focus:ring-ring",
-              task.dueDate ? "text-foreground" : "text-muted-foreground"
-            )}
-            aria-label="Due date"
-          />
+          <div className="relative">
+            {/* Styled button shows human-readable label */}
+            <button
+              type="button"
+              onClick={() => {
+                const input = dueDateInputRef.current;
+                if (!input) return;
+                if (typeof input.showPicker === "function") {
+                  input.showPicker();
+                } else {
+                  input.click();
+                }
+              }}
+              className={cn(
+                "text-sm border border-border rounded-md px-2 py-1.5 cursor-pointer w-full text-left",
+                "focus:outline-none focus:ring-1 focus:ring-ring hover:border-ring transition-colors",
+                task.dueDate ? "text-foreground" : "text-muted-foreground"
+              )}
+            >
+              {task.dueDate ? formatDueDateLabel(task.dueDate, clientDate) : "No date"}
+            </button>
+            {/* Hidden native date input — opened programmatically via showPicker() */}
+            <input
+              ref={dueDateInputRef}
+              type="date"
+              value={task.dueDate ?? ""}
+              onChange={(e) => onUpdate(task.id, { dueDate: e.target.value || null })}
+              className="absolute opacity-0 pointer-events-none w-px h-px"
+              tabIndex={-1}
+              aria-hidden
+            />
+          </div>
         </div>
 
         {/* Assignee */}
@@ -497,6 +547,7 @@ export function ConversationalTaskModal({
                         onUpdate={updateTask}
                         onToggle={toggleSelection}
                         currentUser={user ? { id: user.id, email: user.email } : null}
+                        clientDate={clientDate}
                       />
                     ))}
 
