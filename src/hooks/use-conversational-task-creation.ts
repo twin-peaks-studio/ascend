@@ -229,8 +229,14 @@ export function useConversationalTaskCreation() {
       const affectedProjectIds = new Set<string>();
 
       for (const task of selectedTasks) {
-        // Convert yyyy-MM-dd → full ISO datetime expected by createTaskSchema
-        const dueDate = task.dueDate ? `${task.dueDate}T00:00:00.000Z` : undefined;
+        // Convert yyyy-MM-dd → ISO datetime. Parse without trailing Z so the
+        // browser interprets midnight as LOCAL time, then .toISOString() converts
+        // to UTC — matching the pattern used by every other date picker in the app.
+        // Using Z here would treat midnight as UTC, which shifts the date backwards
+        // for users in negative-offset timezones (e.g. US), causing "due yesterday".
+        const dueDate = task.dueDate
+          ? new Date(`${task.dueDate}T00:00:00`).toISOString()
+          : undefined;
 
         const result = await createTask({
           title: task.title,
