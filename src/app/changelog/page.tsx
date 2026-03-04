@@ -59,6 +59,20 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: "March 3, 2026",
+    version: "0.17.0",
+    title: "New — Create Tasks with AI (Beta)",
+    description: "Describe what you want to work on in plain language — the AI asks clarifying questions when needed, then proposes editable task cards for your approval before creating anything.",
+    features: [
+      {
+        icon: Sparkles,
+        title: "Conversational Task Creation",
+        description: "Click 'Create with AI' in the sidebar to open a chat interface. Describe a task or goal in your own words. For simple, clear tasks the AI proposes them immediately. For complex or ambiguous input it asks up to a few focused questions before surfacing editable task cards you approve.",
+        tag: "new",
+      },
+    ],
+  },
+  {
+    date: "March 3, 2026",
     version: "0.16.7",
     title: "Bug Fix — Assignee Avatar Updates Immediately After Change",
     description: "Changing a task's assignee and navigating back to the task list now reflects the change instantly without needing a manual page refresh.",

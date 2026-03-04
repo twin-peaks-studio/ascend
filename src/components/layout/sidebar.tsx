@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -13,12 +14,14 @@ import {
   MessageSquarePlus,
   Newspaper,
   CalendarDays,
+  Sparkles,
 } from "lucide-react";
 import { AscendLogo } from "@/components/ascend-logo";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useProjects } from "@/hooks/use-projects";
 import { useSidebar } from "@/hooks/use-sidebar";
+import { ConversationalTaskModal } from "@/components/ai";
 import type { ProjectWithRelations } from "@/types";
 
 interface NavItem {
@@ -149,6 +152,7 @@ export function Sidebar({ onShowFeedback }: SidebarProps) {
   const { projects } = useProjects();
   const activeProjects = projects.filter((p) => p.status !== "archived");
   const { isCollapsed, toggleSidebar } = useSidebar();
+  const [aiCreateOpen, setAiCreateOpen] = useState(false);
 
   return (
     <>
@@ -243,6 +247,33 @@ export function Sidebar({ onShowFeedback }: SidebarProps) {
             </Button>
           )}
 
+          {/* Create with AI (beta) — desktop only */}
+          {!isCollapsed ? (
+            <Button
+              variant="ghost"
+              className="w-full justify-start gap-3 text-muted-foreground"
+              onClick={() => setAiCreateOpen(true)}
+            >
+              <Sparkles className="h-5 w-5 shrink-0" />
+              <span className="flex items-center gap-1.5">
+                Create with AI
+                <span className="text-[10px] font-medium bg-primary/10 text-primary px-1.5 py-0.5 rounded-full leading-none">
+                  beta
+                </span>
+              </span>
+            </Button>
+          ) : (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="w-full text-muted-foreground"
+              onClick={() => setAiCreateOpen(true)}
+              title="Create with AI (beta)"
+            >
+              <Sparkles className="h-5 w-5" />
+            </Button>
+          )}
+
           {/* Collapse toggle */}
           <Button
             variant="ghost"
@@ -264,6 +295,10 @@ export function Sidebar({ onShowFeedback }: SidebarProps) {
           </Button>
         </div>
       </aside>
+
+      {/* AI task creation modal — rendered here so it has access to sidebar state
+          while using usePathname() internally to detect current project context */}
+      <ConversationalTaskModal open={aiCreateOpen} onOpenChange={setAiCreateOpen} />
     </>
   );
 }

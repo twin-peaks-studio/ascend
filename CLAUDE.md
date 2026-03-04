@@ -54,6 +54,22 @@ This project uses React Query (`@tanstack/react-query`) for data fetching. Key p
 - **Prefer `setQueriesData` over `invalidateQueries`** for update/archive/flag mutations — in-place cache updates preserve list order and avoid unnecessary refetches. Only use `invalidateQueries` when fresh server-generated data is needed (e.g., after `createTask` which needs a new ID and position). See `deleteTask()` and `updateTask()` in `src/hooks/use-tasks.ts` for the canonical pattern.
 - **Exception — joined relation objects:** When a mutation changes a foreign key (e.g. `assignee_id`), the in-place `setQueriesData` spread only updates the ID field, not the full joined relation object (e.g. `assignee: Profile`). In these cases, follow the `setQueriesData` call with `invalidateQueries` on the affected list caches so they refetch the full object on next mount. See `updateTask()` in `src/hooks/use-tasks.ts` for the pattern.
 
+### Conversational AI Task Creation (Create with AI)
+
+The "Create with AI" feature uses `usePathname()` (NOT `useParams()`) to detect the current project context from the URL. This is because `ConversationalTaskModal` is rendered inside `Sidebar`, which lives outside the page route segment tree. `usePathname()` works from anywhere in the component tree under the App Router; `useParams()` does not.
+
+Pattern for reading route params from non-page components (sidebars, global modals, etc.):
+```typescript
+const pathname = usePathname();
+const projectMatch = pathname.match(/^\/projects\/([^/]+)/);
+const projectId = projectMatch?.[1] ?? null;
+```
+
+Key files:
+- `src/app/api/ai/chat-task-creation/route.ts` — Claude Haiku API route (30s timeout, 5 req/min rate limit, shared aiExtraction bucket)
+- `src/hooks/use-conversational-task-creation.ts` — state machine hook (idle→chatting→waiting→reviewing→creating→done)
+- `src/components/ai/conversational-task-modal.tsx` — full-screen dialog (85vh), rendered in sidebar
+
 ### Project Status & Sidebar Filtering
 
 Projects have a `status` field (`"active" | "completed" | "archived"`). The sidebar (`src/components/layout/sidebar.tsx`) filters out archived projects before rendering — if you add new status values, update this filter accordingly.

@@ -512,8 +512,25 @@ const sections: WikiSection[] = [
     icon: Brain,
     title: "AI Features",
     description:
-      "Leverage Claude AI to extract tasks and streamline your workflow.",
+      "Leverage Claude AI to create tasks conversationally and extract them from notes.",
     content: [
+      {
+        heading: "Create with AI (Beta)",
+        paragraphs: [
+          "Click 'Create with AI' in the left sidebar to open a full-screen chat interface powered by Claude AI. Describe what you want to work on in plain language — the AI figures out the rest.",
+        ],
+        list: [
+          "Simple tasks — Type 'Call dentist tomorrow' and the AI immediately proposes a structured task card ready to approve",
+          "Complex goals — Type 'Prepare for the quarterly review' and the AI asks one focused question at a time to understand what tasks are needed",
+          "Project context — If you're on a project page when you open the modal, tasks are automatically linked to that project",
+          "Editable cards — Before any task is created, you see editable cards where you can adjust the title, priority, and due date",
+          "Multiple tasks — The AI can propose several related tasks at once; select the ones you want and deselect the rest",
+          "Approval-gated — Nothing is saved until you click 'Create tasks'",
+        ],
+      },
+      {
+        tip: "The AI caps at 5 conversation turns. If you haven't reached a proposal by then, it will make reasonable assumptions and propose tasks based on what it knows so far.",
+      },
       {
         heading: "AI Task Extraction",
         paragraphs: [
