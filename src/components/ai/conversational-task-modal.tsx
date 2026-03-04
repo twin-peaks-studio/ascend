@@ -209,35 +209,38 @@ function TaskProposalCard({ task, onUpdate, onToggle, currentUser, clientDate }:
             Due date
           </span>
           <div className="relative min-w-0">
-            {/* Styled button shows human-readable label */}
-            <button
-              type="button"
-              onClick={() => {
-                const input = dueDateInputRef.current;
-                if (!input) return;
-                if (typeof input.showPicker === "function") {
-                  input.showPicker();
-                } else {
-                  input.click();
-                }
-              }}
+            {/* Visible label — pointer-events-none so touches fall through to the input */}
+            <div
               className={cn(
-                "text-sm border border-border rounded-md px-2 py-1.5 cursor-pointer w-full text-left truncate",
-                "focus:outline-none focus:ring-1 focus:ring-ring hover:border-ring transition-colors",
+                "text-sm border border-border rounded-md px-2 py-1.5 w-full text-left truncate pointer-events-none",
+                "transition-colors",
                 task.dueDate ? "text-foreground" : "text-muted-foreground"
               )}
+              aria-hidden
             >
               {task.dueDate ? formatDueDateLabel(task.dueDate, clientDate) : "No date"}
-            </button>
-            {/* Hidden native date input — opened programmatically via showPicker() */}
+            </div>
+            {/* Date input covers the full button area — opacity-0 but fully interactive.
+                Taps land directly on the input (required for iOS Safari; showPicker()
+                called from a separate button handler doesn't work on iOS). */}
             <input
               ref={dueDateInputRef}
               type="date"
               value={task.dueDate ?? ""}
               onChange={(e) => onUpdate(task.id, { dueDate: e.target.value || null })}
-              className="absolute opacity-0 pointer-events-none w-px h-px"
-              tabIndex={-1}
-              aria-hidden
+              onClick={(e) => {
+                // showPicker() works when called from the input's own click handler
+                // (user gesture is preserved). This ensures clicking anywhere on the
+                // label area opens the picker on desktop Chrome, not just the right edge.
+                // iOS ignores this (showPicker is not supported) and uses direct tap on input.
+                try {
+                  (e.currentTarget as HTMLInputElement).showPicker();
+                } catch {
+                  // Ignore — browser doesn't support showPicker (iOS) or no user gesture
+                }
+              }}
+              className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+              aria-label="Due date"
             />
           </div>
         </div>
