@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -21,7 +20,6 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useProjects } from "@/hooks/use-projects";
 import { useSidebar } from "@/hooks/use-sidebar";
-import { ConversationalTaskModal } from "@/components/ai";
 import type { ProjectWithRelations } from "@/types";
 
 interface NavItem {
@@ -55,6 +53,7 @@ const navItems: NavItem[] = [
 
 interface SidebarProps {
   onShowFeedback?: () => void;
+  onAiCreate?: () => void;
 }
 
 interface NavLinksProps {
@@ -147,12 +146,11 @@ function NavLinks({ pathname, projects, isCollapsed }: NavLinksProps) {
   );
 }
 
-export function Sidebar({ onShowFeedback }: SidebarProps) {
+export function Sidebar({ onShowFeedback, onAiCreate }: SidebarProps) {
   const pathname = usePathname();
   const { projects } = useProjects();
   const activeProjects = projects.filter((p) => p.status !== "archived");
   const { isCollapsed, toggleSidebar } = useSidebar();
-  const [aiCreateOpen, setAiCreateOpen] = useState(false);
 
   return (
     <>
@@ -252,7 +250,7 @@ export function Sidebar({ onShowFeedback }: SidebarProps) {
             <Button
               variant="ghost"
               className="w-full justify-start gap-3 text-muted-foreground"
-              onClick={() => setAiCreateOpen(true)}
+              onClick={() => onAiCreate?.()}
             >
               <Sparkles className="h-5 w-5 shrink-0" />
               <span className="flex items-center gap-1.5">
@@ -267,7 +265,7 @@ export function Sidebar({ onShowFeedback }: SidebarProps) {
               variant="ghost"
               size="icon"
               className="w-full text-muted-foreground"
-              onClick={() => setAiCreateOpen(true)}
+              onClick={() => onAiCreate?.()}
               title="Create with AI (beta)"
             >
               <Sparkles className="h-5 w-5" />
@@ -296,9 +294,6 @@ export function Sidebar({ onShowFeedback }: SidebarProps) {
         </div>
       </aside>
 
-      {/* AI task creation modal — rendered here so it has access to sidebar state
-          while using usePathname() internally to detect current project context */}
-      <ConversationalTaskModal open={aiCreateOpen} onOpenChange={setAiCreateOpen} />
     </>
   );
 }

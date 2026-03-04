@@ -8,6 +8,7 @@ import { ShortcutsDialog } from "../shortcuts-dialog";
 import { SearchDialog } from "../search";
 import { AuthDialog } from "../auth";
 import { FeedbackDialog } from "../feedback-dialog";
+import { ConversationalTaskModal } from "../ai";
 import { TimerProvider, useTimerContext } from "@/contexts/timer-context";
 import { useSidebar } from "@/hooks/use-sidebar";
 import { useAuth } from "@/hooks/use-auth";
@@ -118,6 +119,7 @@ export function AppShell({
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
+  const [showAiCreate, setShowAiCreate] = useState(false);
   const [showAuthDialog, setShowAuthDialog] = useState(false);
   const [isDark, setIsDark] = useState(false);
   const [themeMounted, setThemeMounted] = useState(false);
@@ -225,7 +227,7 @@ export function AppShell({
     <SearchContext.Provider value={{ openSearch: handleOpenSearch }}>
       <FeedbackContext.Provider value={{ openFeedback: handleOpenFeedback }}>
       <div className="min-h-screen bg-background">
-        <Sidebar onShowFeedback={handleOpenFeedback} />
+        <Sidebar onShowFeedback={handleOpenFeedback} onAiCreate={() => setShowAiCreate(true)} />
 
         {/* Main content area - offset by sidebar width on desktop (lg), no offset on tablet and below */}
         <main
@@ -240,6 +242,7 @@ export function AppShell({
         {/* Mobile/Tablet bottom navigation (visible below lg breakpoint) */}
         <MobileBottomNav
           onAddTask={onAddTask}
+          onAiCreate={() => setShowAiCreate(true)}
           viewMode={viewMode}
           onViewModeChange={onViewModeChange}
           projects={projects}
@@ -273,6 +276,11 @@ export function AppShell({
 
         {/* Feedback dialog */}
         <FeedbackDialog open={showFeedback} onOpenChange={setShowFeedback} />
+
+        {/* AI task creation modal — rendered at shell level so it's reachable from
+            both the desktop sidebar button and the mobile bottom nav Sparkles button.
+            Uses usePathname() internally to detect project context. */}
+        <ConversationalTaskModal open={showAiCreate} onOpenChange={setShowAiCreate} />
 
         {/* Task dialog for timer indicator clicks */}
         <TimerTaskNavigation />

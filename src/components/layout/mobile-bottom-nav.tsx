@@ -23,6 +23,7 @@ import {
   UserX,
   Eye,
   CalendarDays,
+  Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -76,6 +77,7 @@ const navItems: NavItem[] = [
 
 interface MobileBottomNavProps {
   onAddTask?: () => void;
+  onAiCreate?: () => void;
   viewMode?: ViewMode;
   onViewModeChange?: (mode: ViewMode) => void;
   projects?: Project[];
@@ -100,6 +102,7 @@ type FilterView = "main" | "project" | "sort" | "assignee";
 
 export function MobileBottomNav({
   onAddTask,
+  onAiCreate,
   viewMode,
   onViewModeChange,
   projects = [],
@@ -333,6 +336,16 @@ export function MobileBottomNav({
                   </Link>
                 );
               })}
+
+              {/* AI task creation button */}
+              <button
+                onClick={onAiCreate}
+                className="flex flex-col items-center gap-0.5 rounded-full px-4 py-2 transition-all text-muted-foreground hover:text-foreground active:scale-95"
+                aria-label="Create with AI"
+              >
+                <Sparkles className="h-5 w-5" />
+                <span className="text-[11px] font-medium">AI</span>
+              </button>
             </div>
 
           </div>
