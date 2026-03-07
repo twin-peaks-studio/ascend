@@ -2500,4 +2500,82 @@ This means:
 
 ---
 
+---
+
+### Feedback Forms Architecture
+
+Feedback Forms allow developers to create structured feedback forms via AI chat, share password-protected URLs with testers, and have each submission auto-create an Ascend task. This is a fully unauthenticated user-facing flow layered on top of the existing Supabase + Next.js stack.
+
+#### Database tables
+
+- `feedback_forms` — form definitions (slug, password_hash, password_version, fields JSONB)
+- `feedback_submissions` — per-submission rows (raw_contents, followup_transcript, final_contents, task_id FK)
+- `tasks.feedback_submission_id` — reverse FK from tasks back to submissions
+- `tasks.source_type` — extended to include `"feedback_form"` (was `"manual" | "ai_extraction"`)
+
+There are two FK relationships between `feedback_submissions` and `tasks`:
+1. `feedback_submissions.task_id → tasks.id` (submission owns the task)
+2. `tasks.feedback_submission_id → feedback_submissions.id` (task back-references submission)
+
+Any PostgREST embedded select joining these tables must disambiguate: use `tasks!feedback_submissions_task_id_fkey` not just `tasks`.
+
+#### Session / auth model
+
+Tester authentication uses HMAC-SHA256 signed cookies (no server-side session store). Key facts:
+- Cookie name: `ascend-form-session-[slug]` — unique per form, prevents cross-form bleed
+- Cookie path: `/` — must be `/` so browser sends it to both page and API routes. Scoping to `/forms/[slug]` breaks API calls.
+- Payload: `{ formId, slug, passwordVersion, issuedAt }`
+- `passwordVersion` is embedded in the cookie and checked against `feedback_forms.password_version` on every protected request. Changing the form password bumps `password_version`, instantly invalidating all existing cookies.
+- Secret: `FORM_SESSION_SECRET` env var (operator-set, server-only, never client-exposed)
+
+Implementation: `src/lib/forms/session.ts`
+
+#### AI flows
+
+**Form builder (developer-facing)**
+- Model: `claude-sonnet-4-6`
+- Route: `POST /api/ai/form-builder`
+- Auth: Supabase session (developer must be authenticated)
+- Mirrors `chat-task-creation/route.ts` — same `{ type: "question" | "form" }` streaming pattern
+- Max 5 turns; force-proposal at turn 5 (same `forceProposal` pattern as existing chat)
+
+**Post-submission review (tester-facing)**
+- Model: `claude-haiku-4-5-20251001`
+- Route: `POST /api/forms/[slug]/followup`
+- Auth: form session cookie
+- First call fires automatically on mount (no user message needed)
+- Max 3 follow-up questions; force-completion at question 3
+- On `{ type: "complete" }`: PATCH submission with `final_contents`, then PATCH task with AI-generated title + description
+
+#### PMAdapter pattern
+
+`src/lib/forms/adapter.ts` defines a `PMAdapter` interface:
+
+```typescript
+interface PMAdapter {
+  createTask(params): Promise<{ taskId: string }>;
+  updateTask(taskId, params): Promise<void>;
+  getTask(taskId): Promise<...>;
+  listTasks(formId): Promise<TrackerTask[]>;
+}
+```
+
+`AscendAdapter` implements this using the Supabase service role client (bypasses RLS). All tester-facing API routes go through this adapter — never hit Supabase directly from route handlers. Post-v1, implement this interface for Linear, Jira, etc. without touching form/submission code.
+
+#### Routing
+
+```
+/forms/[slug]               — Public: password gate → submission form → AI follow-up → completion
+/forms/[slug]/tracker       — Public: live kanban/list tracker (30s polling)
+/api/forms/[slug]/*         — Unauthenticated API (session cookie auth)
+/api/ai/form-builder        — Developer API (Supabase auth)
+/api/projects/[id]/forms    — Developer CRUD (Supabase auth)
+```
+
+Pages under `/forms/*` use `src/app/forms/[slug]/layout.tsx` — standalone layout with no Sidebar, AuthProvider, or AppShell.
+
+#### Tracker reuse of existing components
+
+The tracker uses existing `KanbanBoard` and `TaskListItem` with no-op/omitted handlers (read-only). No changes were made to those components. The `TrackerTask` type maps to the shape those components expect.
+
 *Last updated: March 2026*

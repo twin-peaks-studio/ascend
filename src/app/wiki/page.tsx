@@ -29,6 +29,7 @@ import {
   Layers,
   Bell,
   History,
+  ClipboardList,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -763,6 +764,62 @@ const sections: WikiSection[] = [
         heading: "Mobile Backgrounding Recovery",
         paragraphs: [
           "When you background the app (e.g., switch to another app on your phone), Ascend automatically recovers your session when you return. Auth state is refreshed, stale data is refetched, and active timers continue running correctly.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "feedback-forms",
+    icon: ClipboardList,
+    title: "Feedback Forms",
+    description: "Collect structured bug reports and feedback from testers via shareable, password-protected forms.",
+    content: [
+      {
+        heading: "Overview",
+        paragraphs: [
+          "Feedback Forms let you collect structured input from testers, QA teams, or clients without giving them an Ascend account. Each form submission automatically creates a task in your project and goes through an AI follow-up chat to ensure the report is complete.",
+        ],
+      },
+      {
+        heading: "Creating a Form (Developer)",
+        paragraphs: [
+          "Open a project page and click 'Create Form' in the Feedback Forms section. A chat modal opens — describe the kind of feedback you want to collect (e.g. 'a simple bug report form with title, steps to reproduce, and severity'). The AI proposes a set of form fields. When you're happy, click 'Create Form', give the form a name and set an access password.",
+        ],
+        list: [
+          "The form URL is auto-generated from the form title (e.g. /forms/my-project-bug-report)",
+          "The slug is permanent — changing the form title later does not change the URL",
+          "The password can be changed at any time; all existing tester sessions are immediately invalidated",
+          "You can see all forms for a project in the collapsible Feedback Forms section on the project page",
+        ],
+      },
+      {
+        heading: "Sharing the Form (Developer)",
+        paragraphs: [
+          "After creating a form, copy the URL from the success screen or from the form's list item on the project page. Share this URL and the password with your testers via any channel (email, Slack, etc.). Testers do not need an Ascend account.",
+        ],
+      },
+      {
+        heading: "Submitting Feedback (Tester)",
+        paragraphs: [
+          "Visit the form URL in any browser. Enter the password provided by the developer. Fill in the form fields and click Submit. After submitting, an AI chat interface appears with a follow-up question to clarify or complete your report. Answer the question (or questions — the AI asks at most 3) and you'll see a confirmation screen.",
+        ],
+        list: [
+          "Your session is remembered for 7 days — you won't need to re-enter the password on the same device",
+          "If the developer changes the form password, you'll be prompted to re-enter it on your next visit",
+          "Click 'View all issues' on the confirmation screen to see the tracker",
+        ],
+      },
+      {
+        heading: "Issue Tracker (Tester)",
+        paragraphs: [
+          "The tracker page shows all submissions from this form and their current status. It updates every 30 seconds automatically. Use the kanban or list view toggle (top right) to switch between views. As the development team moves tasks through their workflow in Ascend, the status shown here updates accordingly.",
+        ],
+        tip: "The tracker URL is /forms/[slug]/tracker. Bookmark it for easy access.",
+      },
+      {
+        heading: "Viewing Submissions (Developer)",
+        paragraphs: [
+          "Every submitted form automatically creates a task in the linked project with source type 'Feedback Form'. The task title and description are AI-generated based on the tester's submission and follow-up answers. You can find these tasks in your project's task list alongside manually created and AI-extracted tasks.",
         ],
       },
     ],

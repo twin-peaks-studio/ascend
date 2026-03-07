@@ -40,6 +40,12 @@ export type {
   Section,
   SectionInsert,
   SectionUpdate,
+  FeedbackForm,
+  FeedbackFormInsert,
+  FeedbackFormUpdate,
+  FeedbackSubmission,
+  FeedbackSubmissionInsert,
+  FeedbackSubmissionUpdate,
 } from "./database";
 
 import type {
@@ -52,6 +58,7 @@ import type {
   Comment as DBComment,
   Notification as DBNotification,
   ActivityLog as DBActivityLog,
+  FeedbackForm as DBFeedbackForm,
 } from "./database";
 
 /**
@@ -266,3 +273,43 @@ export const PROJECT_STATUS_CONFIG = {
     bgColor: "bg-muted",
   },
 } as const;
+
+// ─── Feedback Forms ───────────────────────────────────────────────────────────
+
+/**
+ * A single form field definition — stored as a JSONB array in feedback_forms.fields.
+ */
+export interface FormField {
+  /** Stable identifier for this field — used as the key in raw_contents. */
+  id: string;
+  label: string;
+  type: "text" | "textarea" | "select" | "radio" | "checkbox" | "url" | "email";
+  required: boolean;
+  /** Options list — only relevant for select / radio / checkbox types. */
+  options?: string[];
+  placeholder?: string;
+}
+
+/**
+ * FeedbackForm with submission count — used in developer-facing project page lists.
+ */
+export interface FeedbackFormWithCount extends DBFeedbackForm {
+  submissionCount: number;
+}
+
+/**
+ * A single row returned by the tracker polling endpoint.
+ * Shape matches TaskWithProject so existing kanban/list components can accept it.
+ */
+export interface TrackerTask {
+  /** The Ascend task ID. */
+  taskId: string;
+  /** The feedback submission ID. */
+  submissionId: string;
+  title: string;
+  description: string | null;
+  /** Task status — the live value from the tasks table. */
+  status: "todo" | "in-progress" | "done";
+  priority: "low" | "medium" | "high" | "urgent";
+  submittedAt: string;
+}

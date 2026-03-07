@@ -70,6 +70,27 @@ Key files:
 - `src/hooks/use-conversational-task-creation.ts` — state machine hook (idle→chatting→waiting→reviewing→creating→done)
 - `src/components/ai/conversational-task-modal.tsx` — full-screen dialog (85vh), rendered in sidebar
 
+### Feedback Forms — Key Patterns & Gotchas
+
+**Cookie path must be `/`** — The session cookie for tester authentication is scoped by name (`ascend-form-session-[slug]`) not by path. The path is set to `/` so the browser sends it to both the page (`/forms/[slug]`) and all API routes (`/api/forms/[slug]/...`). An earlier version used `path: /forms/[slug]` which prevented the cookie from being sent to API routes. Do NOT change the path back to a form-specific path.
+
+**PostgREST FK disambiguation** — `feedback_submissions` has two FK relationships to `tasks`: one via `task_id` (submission → task) and one via `feedback_submission_id` (task → submission). Any PostgREST embedded select must specify the hint: `tasks!feedback_submissions_task_id_fkey`. Using just `tasks` causes PGRST201.
+
+**Feedback Forms are unauthenticated routes** — Pages under `/forms/*` use a standalone layout with no Sidebar, AuthProvider, or AppShell. Do not add Supabase auth guards to these routes. Session validation is via the signed `FORM_SESSION_SECRET` cookie only.
+
+**`FORM_SESSION_SECRET` is server-only** — This env var signs tester session cookies. It is never exposed to the client. It is required; if missing, the server throws at startup. End users of Ascend do not need to set this — it is set by the operator in `.env.local` (or production secrets). Generate with `openssl rand -base64 32`.
+
+**Tracker `isExpanded` toggle** — The `FeedbackFormSection` expand button is a `<button>` inside a flex row that also contains the "+ Create Form" button. Clicking the chevron/text area works correctly, but if focus is trapped by a recently-closed modal, programmatic `.click()` may be needed in tests.
+
+Key files:
+- `src/lib/forms/session.ts` — cookie sign/verify, `hashPassword`, `verifyPassword`
+- `src/lib/forms/slug.ts` — title→slug generation with collision handling
+- `src/lib/forms/adapter.ts` — `PMAdapter` interface + `AscendAdapter` (service role, bypasses RLS)
+- `src/hooks/use-form-builder.ts` — form builder state machine (idle→chatting→waiting→reviewing→confirming→creating→done)
+- `src/hooks/use-submission-followup.ts` — tester follow-up state machine (auto-fires on mount)
+- `src/hooks/use-form-tracker.ts` — polling hook (React Query, `refetchInterval: 30_000`)
+- `src/app/forms/[slug]/layout.tsx` — standalone layout (no Sidebar/AppShell)
+
 ### Project Status & Sidebar Filtering
 
 Projects have a `status` field (`"active" | "completed" | "archived"`). The sidebar (`src/components/layout/sidebar.tsx`) filters out archived projects before rendering — if you add new status values, update this filter accordingly.

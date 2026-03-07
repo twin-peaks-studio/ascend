@@ -35,6 +35,7 @@ import {
   Eye,
   CalendarDays,
   FolderX,
+  ClipboardList,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -57,6 +58,38 @@ interface ChangelogEntry {
 }
 
 const changelog: ChangelogEntry[] = [
+  {
+    date: "March 7, 2026",
+    version: "0.18.0",
+    title: "New — Feedback Forms",
+    description: "Collect structured feedback from testers and clients via password-protected forms. Each submission flows through an AI clarification exchange before automatically creating a task in your project.",
+    features: [
+      {
+        icon: ClipboardList,
+        title: "AI-Powered Form Builder",
+        description: "Create structured feedback forms by describing what you need in plain language. The AI proposes fields based on your description — review and confirm, then set a password for testers to access the form.",
+        tag: "new",
+      },
+      {
+        icon: Shield,
+        title: "Password-Protected Tester Forms",
+        description: "Each form lives at a shareable URL protected by a developer-set password. Testers access the form without needing an Ascend account. Sessions are signed and scoped per form; changing the password instantly invalidates all active sessions.",
+        tag: "new",
+      },
+      {
+        icon: Sparkles,
+        title: "AI Follow-Up Chat",
+        description: "After a tester submits their form, an AI (Claude Haiku) reviews the submission and asks targeted follow-up questions to fill in missing details — up to 3 questions. On completion, the linked task title and description are updated with the enriched content.",
+        tag: "new",
+      },
+      {
+        icon: ClipboardList,
+        title: "Live Issue Tracker for Testers",
+        description: "Testers can view a kanban or list tracker showing all their submitted issues and current statuses. The tracker polls every 30 seconds — as developers move tasks through Ascend, testers see updates in near real-time.",
+        tag: "new",
+      },
+    ],
+  },
   {
     date: "March 3, 2026",
     version: "0.17.0",

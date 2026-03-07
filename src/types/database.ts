@@ -86,7 +86,8 @@ export type Database = {
           position: number;
           section_id: string | null;
           section_position: number;
-          source_type: "manual" | "ai_extraction";
+          source_type: "manual" | "ai_extraction" | "feedback_form";
+          feedback_submission_id: string | null;
           created_by: string;
           created_at: string;
           updated_at: string;
@@ -105,7 +106,8 @@ export type Database = {
           position?: number;
           section_id?: string | null;
           section_position?: number;
-          source_type?: "manual" | "ai_extraction";
+          source_type?: "manual" | "ai_extraction" | "feedback_form";
+          feedback_submission_id?: string | null;
           created_by: string;
           created_at?: string;
           updated_at?: string;
@@ -124,7 +126,8 @@ export type Database = {
           position?: number;
           section_id?: string | null;
           section_position?: number;
-          source_type?: "manual" | "ai_extraction";
+          source_type?: "manual" | "ai_extraction" | "feedback_form";
+          feedback_submission_id?: string | null;
           created_by?: string;
           created_at?: string;
           updated_at?: string;
@@ -638,6 +641,101 @@ export type Database = {
           }
         ];
       };
+      feedback_forms: {
+        Row: {
+          id: string;
+          project_id: string;
+          title: string;
+          slug: string;
+          password_hash: string;
+          password_version: number;
+          fields: Json;
+          ai_builder_history: Json | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          project_id: string;
+          title: string;
+          slug: string;
+          password_hash: string;
+          password_version?: number;
+          fields?: Json;
+          ai_builder_history?: Json | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          project_id?: string;
+          title?: string;
+          slug?: string;
+          password_hash?: string;
+          password_version?: number;
+          fields?: Json;
+          ai_builder_history?: Json | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "feedback_forms_project_id_fkey";
+            columns: ["project_id"];
+            isOneToOne: false;
+            referencedRelation: "projects";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      feedback_submissions: {
+        Row: {
+          id: string;
+          form_id: string;
+          raw_contents: Json;
+          followup_transcript: Json | null;
+          final_contents: Json | null;
+          task_id: string | null;
+          submitted_at: string;
+          followup_complete: boolean;
+        };
+        Insert: {
+          id?: string;
+          form_id: string;
+          raw_contents: Json;
+          followup_transcript?: Json | null;
+          final_contents?: Json | null;
+          task_id?: string | null;
+          submitted_at?: string;
+          followup_complete?: boolean;
+        };
+        Update: {
+          id?: string;
+          form_id?: string;
+          raw_contents?: Json;
+          followup_transcript?: Json | null;
+          final_contents?: Json | null;
+          task_id?: string | null;
+          submitted_at?: string;
+          followup_complete?: boolean;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "feedback_submissions_form_id_fkey";
+            columns: ["form_id"];
+            isOneToOne: false;
+            referencedRelation: "feedback_forms";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "feedback_submissions_task_id_fkey";
+            columns: ["task_id"];
+            isOneToOne: false;
+            referencedRelation: "tasks";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
@@ -709,3 +807,11 @@ export type SectionUpdate = UpdateTables<"sections">;
 
 // Entity type for polymorphic relationships (time entries, etc.)
 export type TimeTrackingEntityType = "task" | "note" | "project";
+
+export type FeedbackForm = Tables<"feedback_forms">;
+export type FeedbackFormInsert = InsertTables<"feedback_forms">;
+export type FeedbackFormUpdate = UpdateTables<"feedback_forms">;
+
+export type FeedbackSubmission = Tables<"feedback_submissions">;
+export type FeedbackSubmissionInsert = InsertTables<"feedback_submissions">;
+export type FeedbackSubmissionUpdate = UpdateTables<"feedback_submissions">;

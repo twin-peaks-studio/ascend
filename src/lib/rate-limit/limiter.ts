@@ -132,6 +132,15 @@ export const rateLimitConfigs = {
 
   // Auth attempts: 5 requests per 5 minutes
   auth: { requests: 5, window: 300 },
+
+  // Feedback form password gate: 5 attempts per 15 minutes per IP (brute-force protection)
+  formPasswordGate: { requests: 5, window: 900 },
+
+  // Feedback form submission: 10 submissions per hour per IP (spam prevention)
+  formSubmission: { requests: 10, window: 3600 },
+
+  // Feedback form AI follow-up: 30 turns per minute per IP
+  formFollowup: { requests: 30, window: 60 },
 } as const;
 
 export const rateLimit = {

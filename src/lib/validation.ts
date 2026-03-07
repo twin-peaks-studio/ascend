@@ -264,3 +264,83 @@ export type UpdateDocumentInput = z.infer<typeof updateDocumentSchema>;
 export type CreateNoteInput = z.infer<typeof createNoteSchema>;
 export type UpdateNoteInput = z.infer<typeof updateNoteSchema>;
 export type CreateNoteTaskInput = z.infer<typeof createNoteTaskSchema>;
+
+// ============================================
+// Feedback Form Schemas
+// ============================================
+
+const formFieldTypeSchema = z.enum([
+  "text",
+  "textarea",
+  "select",
+  "radio",
+  "checkbox",
+  "url",
+  "email",
+]);
+
+const formFieldSchema = z.object({
+  id: z.string().min(1).max(100),
+  label: safeRequiredString(200),
+  type: formFieldTypeSchema,
+  required: z.boolean(),
+  options: z.array(z.string().max(200)).max(50).optional(),
+  placeholder: z.string().max(200).optional(),
+});
+
+/**
+ * Schema for creating a new feedback form (developer-facing).
+ * Password is plaintext here — the API route hashes it before storage.
+ */
+export const createFeedbackFormSchema = z.object({
+  projectId: z.string().uuid("Invalid project ID"),
+  title: safeRequiredString(100),
+  /** Plaintext password — hashed server-side before storage. */
+  password: z
+    .string()
+    .min(6, "Password must be at least 6 characters")
+    .max(128, "Password must be 128 characters or less"),
+  fields: z.array(formFieldSchema).min(1, "Form must have at least one field").max(20),
+  aiBuilderHistory: z.array(z.any()).optional(),
+});
+
+/**
+ * Schema for updating an existing feedback form (edit via new builder conversation).
+ * Does not allow changing projectId or slug.
+ */
+export const updateFeedbackFormSchema = z.object({
+  title: safeRequiredString(100).optional(),
+  /** If provided, the password is re-hashed and password_version is incremented. */
+  password: z
+    .string()
+    .min(6, "Password must be at least 6 characters")
+    .max(128, "Password must be 128 characters or less")
+    .optional(),
+  fields: z.array(formFieldSchema).min(1).max(20).optional(),
+  aiBuilderHistory: z.array(z.any()).optional(),
+});
+
+/**
+ * Schema for the password gate request body (tester-facing).
+ */
+export const formPasswordSchema = z.object({
+  password: z
+    .string()
+    .min(1, "Password is required")
+    .max(128, "Password must be 128 characters or less"),
+});
+
+/**
+ * Schema for a feedback form submission (tester-facing).
+ * raw_contents is a free-form key/value map of field ID → answer.
+ */
+export const feedbackSubmissionSchema = z.object({
+  rawContents: z
+    .record(z.string(), z.union([z.string(), z.array(z.string())]))
+    .refine((v) => Object.keys(v).length > 0, "Submission cannot be empty"),
+});
+
+export type CreateFeedbackFormInput = z.infer<typeof createFeedbackFormSchema>;
+export type UpdateFeedbackFormInput = z.infer<typeof updateFeedbackFormSchema>;
+export type FormPasswordInput = z.infer<typeof formPasswordSchema>;
+export type FeedbackSubmissionInput = z.infer<typeof feedbackSubmissionSchema>;

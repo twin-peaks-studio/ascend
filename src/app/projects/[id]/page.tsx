@@ -60,6 +60,7 @@ import { TimeReportDialog } from "@/components/time/project-time-report";
 import { useProjectTotalTime } from "@/hooks/use-time-tracking";
 import { NoteListItem } from "@/components/note";
 import { ActivityFeed } from "@/components/activity/activity-feed";
+import { FeedbackFormSection } from "@/components/forms/feedback-form-section";
 import {
   notifyProjectLeadAssigned,
   notifyProjectLeadRemoved,
@@ -698,6 +699,12 @@ export default function ProjectDetailPage() {
                   </div>
                 )}
               </div>
+
+              {/* Feedback Forms Section */}
+              <FeedbackFormSection
+                projectId={projectId}
+                projectTitle={project.title}
+              />
 
               {/* Activity Section - Collapsible (collapsed by default) */}
               <div className="border-t border-border/40 pt-6 mt-6">
