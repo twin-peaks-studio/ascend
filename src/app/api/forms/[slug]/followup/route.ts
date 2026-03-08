@@ -96,7 +96,8 @@ Rules:
 - Ask at most ONE question per turn. Be specific and focused.
 - Never ask about information already provided.
 - Generate task titles in this format: "[Type]: [Brief description]" where Type is Bug, Feature, or Feedback.
-- Keep task titles under 80 characters.${forceComplete}
+- Keep task titles under 80 characters.
+- IMPORTANT: The original submission fields are preserved verbatim in the task — do NOT restate them in finalContents. Only include genuinely NEW information gathered from your follow-up questions.${forceComplete}
 
 You MUST respond ONLY with valid JSON — no markdown, no extra text.
 
@@ -104,7 +105,8 @@ When you need clarification:
 {"type":"question","content":"Your single focused question here"}
 
 When you have enough information:
-{"type":"complete","taskTitle":"Bug: Login button unresponsive on Safari iOS","finalContents":{"summary":"Combined answer incorporating all provided info"}}`;
+{"type":"complete","taskTitle":"Bug: Login button unresponsive on Safari iOS","finalContents":{"Additional context":"Only NEW details gathered from follow-up questions. Do NOT restate anything from the original submission. Use an empty object {} if nothing new was gathered."}}`;
+
 }
 
 // ─── Route Handler ─────────────────────────────────────────────────────────────

@@ -13,7 +13,7 @@
  */
 
 import { useState } from "react";
-import { LayoutGrid, List, Clock, CheckCircle2, Circle } from "lucide-react";
+import { LayoutGrid, List, Clock, CheckCircle2, Circle, Paperclip } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { PRIORITY_DISPLAY_SHORT, STATUS_CONFIG } from "@/types";
@@ -159,8 +159,14 @@ function TrackerCard({ task }: { task: TrackerTask }) {
           {plainText(task.description)}
         </p>
       )}
-      <div className="flex items-center gap-1 pl-5">
+      <div className="flex items-center gap-2 pl-5">
         <StatusBadge status={task.status} />
+        {task.attachmentCount > 0 && (
+          <span className="flex items-center gap-1 text-xs text-muted-foreground">
+            <Paperclip className="h-3 w-3" />
+            {task.attachmentCount}
+          </span>
+        )}
       </div>
     </div>
   );
@@ -194,6 +200,12 @@ function TrackerListRow({ task }: { task: TrackerTask }) {
       <span className={cn("text-xs font-medium shrink-0", priority.color)}>
         {priority.label}
       </span>
+      {task.attachmentCount > 0 && (
+        <span className="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
+          <Paperclip className="h-3 w-3" />
+          {task.attachmentCount}
+        </span>
+      )}
       <StatusBadge status={task.status} />
     </div>
   );

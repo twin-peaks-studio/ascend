@@ -4,7 +4,13 @@
  * Called by the follow-up chat when the AI signals completion ({type: "complete"}).
  * Updates the submission record with followup_transcript + final_contents,
  * and patches the linked Ascend task with the AI-generated title and
- * formatted description.
+ * a description that preserves all original user input verbatim.
+ *
+ * Description structure:
+ *   Section 1 — Original submission (raw_contents formatted with field labels)
+ *                This is the user's source of truth and is NEVER overwritten.
+ *   Section 2 — Additional context from follow-up (AI-gathered only, appended below a divider)
+ *                Only present if the AI gathered new information not in the original fields.
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -13,6 +19,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { getFormSession } from "@/lib/forms/session";
 import { ascendAdapter } from "@/lib/forms/adapter";
 import { logger } from "@/lib/logger";
+import type { FormField } from "@/types";
 
 const patchSchema = z.object({
   taskTitle: z.string().min(1).max(200),
@@ -61,11 +68,11 @@ export async function PATCH(
 
   const { taskTitle, finalContents, followupTranscript } = validated.data;
 
-  // 3. Fetch submission — verify it belongs to this session's form
+  // 3. Fetch submission (including raw_contents — the user's verbatim input)
   const supabase = createServiceClient();
   const { data: submission, error: fetchError } = await supabase
     .from("feedback_submissions")
-    .select("id, form_id, task_id, followup_complete, submitted_at")
+    .select("id, form_id, task_id, followup_complete, submitted_at, raw_contents")
     .eq("id", submissionId)
     .eq("form_id", session.formId)
     .single();
@@ -82,18 +89,31 @@ export async function PATCH(
     return NextResponse.json({ success: true, alreadyComplete: true });
   }
 
-  // 4. Build final task description from finalContents
-  const reportedDate = new Date(submission.submitted_at).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-  const description = Object.entries(finalContents)
-    .filter(([, v]) => v.trim())
-    .map(([k, v]) => `**${k}:**\n${v}`)
-    .join("\n\n");
+  // 4. Fetch form fields so we can map field IDs → human-readable labels
+  const { data: form } = await supabase
+    .from("feedback_forms")
+    .select("fields")
+    .eq("id", submission.form_id)
+    .single();
+  const formFields = (form?.fields as unknown as FormField[]) ?? [];
 
-  // 5. Update submission record
+  // 5. Build task description — two sections:
+  //    a) Original submission (raw_contents verbatim) — user's source of truth, never changed
+  //    b) AI additional context (finalContents) — only NEW info gathered during follow-up
+  const originalSection = formatOriginalSubmission(
+    submission.raw_contents as Record<string, string | string[]>,
+    formFields,
+    submission.submitted_at
+  );
+
+  const aiContextEntries = Object.entries(finalContents).filter(([, v]) => v.trim());
+  let description = originalSection;
+  if (aiContextEntries.length > 0) {
+    const aiSection = aiContextEntries.map(([k, v]) => `**${k}:**\n${v}`).join("\n\n");
+    description += `\n\n---\n\n**Additional context from follow-up:**\n\n${aiSection}`;
+  }
+
+  // 6. Update submission record
   const { error: updateSubError } = await supabase
     .from("feedback_submissions")
     .update({
@@ -111,12 +131,12 @@ export async function PATCH(
     );
   }
 
-  // 6. Update linked Ascend task with AI-generated title + final description
+  // 7. Update linked Ascend task — title improved by AI, description preserves original + appends context
   if (submission.task_id) {
     try {
       await ascendAdapter.updateTask(submission.task_id, {
         title: taskTitle,
-        description: `**Feedback Submission**\n\n**Reported:** ${reportedDate}\n\n${description}`,
+        description,
       });
     } catch (err) {
       // Log but don't fail — submission is already saved
@@ -129,4 +149,34 @@ export async function PATCH(
   }
 
   return NextResponse.json({ success: true });
+}
+
+/**
+ * Format raw form field values as the primary "original submission" section.
+ * Maps field IDs to human-readable labels. Never modifies the values.
+ */
+function formatOriginalSubmission(
+  contents: Record<string, string | string[]>,
+  fields: FormField[],
+  submittedAt: string
+): string {
+  const fieldMap = new Map(fields.map((f) => [f.id, f.label]));
+  const reportedDate = new Date(submittedAt).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+  const lines: string[] = ["**Feedback Submission**", "", `**Reported:** ${reportedDate}`, ""];
+
+  for (const [key, value] of Object.entries(contents)) {
+    const label = fieldMap.get(key) ?? key;
+    const displayValue = Array.isArray(value) ? value.join(", ") : value;
+    if (String(displayValue).trim()) {
+      lines.push(`**${label}:**`);
+      lines.push(String(displayValue));
+      lines.push("");
+    }
+  }
+
+  return lines.join("\n");
 }

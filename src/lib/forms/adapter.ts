@@ -160,26 +160,46 @@ export class AscendAdapter implements PMAdapter {
       return [];
     }
 
-    return (data ?? [])
-      .filter((row) => row.tasks)
-      .map((row) => {
-        const task = row.tasks as {
-          id: string;
-          title: string;
-          description: string | null;
-          status: TaskStatus;
-          priority: TaskPriority;
-        };
-        return {
-          taskId: task.id,
-          submissionId: row.id,
-          title: task.title,
-          description: task.description,
-          status: task.status,
-          priority: task.priority,
-          submittedAt: row.submitted_at,
-        };
-      });
+    const rows = (data ?? []).filter((row) => row.tasks);
+
+    // Fetch attachment counts for all tasks in a single query.
+    // attachments uses a polymorphic entity_id (no FK), so we count manually.
+    const taskIds = rows
+      .map((row) => (row.tasks as { id: string } | null)?.id)
+      .filter(Boolean) as string[];
+
+    const attachmentCountMap = new Map<string, number>();
+    if (taskIds.length > 0) {
+      const { data: attachmentRows } = await this.db
+        .from("attachments")
+        .select("entity_id")
+        .eq("entity_type", "task")
+        .in("entity_id", taskIds);
+
+      for (const a of attachmentRows ?? []) {
+        attachmentCountMap.set(a.entity_id, (attachmentCountMap.get(a.entity_id) ?? 0) + 1);
+      }
+    }
+
+    return rows.map((row) => {
+      const task = row.tasks as {
+        id: string;
+        title: string;
+        description: string | null;
+        status: TaskStatus;
+        priority: TaskPriority;
+      };
+      return {
+        taskId: task.id,
+        submissionId: row.id,
+        title: task.title,
+        description: task.description,
+        status: task.status,
+        priority: task.priority,
+        submittedAt: row.submitted_at,
+        attachmentCount: attachmentCountMap.get(task.id) ?? 0,
+      };
+    });
   }
 
   /** Fetch the project lead ID, or null if no lead is set. */

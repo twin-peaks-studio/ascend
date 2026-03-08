@@ -313,4 +313,5 @@ export interface TrackerTask {
   status: "todo" | "in-progress" | "done";
   priority: "low" | "medium" | "high" | "urgent";
   submittedAt: string;
+  attachmentCount: number;
 }
