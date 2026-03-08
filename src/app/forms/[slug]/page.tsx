@@ -189,7 +189,12 @@ export default function FormPage({
     return (
       <div className="flex min-h-dvh items-center justify-center p-4">
         <div className="w-full max-w-xl rounded-xl border bg-card shadow-sm overflow-hidden">
-          <FollowupChat slug={slug} submissionId={submissionId} taskId={taskId} />
+          <FollowupChat
+            slug={slug}
+            submissionId={submissionId}
+            taskId={taskId}
+            onSubmitAnother={() => setPageState("form")}
+          />
         </div>
       </div>
     );
@@ -200,7 +205,11 @@ export default function FormPage({
   if (pageState === "followup" && submissionId && !taskId) {
     return (
       <div className="flex min-h-dvh items-center justify-center p-4">
-        <CompletionScreen slug={slug} submissionId={submissionId} />
+        <CompletionScreen
+          slug={slug}
+          submissionId={submissionId}
+          onSubmitAnother={() => setPageState("form")}
+        />
       </div>
     );
   }

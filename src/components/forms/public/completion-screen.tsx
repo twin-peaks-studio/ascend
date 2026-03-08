@@ -16,9 +16,10 @@ import Link from "next/link";
 interface CompletionScreenProps {
   slug: string;
   submissionId: string;
+  onSubmitAnother: () => void;
 }
 
-export function CompletionScreen({ slug, submissionId: _submissionId }: CompletionScreenProps) {
+export function CompletionScreen({ slug, submissionId: _submissionId, onSubmitAnother }: CompletionScreenProps) {
   return (
     <div className="flex flex-col items-center text-center space-y-6 py-10 px-6">
       <div className="rounded-full bg-green-500/10 p-4">
@@ -39,10 +40,8 @@ export function CompletionScreen({ slug, submissionId: _submissionId }: Completi
             View all submissions
           </Link>
         </Button>
-        <Button asChild variant="outline" className="w-full h-11">
-          <Link href={`/forms/${slug}`}>
-            Submit another report
-          </Link>
+        <Button variant="outline" className="w-full h-11" onClick={onSubmitAnother}>
+          Submit another report
         </Button>
       </div>
     </div>

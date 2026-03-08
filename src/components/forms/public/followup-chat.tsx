@@ -20,9 +20,10 @@ interface FollowupChatProps {
   slug: string;
   submissionId: string;
   taskId: string;
+  onSubmitAnother: () => void;
 }
 
-export function FollowupChat({ slug, submissionId, taskId }: FollowupChatProps) {
+export function FollowupChat({ slug, submissionId, taskId, onSubmitAnother }: FollowupChatProps) {
   const [inputValue, setInputValue] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -54,7 +55,7 @@ export function FollowupChat({ slug, submissionId, taskId }: FollowupChatProps) 
   // ─── Done state → hand off to CompletionScreen ───────────────────────────
 
   if (status === "done") {
-    return <CompletionScreen slug={slug} submissionId={submissionId} />;
+    return <CompletionScreen slug={slug} submissionId={submissionId} onSubmitAnother={onSubmitAnother} />;
   }
 
   // ─── Chat UI ─────────────────────────────────────────────────────────────
