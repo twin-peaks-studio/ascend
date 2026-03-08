@@ -2545,7 +2545,7 @@ Implementation: `src/lib/forms/session.ts`
 - Auth: form session cookie
 - First call fires automatically on mount (no user message needed)
 - Max 3 follow-up questions; force-completion at question 3
-- On `{ type: "complete" }`: PATCH submission with `final_contents`, then PATCH task with AI-generated title + description
+- On `{ type: "complete" }`: returns `{ taskTitle, aiSummary, additionalContext }` — PATCH submission with these, then PATCH task with three-section description
 
 #### PMAdapter pattern
 
@@ -2574,8 +2574,36 @@ interface PMAdapter {
 
 Pages under `/forms/*` use `src/app/forms/[slug]/layout.tsx` — standalone layout with no Sidebar, AuthProvider, or AppShell.
 
+#### Task description structure (three sections)
+
+Tasks created from feedback submissions always have a three-section description built in `submissions/[id]/route.ts`:
+
+1. **Original submission** — `raw_contents` formatted verbatim with field labels (`formatOriginalSubmission`). Never modified by AI.
+2. **AI Summary** — `aiSummary` returned by the followup AI. A 1–3 sentence interpretation of the full report. Separated by `---`.
+3. **Additional context** — `additionalContext` from the followup AI. Only genuinely NEW info gathered from Q&A. Absent if empty.
+
+The followup response schema changed from `finalContents: Record<string,string>` to `aiSummary: string` + `additionalContext: Record<string,string>`. `final_contents` stored in the DB now has shape `{ aiSummary, additionalContext }`.
+
+#### File attachments
+
+Testers upload files via `POST /api/forms/[slug]/submissions/[id]/upload`. This route:
+- Validates MIME type and extension using the same allowlist as task attachments (`src/lib/validation/file-types.ts`)
+- Enforces 10 MB limit server-side
+- Uploads to Supabase Storage bucket `attachments` under path `task/{taskId}/{timestamp}-{filename}`
+- Inserts a row in the `attachments` table with `entity_type: "task"` so the file appears in the Ascend task detail automatically
+
+Testers have no Supabase session, so this route uses `createServiceClient()` (service role) — it cannot use the `useAttachments` hook.
+
+`listTasks` in `AscendAdapter` fetches full attachment details for all tasks in one separate query (polymorphic `entity_type + entity_id` — no FK, so PostgREST can't join). Public URLs are constructed server-side as `${NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/attachments/${filePath}`.
+
+`TrackerTask` has `attachments: TrackerAttachment[]` alongside `attachmentCount`. Always guard access as `task.attachments ?? []` — stale React Query cache may predate this field.
+
+#### Tracker card detail view
+
+`tracker-view.tsx` renders clickable `<button>` cards/rows. Clicking sets `selectedTask` state, which opens a shadcn `Sheet` on the right. `TaskDetail` inside the sheet renders all three description sections using `renderDescription()` (handles `**bold**` and `---` dividers) plus an `AttachmentRow` list with download links.
+
 #### Tracker reuse of existing components
 
-The tracker uses existing `KanbanBoard` and `TaskListItem` with no-op/omitted handlers (read-only). No changes were made to those components. The `TrackerTask` type maps to the shape those components expect.
+The tracker uses a custom lean `TrackerCard` / `TrackerListRow` (not the full `TaskListItem` / `KanbanBoard`). This was intentional — `TrackerTask` does not conform to the full `Task` DB shape those components require, and a lean read-only card is simpler and more appropriate here.
 
 *Last updated: March 2026*

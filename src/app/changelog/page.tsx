@@ -36,6 +36,9 @@ import {
   CalendarDays,
   FolderX,
   ClipboardList,
+  Paperclip,
+  KeyRound,
+  PanelRight,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -58,6 +61,38 @@ interface ChangelogEntry {
 }
 
 const changelog: ChangelogEntry[] = [
+  {
+    date: "March 8, 2026",
+    version: "0.19.0",
+    title: "Improved — Feedback Forms: Attachments, Detail View & Richer Task Descriptions",
+    description: "Testers can now attach files to submissions, click any tracker card to see full task details, and each submitted task now carries a structured three-section description that preserves the original report verbatim.",
+    features: [
+      {
+        icon: Paperclip,
+        title: "File Attachments on Submissions",
+        description: "Every feedback form now includes an optional file attachment section. Testers can drag-and-drop or browse to attach screenshots, logs, or any other files (up to 10 MB each). Attachments appear on the created Ascend task and are downloadable from the tester tracker.",
+        tag: "new",
+      },
+      {
+        icon: PanelRight,
+        title: "Clickable Tracker Cards with Detail View",
+        description: "Each card or row in the tester issue tracker is now clickable. Clicking opens a slide-over panel showing the full task: title, status, priority, submission date, formatted description with all three sections, and a downloadable attachment list.",
+        tag: "new",
+      },
+      {
+        icon: Sparkles,
+        title: "Three-Section Task Descriptions",
+        description: "Task descriptions created from feedback submissions now have three distinct sections: (1) the original user input, verbatim and never modified by AI; (2) an AI summary interpreting the full report; and (3) additional context from any follow-up Q&A answers.",
+        tag: "improved",
+      },
+      {
+        icon: KeyRound,
+        title: "Password View & Change for Developers",
+        description: "The Feedback Forms section on the project page now shows the current plaintext password and includes an Edit button to change it. Changing the password immediately invalidates all active tester sessions.",
+        tag: "new",
+      },
+    ],
+  },
   {
     date: "March 7, 2026",
     version: "0.18.0",

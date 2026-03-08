@@ -801,11 +801,13 @@ const sections: WikiSection[] = [
       {
         heading: "Submitting Feedback (Tester)",
         paragraphs: [
-          "Visit the form URL in any browser. Enter the password provided by the developer. Fill in the form fields and click Submit. After submitting, an AI chat interface appears with a follow-up question to clarify or complete your report. Answer the question (or questions — the AI asks at most 3) and you'll see a confirmation screen.",
+          "Visit the form URL in any browser. Enter the password provided by the developer. After authenticating you can choose to submit a new report or view existing submissions. When submitting, fill in the form fields, optionally attach files (screenshots, logs, etc. — up to 10 MB each), and click Submit Feedback.",
+          "After submitting, an AI chat interface appears with a follow-up question to clarify or complete your report. Answer the question (or questions — the AI asks at most 3) and you'll see a confirmation screen with links to view all issues or just the one you submitted.",
         ],
         list: [
           "Your session is remembered for 7 days — you won't need to re-enter the password on the same device",
           "If the developer changes the form password, you'll be prompted to re-enter it on your next visit",
+          "File attachments are optional — drag-and-drop or click the attachment area to browse",
           "Click 'View all issues' on the confirmation screen to see the tracker",
         ],
       },
@@ -813,13 +815,15 @@ const sections: WikiSection[] = [
         heading: "Issue Tracker (Tester)",
         paragraphs: [
           "The tracker page shows all submissions from this form and their current status. It updates every 30 seconds automatically. Use the kanban or list view toggle (top right) to switch between views. As the development team moves tasks through their workflow in Ascend, the status shown here updates accordingly.",
+          "Click any card (in kanban view) or row (in list view) to open a detail panel showing the full task: title, status, priority, submission date, the complete description with all sections, and any attached files with download links.",
         ],
         tip: "The tracker URL is /forms/[slug]/tracker. Bookmark it for easy access.",
       },
       {
         heading: "Viewing Submissions (Developer)",
         paragraphs: [
-          "Every submitted form automatically creates a task in the linked project with source type 'Feedback Form'. The task title and description are AI-generated based on the tester's submission and follow-up answers. You can find these tasks in your project's task list alongside manually created and AI-extracted tasks.",
+          "Every submitted form automatically creates a task in the linked project with source type 'Feedback Form'. The task description is structured in three sections: the original verbatim submission (never modified), an AI summary of the full report, and any additional context gathered during the follow-up chat. Attachments appear directly on the task alongside other task attachments.",
+          "You can view and change the form password at any time from the Feedback Forms section on the project page. Click the eye icon to reveal the current password, or click Edit to set a new one — all active tester sessions are immediately invalidated.",
         ],
       },
     ],

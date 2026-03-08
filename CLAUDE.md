@@ -82,6 +82,14 @@ Key files:
 
 **Tracker `isExpanded` toggle** — The `FeedbackFormSection` expand button is a `<button>` inside a flex row that also contains the "+ Create Form" button. Clicking the chevron/text area works correctly, but if focus is trapped by a recently-closed modal, programmatic `.click()` may be needed in tests.
 
+**Three-section task description** — Task descriptions from feedback submissions have three sections: (1) original verbatim user input, (2) AI summary, (3) additional context from Q&A. The followup API returns `{ aiSummary: string, additionalContext: Record<string,string> }` — NOT `finalContents`. Do not revert to `finalContents`.
+
+**Tracker `task.attachments` guard** — `TrackerTask.attachments` may be `undefined` for tasks fetched before the field was added. Always access as `task.attachments ?? []` in `tracker-view.tsx`.
+
+**File upload is server-side only** — Testers have no Supabase session, so `POST /api/forms/[slug]/submissions/[id]/upload` uses `createServiceClient()`. The `useAttachments` hook (which calls `createClient()`) cannot be used here.
+
+**`password_plain` column** — `feedback_forms` stores plaintext password alongside `password_hash` so developers can view it in the UI. Set in `POST /api/projects/[id]/forms` and `PATCH /api/projects/[id]/forms/[formId]`.
+
 Key files:
 - `src/lib/forms/session.ts` — cookie sign/verify, `hashPassword`, `verifyPassword`
 - `src/lib/forms/slug.ts` — title→slug generation with collision handling
@@ -90,6 +98,7 @@ Key files:
 - `src/hooks/use-submission-followup.ts` — tester follow-up state machine (auto-fires on mount)
 - `src/hooks/use-form-tracker.ts` — polling hook (React Query, `refetchInterval: 30_000`)
 - `src/app/forms/[slug]/layout.tsx` — standalone layout (no Sidebar/AppShell)
+- `src/components/forms/public/tracker-view.tsx` — standalone tracker UI (NOT reusing KanbanBoard/TaskListItem)
 
 ### Project Status & Sidebar Filtering
 
