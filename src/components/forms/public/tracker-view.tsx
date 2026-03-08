@@ -285,13 +285,13 @@ function TaskDetail({ task }: { task: TrackerTask }) {
       )}
 
       {/* Attachments */}
-      {task.attachments.length > 0 && (
+      {(task.attachments ?? []).length > 0 && (
         <div className="space-y-2">
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             Attachments
           </p>
           <ul className="space-y-1.5">
-            {task.attachments.map((att) => (
+            {(task.attachments ?? []).map((att) => (
               <AttachmentRow key={att.id} attachment={att} />
             ))}
           </ul>
