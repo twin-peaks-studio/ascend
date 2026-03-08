@@ -65,7 +65,7 @@ export async function PATCH(
   const supabase = createServiceClient();
   const { data: submission, error: fetchError } = await supabase
     .from("feedback_submissions")
-    .select("id, form_id, task_id, followup_complete")
+    .select("id, form_id, task_id, followup_complete, submitted_at")
     .eq("id", submissionId)
     .eq("form_id", session.formId)
     .single();
@@ -83,6 +83,11 @@ export async function PATCH(
   }
 
   // 4. Build final task description from finalContents
+  const reportedDate = new Date(submission.submitted_at).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
   const description = Object.entries(finalContents)
     .filter(([, v]) => v.trim())
     .map(([k, v]) => `**${k}:** ${v}`)
@@ -111,7 +116,7 @@ export async function PATCH(
     try {
       await ascendAdapter.updateTask(submission.task_id, {
         title: taskTitle,
-        description: `**Feedback Submission**\n\n${description}`,
+        description: `**Feedback Submission**\n\n**Reported:** ${reportedDate}\n\n${description}`,
       });
     } catch (err) {
       // Log but don't fail — submission is already saved

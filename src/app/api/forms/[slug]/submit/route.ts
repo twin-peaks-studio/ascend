@@ -182,7 +182,12 @@ function formatSubmissionDescription(
   fields: FormField[]
 ): string {
   const fieldMap = new Map(fields.map((f) => [f.id, f.label]));
-  const lines: string[] = ["**Feedback Submission**", ""];
+  const reportedDate = new Date().toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+  const lines: string[] = ["**Feedback Submission**", "", `**Reported:** ${reportedDate}`, ""];
 
   for (const [key, value] of Object.entries(contents)) {
     const label = fieldMap.get(key) ?? key;
