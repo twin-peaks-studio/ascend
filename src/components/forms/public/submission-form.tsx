@@ -125,6 +125,7 @@ export function SubmissionForm({ slug, formTitle, fields, onSubmitted }: Submiss
                 onChange={(e) => setValue(field.id, e.target.value)}
                 placeholder={field.placeholder}
                 required={field.required}
+                className="text-base"
               />
             )}
 
@@ -136,6 +137,7 @@ export function SubmissionForm({ slug, formTitle, fields, onSubmitted }: Submiss
                 onChange={(e) => setValue(field.id, e.target.value)}
                 placeholder={field.placeholder ?? "you@example.com"}
                 required={field.required}
+                className="text-base"
               />
             )}
 
@@ -147,6 +149,7 @@ export function SubmissionForm({ slug, formTitle, fields, onSubmitted }: Submiss
                 onChange={(e) => setValue(field.id, e.target.value)}
                 placeholder={field.placeholder ?? "https://"}
                 required={field.required}
+                className="text-base"
               />
             )}
 
@@ -158,7 +161,7 @@ export function SubmissionForm({ slug, formTitle, fields, onSubmitted }: Submiss
                 placeholder={field.placeholder}
                 required={field.required}
                 rows={4}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none"
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-base shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none"
               />
             )}
 
@@ -168,7 +171,7 @@ export function SubmissionForm({ slug, formTitle, fields, onSubmitted }: Submiss
                 value={values[field.id] as string}
                 onChange={(e) => setValue(field.id, e.target.value)}
                 required={field.required}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-base shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               >
                 <option value="">Select an option…</option>
                 {field.options.map((opt) => (
@@ -180,9 +183,9 @@ export function SubmissionForm({ slug, formTitle, fields, onSubmitted }: Submiss
             )}
 
             {field.type === "radio" && field.options && (
-              <div className="space-y-2">
+              <div className="space-y-1">
                 {field.options.map((opt) => (
-                  <label key={opt} className="flex items-center gap-2 cursor-pointer">
+                  <label key={opt} className="flex items-center gap-3 min-h-[44px] cursor-pointer">
                     <input
                       type="radio"
                       name={field.id}
@@ -190,25 +193,25 @@ export function SubmissionForm({ slug, formTitle, fields, onSubmitted }: Submiss
                       checked={values[field.id] === opt}
                       onChange={() => setValue(field.id, opt)}
                       required={field.required}
-                      className="accent-primary"
+                      className="accent-primary h-4 w-4 flex-shrink-0"
                     />
-                    <span className="text-sm">{opt}</span>
+                    <span className="text-base">{opt}</span>
                   </label>
                 ))}
               </div>
             )}
 
             {field.type === "checkbox" && field.options && (
-              <div className="space-y-2">
+              <div className="space-y-1">
                 {field.options.map((opt) => (
-                  <label key={opt} className="flex items-center gap-2 cursor-pointer">
+                  <label key={opt} className="flex items-center gap-3 min-h-[44px] cursor-pointer">
                     <input
                       type="checkbox"
                       checked={(values[field.id] as string[]).includes(opt)}
                       onChange={() => toggleCheckbox(field.id, opt)}
-                      className="accent-primary"
+                      className="accent-primary h-4 w-4 flex-shrink-0"
                     />
-                    <span className="text-sm">{opt}</span>
+                    <span className="text-base">{opt}</span>
                   </label>
                 ))}
               </div>
@@ -223,7 +226,7 @@ export function SubmissionForm({ slug, formTitle, fields, onSubmitted }: Submiss
         </p>
       )}
 
-      <Button type="submit" disabled={loading} className="w-full">
+      <Button type="submit" disabled={loading} className="w-full h-11">
         {loading ? "Submitting…" : "Submit Feedback"}
       </Button>
     </form>

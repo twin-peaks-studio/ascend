@@ -60,7 +60,7 @@ export function FollowupChat({ slug, submissionId, taskId }: FollowupChatProps) 
   // ─── Chat UI ─────────────────────────────────────────────────────────────
 
   return (
-    <div className="flex flex-col h-full max-h-[600px]">
+    <div className="flex flex-col" style={{ height: "min(600px, calc(100dvh - 2rem))" }}>
       {/* Header */}
       <div className="border-b px-4 py-3">
         <p className="text-sm font-medium">A couple of quick follow-up questions</p>
@@ -115,13 +115,14 @@ export function FollowupChat({ slug, submissionId, taskId }: FollowupChatProps) 
           onKeyDown={handleKeyDown}
           placeholder="Type your answer…"
           disabled={status !== "asking"}
-          className="flex-1"
+          className="flex-1 text-base h-11"
         />
         <Button
           size="icon"
           onClick={handleSend}
           disabled={!inputValue.trim() || status !== "asking"}
           aria-label="Send"
+          className="h-11 w-11 flex-shrink-0"
         >
           <Send className="h-4 w-4" />
         </Button>

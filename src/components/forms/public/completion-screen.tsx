@@ -4,9 +4,9 @@
  * CompletionScreen
  *
  * Shown after follow-up chat completes (or is skipped).
- * Displays a confirmation message and two action buttons:
- *   - "View all issues" → /forms/[slug]/tracker
- *   - "View this issue" → /forms/[slug]/tracker#[submissionId]
+ * Displays a confirmation message with two next-step actions:
+ *   - "View all submissions" → /forms/[slug]/tracker
+ *   - "Submit another report" → /forms/[slug] (fresh form)
  */
 
 import { CheckCircle } from "lucide-react";
@@ -18,30 +18,30 @@ interface CompletionScreenProps {
   submissionId: string;
 }
 
-export function CompletionScreen({ slug, submissionId }: CompletionScreenProps) {
+export function CompletionScreen({ slug, submissionId: _submissionId }: CompletionScreenProps) {
   return (
-    <div className="flex flex-col items-center text-center space-y-5 py-8 px-4">
+    <div className="flex flex-col items-center text-center space-y-6 py-10 px-6">
       <div className="rounded-full bg-green-500/10 p-4">
         <CheckCircle className="h-8 w-8 text-green-500" />
       </div>
 
-      <div className="space-y-1">
-        <h2 className="text-lg font-semibold">Thank you! Your report has been submitted.</h2>
-        <p className="text-sm text-muted-foreground">
-          The team has been notified and will review your feedback shortly.
-          You can track the status of your report below.
+      <div className="space-y-2 max-w-sm">
+        <h2 className="text-lg font-semibold">Report submitted — thank you!</h2>
+        <p className="text-sm text-muted-foreground leading-relaxed">
+          Your feedback has been logged and the team has been notified.
+          What would you like to do next?
         </p>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-3 w-full max-w-xs">
-        <Button asChild variant="default" className="flex-1">
-          <Link href={`/forms/${slug}/tracker#${submissionId}`}>
-            View this issue
+      <div className="flex flex-col gap-3 w-full max-w-xs">
+        <Button asChild variant="default" className="w-full h-11">
+          <Link href={`/forms/${slug}/tracker`}>
+            View all submissions
           </Link>
         </Button>
-        <Button asChild variant="outline" className="flex-1">
-          <Link href={`/forms/${slug}/tracker`}>
-            View all issues
+        <Button asChild variant="outline" className="w-full h-11">
+          <Link href={`/forms/${slug}`}>
+            Submit another report
           </Link>
         </Button>
       </div>

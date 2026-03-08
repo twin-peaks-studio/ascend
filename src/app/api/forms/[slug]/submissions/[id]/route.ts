@@ -90,8 +90,8 @@ export async function PATCH(
   });
   const description = Object.entries(finalContents)
     .filter(([, v]) => v.trim())
-    .map(([k, v]) => `**${k}:** ${v}`)
-    .join("\n");
+    .map(([k, v]) => `**${k}:**\n${v}`)
+    .join("\n\n");
 
   // 5. Update submission record
   const { error: updateSubError } = await supabase

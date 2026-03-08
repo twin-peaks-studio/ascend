@@ -193,7 +193,9 @@ function formatSubmissionDescription(
     const label = fieldMap.get(key) ?? key;
     const displayValue = Array.isArray(value) ? value.join(", ") : value;
     if (displayValue.trim()) {
-      lines.push(`**${label}:** ${displayValue}`);
+      lines.push(`**${label}:**`);
+      lines.push(displayValue);
+      lines.push("");
     }
   }
 
