@@ -92,7 +92,7 @@ export function FeedbackFormSection({
             ) : forms.length > 0 ? (
               <div className="border rounded-lg divide-y overflow-hidden">
                 {forms.map((form) => (
-                  <FeedbackFormListItem key={form.id} form={form} />
+                  <FeedbackFormListItem key={form.id} form={form} projectId={projectId} />
                 ))}
               </div>
             ) : (

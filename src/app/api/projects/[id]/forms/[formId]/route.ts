@@ -57,9 +57,10 @@ export async function PATCH(
   if (fields !== undefined) updatePayload.fields = fields;
   if (aiBuilderHistory !== undefined) updatePayload.ai_builder_history = aiBuilderHistory;
 
-  // If password is being changed, hash it and bump password_version
+  // If password is being changed, hash it, store plaintext, and bump password_version
   if (password) {
     updatePayload.password_hash = await hashPassword(password);
+    updatePayload.password_plain = password;
 
     // Fetch current version so we can increment
     const { data: current } = await supabase

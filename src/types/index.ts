@@ -295,6 +295,7 @@ export interface FormField {
  */
 export interface FeedbackFormWithCount extends DBFeedbackForm {
   submissionCount: number;
+  passwordPlain: string | null;
 }
 
 /**

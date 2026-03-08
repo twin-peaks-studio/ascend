@@ -12,10 +12,13 @@
  */
 
 import { use, useEffect, useState } from "react";
+import Link from "next/link";
+import { ClipboardList, PlusCircle } from "lucide-react";
 import { PasswordGate } from "@/components/forms/public/password-gate";
 import { SubmissionForm } from "@/components/forms/public/submission-form";
 import { FollowupChat } from "@/components/forms/public/followup-chat";
 import { CompletionScreen } from "@/components/forms/public/completion-screen";
+import { Button } from "@/components/ui/button";
 import type { FormField } from "@/types";
 
 interface FormMeta {
@@ -28,6 +31,7 @@ interface FormMeta {
 type PageState =
   | "loading"
   | "needs-auth"
+  | "choice"
   | "form"
   | "followup"
   | "done"
@@ -53,7 +57,7 @@ export default function FormPage({
 
       if (data.success) {
         setFormMeta(data.form as FormMeta);
-        setPageState("form");
+        setPageState("choice");
       } else if (
         data.error?.type === "unauthenticated" ||
         data.error?.type === "session_invalidated"
@@ -124,6 +128,40 @@ export default function FormPage({
     return (
       <div className="flex min-h-dvh items-center justify-center">
         <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      </div>
+    );
+  }
+
+  // ─── Choice Screen ────────────────────────────────────────────────────────
+
+  if (pageState === "choice") {
+    return (
+      <div className="flex min-h-dvh items-center justify-center p-4">
+        <div className="w-full max-w-sm space-y-8 text-center">
+          <div className="space-y-1">
+            <h1 className="text-xl font-semibold">{formMeta.title}</h1>
+            <p className="text-sm text-muted-foreground">What would you like to do?</p>
+          </div>
+          <div className="flex flex-col gap-3">
+            <Button
+              className="w-full h-12 text-base gap-2"
+              onClick={() => setPageState("form")}
+            >
+              <PlusCircle className="h-5 w-5" />
+              Submit a new report
+            </Button>
+            <Button
+              asChild
+              variant="outline"
+              className="w-full h-12 text-base gap-2"
+            >
+              <Link href={`/forms/${slug}/tracker`}>
+                <ClipboardList className="h-5 w-5" />
+                View submitted reports
+              </Link>
+            </Button>
+          </div>
+        </div>
       </div>
     );
   }

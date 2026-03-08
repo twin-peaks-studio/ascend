@@ -648,6 +648,7 @@ export type Database = {
           title: string;
           slug: string;
           password_hash: string;
+          password_plain: string | null;
           password_version: number;
           fields: Json;
           ai_builder_history: Json | null;
@@ -660,6 +661,7 @@ export type Database = {
           title: string;
           slug: string;
           password_hash: string;
+          password_plain?: string | null;
           password_version?: number;
           fields?: Json;
           ai_builder_history?: Json | null;
@@ -672,6 +674,7 @@ export type Database = {
           title?: string;
           slug?: string;
           password_hash?: string;
+          password_plain?: string | null;
           password_version?: number;
           fields?: Json;
           ai_builder_history?: Json | null;

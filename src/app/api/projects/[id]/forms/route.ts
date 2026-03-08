@@ -31,7 +31,7 @@ export async function GET(
   // Fetch forms with submission counts
   const { data: forms, error } = await supabase
     .from("feedback_forms")
-    .select("id, title, slug, created_at, updated_at, feedback_submissions(count)")
+    .select("id, title, slug, password_plain, created_at, updated_at, feedback_submissions(count)")
     .eq("project_id", projectId)
     .order("created_at", { ascending: false });
 
@@ -48,6 +48,7 @@ export async function GET(
     id: f.id,
     title: f.title,
     slug: f.slug,
+    passwordPlain: f.password_plain,
     createdAt: f.created_at,
     updatedAt: f.updated_at,
     submissionCount: Array.isArray(f.feedback_submissions)
@@ -117,6 +118,7 @@ export async function POST(
       title,
       slug,
       password_hash: passwordHash,
+      password_plain: password,
       password_version: 1,
       fields,
       ai_builder_history: aiBuilderHistory ?? null,
