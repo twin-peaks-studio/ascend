@@ -76,15 +76,11 @@ export class AscendAdapter implements PMAdapter {
         priority: params.priority,
         source_type: "feedback_form",
         feedback_submission_id: params.feedbackSubmissionId,
-        // Tasks created from feedback forms are unassigned and have no due date by default.
-        // The developer can update these in Ascend after reviewing the submission.
-        assignee_id: null,
+        // Assign to the project lead if one is set, otherwise unassigned.
+        assignee_id: await this._getProjectLead(params.projectId),
         due_date: null,
         position: 0,
         section_position: 0,
-        // created_by is required by the schema. We store the form's project ID
-        // as a sentinel here because the submission comes from an anonymous tester.
-        // The project creator is the logical owner — look them up.
         created_by: await this._getProjectCreator(params.projectId),
       })
       .select("id")
@@ -184,6 +180,17 @@ export class AscendAdapter implements PMAdapter {
           submittedAt: row.submitted_at,
         };
       });
+  }
+
+  /** Fetch the project lead ID, or null if no lead is set. */
+  private async _getProjectLead(projectId: string): Promise<string | null> {
+    const { data } = await this.db
+      .from("projects")
+      .select("lead_id")
+      .eq("id", projectId)
+      .single();
+
+    return data?.lead_id ?? null;
   }
 
   /** Fetch the created_by user ID for a project (used when creating tasks from submissions). */

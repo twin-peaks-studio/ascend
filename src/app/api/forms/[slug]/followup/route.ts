@@ -52,7 +52,12 @@ const followupResponseSchema = z.union([
   z.object({
     type: z.literal("complete"),
     taskTitle: z.string().min(1).max(200),
-    finalContents: z.record(z.string(), z.string()),
+    // Coerce any scalar value to string — AI may return numbers or booleans
+    finalContents: z.record(
+      z.string(),
+      z.union([z.string(), z.number(), z.boolean(), z.array(z.string())])
+        .transform((v) => (Array.isArray(v) ? v.join(", ") : String(v)))
+    ),
   }),
 ]);
 
@@ -267,6 +272,11 @@ export async function POST(
 
   const validatedResponse = followupResponseSchema.safeParse(parsed);
   if (!validatedResponse.success) {
+    logger.error("AI followup response schema validation failed", {
+      feature: "feedback-followup",
+      parsed,
+      issues: validatedResponse.error.issues,
+    });
     return NextResponse.json(
       { success: false, error: { type: "invalid_response", message: "AI response did not match expected format" } },
       { status: 502 }
