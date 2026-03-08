@@ -82,6 +82,8 @@ Key files:
 
 **Tracker `isExpanded` toggle** — The `FeedbackFormSection` expand button is a `<button>` inside a flex row that also contains the "+ Create Form" button. Clicking the chevron/text area works correctly, but if focus is trapped by a recently-closed modal, programmatic `.click()` may be needed in tests.
 
+**Same-URL navigation is a no-op** — In the Next.js App Router, navigating via `Link` or `router.push()` to the URL you're already on does not remount the page or reset state. The "Submit another report" button was broken because it used `<Link href="/forms/[slug]">` — fixed by replacing it with an `onSubmitAnother: () => void` callback prop threaded from `page.tsx` → `FollowupChat` → `CompletionScreen`, calling `setPageState("form")` directly. Apply the same pattern anywhere you need to "restart" a form flow without leaving the page.
+
 **Three-section task description** — Task descriptions from feedback submissions have three sections: (1) original verbatim user input, (2) AI summary, (3) additional context from Q&A. The followup API returns `{ aiSummary: string, additionalContext: Record<string,string> }` — NOT `finalContents`. Do not revert to `finalContents`.
 
 **Tracker `task.attachments` guard** — `TrackerTask.attachments` may be `undefined` for tasks fetched before the field was added. Always access as `task.attachments ?? []` in `tracker-view.tsx`.

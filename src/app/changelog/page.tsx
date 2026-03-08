@@ -63,6 +63,26 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: "March 8, 2026",
+    version: "0.19.1",
+    title: "Fix — Feedback Forms: Submit Another Report & Submission Rate Limit",
+    description: "Fixed a bug where 'Submit another report' did nothing after completing a submission, and raised the per-IP submission rate limit to accommodate active testing sessions.",
+    features: [
+      {
+        icon: RefreshCw,
+        title: "\"Submit Another Report\" Now Works",
+        description: "After completing a submission and follow-up chat, clicking 'Submit another report' now correctly resets to a blank form. Previously, navigating to the same URL was a no-op in Next.js and the button had no effect.",
+        tag: "fix",
+      },
+      {
+        icon: Shield,
+        title: "Submission Rate Limit Raised to 50/hour",
+        description: "The per-IP feedback submission rate limit has been increased from 10 to 50 submissions per hour to avoid false positives during active test sessions.",
+        tag: "improved",
+      },
+    ],
+  },
+  {
+    date: "March 8, 2026",
     version: "0.19.0",
     title: "Improved — Feedback Forms: Attachments, Detail View & Richer Task Descriptions",
     description: "Testers can now attach files to submissions, click any tracker card to see full task details, and each submitted task now carries a structured three-section description that preserves the original report verbatim.",
