@@ -298,6 +298,16 @@ export interface FeedbackFormWithCount extends DBFeedbackForm {
   passwordPlain: string | null;
 }
 
+/** A file attached to a feedback submission (stored as a task attachment). */
+export interface TrackerAttachment {
+  id: string;
+  filename: string;
+  fileSize: number;
+  mimeType: string;
+  /** Public URL for direct download. */
+  url: string;
+}
+
 /**
  * A single row returned by the tracker polling endpoint.
  * Shape matches TaskWithProject so existing kanban/list components can accept it.
@@ -314,4 +324,5 @@ export interface TrackerTask {
   priority: "low" | "medium" | "high" | "urgent";
   submittedAt: string;
   attachmentCount: number;
+  attachments: TrackerAttachment[];
 }

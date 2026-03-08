@@ -35,7 +35,8 @@ export interface ConversationMessage {
 
 interface FollowupCompleteData {
   taskTitle: string;
-  finalContents: Record<string, string>;
+  aiSummary: string;
+  additionalContext: Record<string, string>;
 }
 
 // ─── Hook ──────────────────────────────────────────────────────────────────────
@@ -124,7 +125,8 @@ export function useSubmissionFollowup({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             taskTitle: complete.taskTitle,
-            finalContents: complete.finalContents,
+            aiSummary: complete.aiSummary,
+            additionalContext: complete.additionalContext,
             followupTranscript: transcript,
           }),
         });

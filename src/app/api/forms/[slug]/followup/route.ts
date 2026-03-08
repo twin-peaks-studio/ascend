@@ -52,8 +52,10 @@ const followupResponseSchema = z.union([
   z.object({
     type: z.literal("complete"),
     taskTitle: z.string().min(1).max(200),
-    // Coerce any scalar value to string — AI may return numbers or booleans
-    finalContents: z.record(
+    /** AI's overall interpretation/summary of the full submission */
+    aiSummary: z.string().max(2000),
+    /** Only genuinely NEW info from follow-up Q&A — not restating original fields */
+    additionalContext: z.record(
       z.string(),
       z.union([z.string(), z.number(), z.boolean(), z.array(z.string())])
         .transform((v) => (Array.isArray(v) ? v.join(", ") : String(v)))
@@ -97,7 +99,7 @@ Rules:
 - Never ask about information already provided.
 - Generate task titles in this format: "[Type]: [Brief description]" where Type is Bug, Feature, or Feedback.
 - Keep task titles under 80 characters.
-- IMPORTANT: The original submission fields are preserved verbatim in the task — do NOT restate them in finalContents. Only include genuinely NEW information gathered from your follow-up questions.${forceComplete}
+- IMPORTANT: The original submission fields are always preserved verbatim in the task. Do NOT restate them in additionalContext.${forceComplete}
 
 You MUST respond ONLY with valid JSON — no markdown, no extra text.
 
@@ -105,7 +107,12 @@ When you need clarification:
 {"type":"question","content":"Your single focused question here"}
 
 When you have enough information:
-{"type":"complete","taskTitle":"Bug: Login button unresponsive on Safari iOS","finalContents":{"Additional context":"Only NEW details gathered from follow-up questions. Do NOT restate anything from the original submission. Use an empty object {} if nothing new was gathered."}}`;
+{
+  "type": "complete",
+  "taskTitle": "Bug: Login button unresponsive on Safari iOS",
+  "aiSummary": "A concise 1-3 sentence interpretation of the full submission — what the issue is, its impact, and any relevant context. This synthesizes both the original fields and any follow-up answers.",
+  "additionalContext": {"Key from follow-up": "Only genuinely NEW details gathered from follow-up questions. Do NOT restate anything from the original submission. Use an empty object {} if nothing new was gathered."}
+}`;
 
 }
 

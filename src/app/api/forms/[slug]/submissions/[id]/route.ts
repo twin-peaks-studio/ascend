@@ -9,8 +9,10 @@
  * Description structure:
  *   Section 1 — Original submission (raw_contents formatted with field labels)
  *                This is the user's source of truth and is NEVER overwritten.
- *   Section 2 — Additional context from follow-up (AI-gathered only, appended below a divider)
- *                Only present if the AI gathered new information not in the original fields.
+ *   Section 2 — AI summary (AI's interpretation of the full submission)
+ *                Always present; gives a quick human-readable overview.
+ *   Section 3 — Additional context from follow-up Q&A (AI-gathered only)
+ *                Only present if the follow-up chat surfaced genuinely new information.
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -23,7 +25,10 @@ import type { FormField } from "@/types";
 
 const patchSchema = z.object({
   taskTitle: z.string().min(1).max(200),
-  finalContents: z.record(z.string(), z.string()),
+  /** AI's overall interpretation/summary of the full submission */
+  aiSummary: z.string().max(2000),
+  /** Only genuinely NEW info from follow-up Q&A — not restating original fields */
+  additionalContext: z.record(z.string(), z.string()),
   followupTranscript: z.array(
     z.object({ role: z.enum(["user", "assistant"]), content: z.string() })
   ),
@@ -66,7 +71,7 @@ export async function PATCH(
     );
   }
 
-  const { taskTitle, finalContents, followupTranscript } = validated.data;
+  const { taskTitle, aiSummary, additionalContext, followupTranscript } = validated.data;
 
   // 3. Fetch submission (including raw_contents — the user's verbatim input)
   const supabase = createServiceClient();
@@ -97,20 +102,26 @@ export async function PATCH(
     .single();
   const formFields = (form?.fields as unknown as FormField[]) ?? [];
 
-  // 5. Build task description — two sections:
+  // 5. Build task description — three sections:
   //    a) Original submission (raw_contents verbatim) — user's source of truth, never changed
-  //    b) AI additional context (finalContents) — only NEW info gathered during follow-up
+  //    b) AI summary — AI's interpretation of the full submission
+  //    c) Additional context (additionalContext) — only NEW info gathered during follow-up
   const originalSection = formatOriginalSubmission(
     submission.raw_contents as Record<string, string | string[]>,
     formFields,
     submission.submitted_at
   );
 
-  const aiContextEntries = Object.entries(finalContents).filter(([, v]) => v.trim());
   let description = originalSection;
-  if (aiContextEntries.length > 0) {
-    const aiSection = aiContextEntries.map(([k, v]) => `**${k}:**\n${v}`).join("\n\n");
-    description += `\n\n---\n\n**Additional context from follow-up:**\n\n${aiSection}`;
+
+  if (aiSummary.trim()) {
+    description += `\n\n---\n\n**AI Summary:**\n${aiSummary.trim()}`;
+  }
+
+  const additionalContextEntries = Object.entries(additionalContext).filter(([, v]) => v.trim());
+  if (additionalContextEntries.length > 0) {
+    const contextSection = additionalContextEntries.map(([k, v]) => `**${k}:**\n${v}`).join("\n\n");
+    description += `\n\n---\n\n**Additional context from follow-up:**\n\n${contextSection}`;
   }
 
   // 6. Update submission record
@@ -118,7 +129,7 @@ export async function PATCH(
     .from("feedback_submissions")
     .update({
       followup_transcript: followupTranscript,
-      final_contents: finalContents,
+      final_contents: { aiSummary, additionalContext },
       followup_complete: true,
     })
     .eq("id", submissionId);

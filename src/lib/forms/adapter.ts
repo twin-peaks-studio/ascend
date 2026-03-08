@@ -11,7 +11,7 @@
 
 import { createServiceClient } from "@/lib/supabase/service";
 import { logger } from "@/lib/logger";
-import type { TaskStatus, TaskPriority, TrackerTask } from "@/types";
+import type { TaskStatus, TaskPriority, TrackerTask, TrackerAttachment } from "@/types";
 
 // ─── Interface ────────────────────────────────────────────────────────────────
 
@@ -162,22 +162,32 @@ export class AscendAdapter implements PMAdapter {
 
     const rows = (data ?? []).filter((row) => row.tasks);
 
-    // Fetch attachment counts for all tasks in a single query.
-    // attachments uses a polymorphic entity_id (no FK), so we count manually.
+    // Fetch full attachment details for all tasks in one query.
+    // attachments uses a polymorphic entity_id (no FK), so we can't use PostgREST join.
     const taskIds = rows
       .map((row) => (row.tasks as { id: string } | null)?.id)
       .filter(Boolean) as string[];
 
-    const attachmentCountMap = new Map<string, number>();
+    const attachmentMap = new Map<string, TrackerAttachment[]>();
     if (taskIds.length > 0) {
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
       const { data: attachmentRows } = await this.db
         .from("attachments")
-        .select("entity_id")
+        .select("id, entity_id, filename, file_path, file_size, mime_type")
         .eq("entity_type", "task")
         .in("entity_id", taskIds);
 
       for (const a of attachmentRows ?? []) {
-        attachmentCountMap.set(a.entity_id, (attachmentCountMap.get(a.entity_id) ?? 0) + 1);
+        const url = `${supabaseUrl}/storage/v1/object/public/attachments/${a.file_path}`;
+        const existing = attachmentMap.get(a.entity_id) ?? [];
+        existing.push({
+          id: a.id,
+          filename: a.filename,
+          fileSize: a.file_size,
+          mimeType: a.mime_type,
+          url,
+        });
+        attachmentMap.set(a.entity_id, existing);
       }
     }
 
@@ -189,6 +199,7 @@ export class AscendAdapter implements PMAdapter {
         status: TaskStatus;
         priority: TaskPriority;
       };
+      const attachments = attachmentMap.get(task.id) ?? [];
       return {
         taskId: task.id,
         submissionId: row.id,
@@ -197,7 +208,8 @@ export class AscendAdapter implements PMAdapter {
         status: task.status,
         priority: task.priority,
         submittedAt: row.submitted_at,
-        attachmentCount: attachmentCountMap.get(task.id) ?? 0,
+        attachmentCount: attachments.length,
+        attachments,
       };
     });
   }
