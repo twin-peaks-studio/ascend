@@ -172,13 +172,19 @@ function formatOriginalSubmission(
   submittedAt: string
 ): string {
   const fieldMap = new Map(fields.map((f) => [f.id, f.label]));
-  const reportedDate = new Date(submittedAt).toLocaleDateString("en-US", {
+  const dt = new Date(submittedAt);
+  const reportedDate = dt.toLocaleDateString("en-US", {
     year: "numeric",
     month: "long",
     day: "numeric",
     timeZone: "America/New_York",
   });
-  const lines: string[] = ["**Feedback Submission**", "", `**Reported:** ${reportedDate}`, ""];
+  const reportedTime = dt.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: "America/New_York",
+  });
+  const lines: string[] = ["**Feedback Submission**", "", `**Reported:** ${reportedDate} ${reportedTime} ET`, ""];
 
   for (const [key, value] of Object.entries(contents)) {
     const label = fieldMap.get(key) ?? key;
