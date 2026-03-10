@@ -186,6 +186,7 @@ function formatSubmissionDescription(
     year: "numeric",
     month: "long",
     day: "numeric",
+    timeZone: "America/New_York",
   });
   const lines: string[] = ["**Feedback Submission**", "", `**Reported:** ${reportedDate}`, ""];
 
