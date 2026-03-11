@@ -18,7 +18,7 @@ import { DeleteConfirmationDialog } from "@/components/ui/delete-confirmation-di
 import { useProject } from "@/hooks/use-projects";
 import { useNote, useNoteMutations } from "@/hooks/use-notes";
 import { useTaskMutations } from "@/hooks/use-tasks";
-import { QuickAddNoteTask } from "@/components/note";
+import { QuickAddNoteTask, NoteAttachmentsSection } from "@/components/note";
 import { TaskListItem } from "@/components/task";
 import { TaskExtractionDialog } from "@/components/ai";
 import { useTaskExtraction } from "@/hooks/use-task-extraction";
@@ -91,6 +91,18 @@ export default function NoteDetailPage() {
       }, 1500); // 1.5 second debounce
     },
     [note, noteId, updateNote]
+  );
+
+  // Immediate save used by extraction append (bypasses debounce)
+  const handleSaveContent = useCallback(
+    async (nId: string, newContent: string) => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = null;
+      }
+      await updateNote(nId, { content: newContent }, projectId);
+    },
+    [updateNote, projectId]
   );
 
   // Cleanup timeout on unmount
@@ -291,6 +303,14 @@ export default function NoteDetailPage() {
             Changes are saved automatically
           </p>
         </div>
+
+        {/* Attachments Section */}
+        <NoteAttachmentsSection
+          noteId={noteId}
+          content={content}
+          onContentChange={handleContentChange}
+          onSaveContent={handleSaveContent}
+        />
 
         {/* Tasks Section */}
         <div className="border-t border-border/40 pt-6">

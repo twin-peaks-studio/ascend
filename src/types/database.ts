@@ -269,32 +269,38 @@ export type Database = {
       attachments: {
         Row: {
           id: string;
-          entity_type: "task" | "project";
+          entity_type: "task" | "project" | "note";
           entity_id: string;
           filename: string;
           file_path: string;
           file_size: number;
           mime_type: string;
+          extracted_text: string | null;
+          append_to_note: boolean;
           created_at: string;
         };
         Insert: {
           id?: string;
-          entity_type: "task" | "project";
+          entity_type: "task" | "project" | "note";
           entity_id: string;
           filename: string;
           file_path: string;
           file_size: number;
           mime_type: string;
+          extracted_text?: string | null;
+          append_to_note?: boolean;
           created_at?: string;
         };
         Update: {
           id?: string;
-          entity_type?: "task" | "project";
+          entity_type?: "task" | "project" | "note";
           entity_id?: string;
           filename?: string;
           file_path?: string;
           file_size?: number;
           mime_type?: string;
+          extracted_text?: string | null;
+          append_to_note?: boolean;
           created_at?: string;
         };
         Relationships: [];

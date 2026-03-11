@@ -10,7 +10,14 @@ import {
 } from "@/lib/validation/file-types";
 import { logger } from "@/lib/logger/logger";
 
-type EntityType = "task" | "project";
+type EntityType = "task" | "project" | "note";
+
+export interface ExtractionOptions {
+  extractText: boolean;
+  appendToNote: boolean;
+  /** Required when appendToNote is true — called with the extracted text and filename */
+  onAppendToNote?: (text: string, filename: string) => Promise<void>;
+}
 
 const STORAGE_BUCKET = "attachments";
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -153,6 +160,69 @@ export function useAttachments(entityType: EntityType, entityId: string | null) 
   );
 
   /**
+   * Upload a file with optional AI text extraction (for notes)
+   */
+  const uploadWithExtraction = useCallback(
+    async (file: File, options: ExtractionOptions): Promise<Attachment | null> => {
+      const attachment = await uploadFile(file);
+      if (!attachment) return null;
+
+      if (!options.extractText) return attachment;
+
+      let extractedText: string | null = null;
+      try {
+        const response = await fetch("/api/ai/extract-text", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ attachment_id: attachment.id }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          extractedText = data.extracted_text ?? null;
+        } else {
+          const err = await response.json().catch(() => ({}));
+          toast.error(err?.error?.message || "Text extraction failed");
+        }
+      } catch {
+        toast.error("Text extraction failed");
+      }
+
+      if (!extractedText) return attachment;
+
+      if (options.appendToNote && options.onAppendToNote) {
+        await options.onAppendToNote(extractedText, attachment.filename);
+      }
+
+      const supabase = createClient();
+      const { data: updated, error: updateError } = await supabase
+        .from("attachments")
+        .update({
+          extracted_text: extractedText,
+          append_to_note: options.appendToNote,
+        })
+        .eq("id", attachment.id)
+        .select()
+        .single();
+
+      if (updateError) {
+        logger.error("Failed to save extracted text to attachment", {
+          attachmentId: attachment.id,
+          error: updateError,
+        });
+        return attachment;
+      }
+
+      const typedUpdated = updated as Attachment;
+      setAttachments((prev) =>
+        prev.map((a) => (a.id === attachment.id ? typedUpdated : a))
+      );
+      return typedUpdated;
+    },
+    [uploadFile]
+  );
+
+  /**
    * Delete an attachment (removes from storage and database)
    */
   const deleteAttachment = useCallback(
@@ -253,6 +323,7 @@ export function useAttachments(entityType: EntityType, entityId: string | null) 
     uploading,
     error,
     uploadFile,
+    uploadWithExtraction,
     deleteAttachment,
     getFileUrl,
     downloadFile,

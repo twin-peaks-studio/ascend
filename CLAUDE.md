@@ -54,6 +54,20 @@ This project uses React Query (`@tanstack/react-query`) for data fetching. Key p
 - **Prefer `setQueriesData` over `invalidateQueries`** for update/archive/flag mutations — in-place cache updates preserve list order and avoid unnecessary refetches. Only use `invalidateQueries` when fresh server-generated data is needed (e.g., after `createTask` which needs a new ID and position). See `deleteTask()` and `updateTask()` in `src/hooks/use-tasks.ts` for the canonical pattern.
 - **Exception — joined relation objects:** When a mutation changes a foreign key (e.g. `assignee_id`), the in-place `setQueriesData` spread only updates the ID field, not the full joined relation object (e.g. `assignee: Profile`). In these cases, follow the `setQueriesData` call with `invalidateQueries` on the affected list caches so they refetch the full object on next mount. See `updateTask()` in `src/hooks/use-tasks.ts` for the pattern.
 
+### Note Attachments — AI Extraction
+
+The `attachments` table supports `entity_type: "task" | "project" | "note"`. The `"note"` value was added in v0.20.0. The `useAttachments` hook in `src/hooks/use-attachments.ts` accepts all three. The `attachments` table also has two new columns added for the Notes AI extraction feature:
+- `extracted_text TEXT` — nullable, populated when AI extraction is run on an image or PDF
+- `append_to_note BOOLEAN NOT NULL DEFAULT FALSE` — true when extracted text was appended into the note body
+
+`useAttachments` exposes `uploadWithExtraction(file, options)` for the notes feature. The `options.onAppendToNote` callback is used instead of calling `updateNote` directly inside the hook — this keeps the hook decoupled from notes and lets the page component control the debounce behaviour and content state.
+
+The extract-text route (`/api/ai/extract-text`) reuses the `aiExtraction` rate-limit bucket (5 req/min per user). It owns the ownership-check for the attachment (joins `notes` table to confirm `created_by = user.id` or project membership). Only images (jpeg, png, gif, webp) and PDFs are extractable.
+
+The note detail page (`src/app/projects/[id]/notes/[noteId]/page.tsx`) has two content-save paths:
+- `handleContentChange` — debounced 1.5s autosave (used during normal typing)
+- `handleSaveContent` — immediate save, cancels the debounce timer (used only by extraction append to avoid losing text)
+
 ### Conversational AI Task Creation (Create with AI)
 
 The "Create with AI" feature uses `usePathname()` (NOT `useParams()`) to detect the current project context from the URL. This is because `ConversationalTaskModal` is rendered inside `Sidebar`, which lives outside the page route segment tree. `usePathname()` works from anywhere in the component tree under the App Router; `useParams()` does not.

@@ -452,6 +452,41 @@ const sections: WikiSection[] = [
     ],
   },
   {
+    id: "note-attachments",
+    icon: ClipboardList,
+    title: "Note Attachments",
+    description: "Attach files to notes and extract text from images and PDFs using AI.",
+    content: [
+      {
+        heading: "Uploading Files",
+        paragraphs: [
+          "Open any note and scroll to the Attachments section, located between the editor and the linked tasks. Drag files directly onto the drop zone, or click inside it to browse your device.",
+          "Files upload after you confirm the upload options dialog. Each note supports up to 20 attachments. Individual files must be 10 MB or smaller.",
+        ],
+      },
+      {
+        heading: "Supported File Types",
+        paragraphs: [
+          "You can attach images (JPG, PNG, GIF, WebP, SVG), documents (PDF, Word, Excel, PowerPoint), plain text and CSV files, ZIP archives, and videos (MP4, MOV, AVI).",
+        ],
+      },
+      {
+        heading: "AI Text Extraction",
+        paragraphs: [
+          "When uploading an image or PDF, an \"Extract text from this file using AI\" checkbox appears. If checked, you choose whether the extracted text is appended to the bottom of the note body or stored on the attachment itself.",
+          "Text stored on an attachment appears with a badge icon on the thumbnail. Click the badge to open a panel with the full extracted text and a Copy button.",
+        ],
+        tip: "Text extraction works best with clear, well-lit images and text-based PDFs. Scanned documents with low resolution or handwriting may produce incomplete results.",
+      },
+      {
+        heading: "Downloading and Deleting",
+        paragraphs: [
+          "Hover over any thumbnail to reveal Download and Delete buttons. Deleting an attachment removes both the file and its database record permanently.",
+        ],
+      },
+    ],
+  },
+  {
     id: "time-tracking",
     icon: Timer,
     title: "Time Tracking",

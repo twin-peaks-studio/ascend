@@ -62,6 +62,36 @@ interface ChangelogEntry {
 
 const changelog: ChangelogEntry[] = [
   {
+    date: "March 11, 2026",
+    version: "0.20.0",
+    title: "New — Note File Attachments with AI Text Extraction",
+    description:
+      "Notes now support file attachments with drag-and-drop upload, image thumbnails, and optional AI-powered text extraction that can append content directly to your note.",
+    features: [
+      {
+        icon: Paperclip,
+        title: "File Attachments on Notes",
+        description:
+          "Attach images, PDFs, documents, and more to any note. Files upload immediately on drop or selection. Each note supports up to 20 attachments (10 MB per file).",
+        tag: "new",
+      },
+      {
+        icon: FileText,
+        title: "Visual Thumbnails",
+        description:
+          "Images display as actual previews in a grid. Non-image files (PDFs, archives, videos) show a file-type icon with filename and size. Hover any thumbnail to reveal download and delete actions.",
+        tag: "new",
+      },
+      {
+        icon: Sparkles,
+        title: "AI Text Extraction",
+        description:
+          "When uploading an image or PDF, optionally extract its text using AI. Choose to append the extracted text to the bottom of your note or keep it stored on the attachment with a copy button.",
+        tag: "new",
+      },
+    ],
+  },
+  {
     date: "March 8, 2026",
     version: "0.19.1",
     title: "Fix — Feedback Forms: Submit Another Report & Submission Rate Limit",
