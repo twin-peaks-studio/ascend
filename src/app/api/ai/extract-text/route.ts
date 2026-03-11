@@ -13,6 +13,7 @@ import {
   createRateLimitResponse,
 } from "@/lib/rate-limit/middleware";
 import { logger } from "@/lib/logger/logger";
+import type { Attachment } from "@/types";
 
 const CLAUDE_API_URL = "https://api.anthropic.com/v1/messages";
 const CLAUDE_MODEL = "claude-haiku-4-5-20251001";
@@ -101,11 +102,13 @@ export async function POST(
 
     // 5. Fetch attachment and verify ownership
     // For notes: join to confirm user created the note or is a project member
-    const { data: attachment, error: fetchError } = await supabase
+    const { data: attachmentRaw, error: fetchError } = await supabase
       .from("attachments")
       .select("*")
       .eq("id", attachmentId)
       .single();
+
+    const attachment = attachmentRaw as Attachment | null;
 
     if (fetchError || !attachment) {
       return NextResponse.json(
