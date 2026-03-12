@@ -207,11 +207,8 @@ export function AppShell({
         setShowSearch(true);
       }
 
-      // Cmd/Ctrl + / or ? to open shortcuts dialog
-      if (
-        (e.key === "/" && (e.ctrlKey || e.metaKey)) ||
-        (e.key === "?" && !isInput)
-      ) {
+      // Cmd/Ctrl + / to open shortcuts dialog
+      if (e.key === "/" && (e.ctrlKey || e.metaKey)) {
         e.preventDefault();
         setShowShortcuts(true);
       }

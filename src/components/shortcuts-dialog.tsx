@@ -26,10 +26,6 @@ const shortcuts: Shortcut[] = [
     description: "Show keyboard shortcuts",
   },
   {
-    keys: ["?"],
-    description: "Show keyboard shortcuts",
-  },
-  {
     keys: ["Esc"],
     description: "Close dialog / Cancel",
   },
