@@ -1,0 +1,540 @@
+# Entity Memory Implementation Plan
+
+> **Status:** Planning
+> **Created:** March 12, 2026
+> **Context:** Evolves MVP 2 (Entities + Brain Dump) from MEMORY_LAYER.md with new Product → Initiative hierarchy and @mention-driven memory system.
+
+---
+
+## Overview
+
+This plan replaces the original MVP 2 spec with a richer model based on product management workflows. The key evolution:
+
+**Original MVP 2:** Generic entities + brain dump extraction
+**New MVP 2:** Products, Initiatives, Stakeholders as entity types + @mention-driven memory + AI-synthesized entity memory with manual refresh
+
+### Core Concepts
+
+1. **Products** — Things you ship/manage (Online Ordering, Mobile App, POS)
+2. **Initiatives** — Cross-product work efforts (current "projects" become these)
+3. **Stakeholders** — People/groups you work with (VP, Engineering Team, Legal)
+4. **@Mentions** — Inline entity linking in any text surface (`@OnlineOrdering`)
+5. **Foundational Context** — User-written description that teaches AI what an entity is
+6. **AI Memory** — AI-synthesized knowledge per entity, refreshed on demand
+7. **Entity Mentions** — Index of where entities are referenced across all content
+
+### Data Flow
+
+```
+User writes content with @mentions
+        ↓
+On save: parse @mentions → create entity_mentions records
+        ↓
+User clicks "Refresh Memory" on entity page
+        ↓
+AI reads foundational_context + all mentioned source content
+        ↓
+AI extracts ONLY relevant portions → synthesizes entity memory
+        ↓
+Stored in entities.ai_memory
+```
+
+---
+
+## Phase 1: Database + Entities CRUD (No UI Changes to Existing Pages)
+
+### 1A. Database Migration
+
+**New tables:**
+
+```sql
+-- Products, initiatives, stakeholders, and any future entity types
+CREATE TABLE entities (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id UUID NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  entity_type TEXT NOT NULL CHECK (entity_type IN ('product', 'initiative', 'stakeholder')),
+  name TEXT NOT NULL,
+  slug TEXT NOT NULL, -- for @mention matching (lowercase, no spaces)
+  description TEXT, -- short tagline
+  foundational_context TEXT, -- detailed user-written knowledge (teaches AI what this entity is)
+  ai_memory TEXT, -- AI-synthesized knowledge (updated on manual refresh)
+  memory_refreshed_at TIMESTAMPTZ, -- when AI memory was last refreshed
+  metadata JSONB DEFAULT '{}', -- flexible per-type data
+  created_by UUID NOT NULL REFERENCES profiles(id),
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(workspace_id, slug)
+);
+
+-- Many-to-many: initiatives ↔ products (cross-product initiatives)
+CREATE TABLE entity_links (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  source_entity_id UUID NOT NULL REFERENCES entities(id) ON DELETE CASCADE,
+  target_entity_id UUID NOT NULL REFERENCES entities(id) ON DELETE CASCADE,
+  link_type TEXT NOT NULL CHECK (link_type IN (
+    'initiative_product',    -- initiative belongs to product
+    'stakeholder_product',   -- stakeholder associated with product
+    'stakeholder_initiative' -- stakeholder associated with initiative
+  )),
+  created_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(source_entity_id, target_entity_id, link_type)
+);
+
+-- Index of where entities are @mentioned across all content
+CREATE TABLE entity_mentions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  entity_id UUID NOT NULL REFERENCES entities(id) ON DELETE CASCADE,
+  workspace_id UUID NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  source_type TEXT NOT NULL CHECK (source_type IN (
+    'note', 'comment', 'task_description', 'capture'
+  )),
+  source_id UUID NOT NULL, -- polymorphic FK to note/comment/task/capture
+  created_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(entity_id, source_type, source_id)
+);
+
+-- Bridge: existing projects → entity system
+-- Each project gets an optional entity_id linking it into the entity graph
+ALTER TABLE projects ADD COLUMN entity_id UUID REFERENCES entities(id) ON DELETE SET NULL;
+
+-- Bridge: tasks can optionally link to an initiative entity
+-- (keeps existing project_id for backward compat)
+ALTER TABLE tasks ADD COLUMN initiative_entity_id UUID REFERENCES entities(id) ON DELETE SET NULL;
+
+-- Indexes
+CREATE INDEX idx_entities_workspace ON entities(workspace_id);
+CREATE INDEX idx_entities_type ON entities(workspace_id, entity_type);
+CREATE INDEX idx_entities_slug ON entities(workspace_id, slug);
+CREATE INDEX idx_entity_links_source ON entity_links(source_entity_id);
+CREATE INDEX idx_entity_links_target ON entity_links(target_entity_id);
+CREATE INDEX idx_entity_mentions_entity ON entity_mentions(entity_id);
+CREATE INDEX idx_entity_mentions_source ON entity_mentions(source_type, source_id);
+
+-- RLS: workspace members can access entities in their workspace
+ALTER TABLE entities ENABLE ROW LEVEL SECURITY;
+ALTER TABLE entity_links ENABLE ROW LEVEL SECURITY;
+ALTER TABLE entity_mentions ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "workspace members can view entities"
+  ON entities FOR SELECT
+  USING (workspace_id IN (
+    SELECT workspace_id FROM workspace_members WHERE user_id = auth.uid()
+  ));
+
+CREATE POLICY "workspace members can insert entities"
+  ON entities FOR INSERT
+  WITH CHECK (workspace_id IN (
+    SELECT workspace_id FROM workspace_members WHERE user_id = auth.uid()
+  ));
+
+CREATE POLICY "workspace members can update entities"
+  ON entities FOR UPDATE
+  USING (workspace_id IN (
+    SELECT workspace_id FROM workspace_members WHERE user_id = auth.uid()
+  ));
+
+CREATE POLICY "workspace members can delete entities"
+  ON entities FOR DELETE
+  USING (workspace_id IN (
+    SELECT workspace_id FROM workspace_members WHERE user_id = auth.uid()
+  ));
+
+-- entity_links: accessible if user can access the source entity's workspace
+CREATE POLICY "workspace members can manage entity links"
+  ON entity_links FOR ALL
+  USING (source_entity_id IN (
+    SELECT id FROM entities WHERE workspace_id IN (
+      SELECT workspace_id FROM workspace_members WHERE user_id = auth.uid()
+    )
+  ));
+
+-- entity_mentions: accessible if user can access the entity's workspace
+CREATE POLICY "workspace members can manage entity mentions"
+  ON entity_mentions FOR ALL
+  USING (workspace_id IN (
+    SELECT workspace_id FROM workspace_members WHERE user_id = auth.uid()
+  ));
+```
+
+### 1B. TypeScript Types
+
+**File:** `src/types/database.ts` — add:
+
+```typescript
+export type EntityType = 'product' | 'initiative' | 'stakeholder';
+
+export interface Entity {
+  id: string;
+  workspace_id: string;
+  entity_type: EntityType;
+  name: string;
+  slug: string;
+  description: string | null;
+  foundational_context: string | null;
+  ai_memory: string | null;
+  memory_refreshed_at: string | null;
+  metadata: Record<string, unknown>;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export type EntityLinkType =
+  | 'initiative_product'
+  | 'stakeholder_product'
+  | 'stakeholder_initiative';
+
+export interface EntityLink {
+  id: string;
+  source_entity_id: string;
+  target_entity_id: string;
+  link_type: EntityLinkType;
+  created_at: string;
+}
+
+export type MentionSourceType = 'note' | 'comment' | 'task_description' | 'capture';
+
+export interface EntityMention {
+  id: string;
+  entity_id: string;
+  workspace_id: string;
+  source_type: MentionSourceType;
+  source_id: string;
+  created_at: string;
+}
+```
+
+### 1C. Data Hooks
+
+**File:** `src/hooks/use-entities.ts`
+
+```
+useEntities(workspaceId, entityType?) — list entities, optionally filtered by type
+useEntity(entityId) — single entity with linked entities
+useEntityMutations() — create, update, delete entities
+  - createEntity(input) — auto-generates slug from name
+  - updateEntity(id, input) — updates entity, regenerates slug if name changes
+  - deleteEntity(id) — deletes entity + cascading links/mentions
+```
+
+**File:** `src/hooks/use-entity-links.ts`
+
+```
+useEntityLinks(entityId) — all links for an entity (both directions)
+useEntityLinkMutations() — create/delete links between entities
+```
+
+**File:** `src/hooks/use-entity-mentions.ts`
+
+```
+useEntityMentions(entityId) — all mentions of an entity with source content
+useMentionParser() — parses @mentions from text, returns entity IDs
+useSaveMentions(sourceType, sourceId) — saves parsed mentions to DB
+```
+
+### 1D. Entity CRUD Pages
+
+**`/entities`** — List all entities grouped by type (Products, Initiatives, Stakeholders)
+- Shows count of mentions, linked entities
+- "New Entity" button with type picker
+- Search/filter by type
+
+**`/entities/[id]`** — Entity detail page with tabs:
+- **Overview**: Name, description, foundational context (editable)
+- **Memory**: AI-synthesized memory + "Refresh Memory" button + last refreshed timestamp
+- **Mentions**: All content that references this entity (notes, comments, tasks)
+- **Links**: Connected products/initiatives/stakeholders
+- **For Products**: Shows linked initiatives with task rollup
+- **For Initiatives**: Shows linked products + tasks
+
+### 1E. Sidebar Navigation
+
+Add to sidebar (intelligence workspaces only, below Captures):
+- "Entities" link with `Box` or `Network` icon
+- Shows entity count badge
+
+**Files to modify:**
+- `src/components/layout/sidebar.tsx` — add nav item
+- `src/components/layout/mobile-bottom-nav.tsx` — add to mobile nav
+
+---
+
+## Phase 2: @Mention System (All Text Surfaces)
+
+### 2A. Mention Autocomplete Component
+
+**File:** `src/components/shared/mention-autocomplete.tsx`
+
+A reusable autocomplete dropdown that:
+- Triggers on `@` character (after space/newline or at line start)
+- Queries entities in current workspace by slug/name prefix
+- Shows entity type icon + name + type badge
+- Keyboard nav: ↑↓ to navigate, Enter/Tab to insert, Esc to dismiss
+- Inserts `@EntityName` into text with a trailing space
+
+This needs to integrate with **three different editor types:**
+
+1. **Tiptap (RichTextEditor)** — notes, task descriptions
+   - Create a Tiptap extension (`@tiptap/extension-mention` pattern)
+   - Stores mention as custom node: `<span data-entity-id="uuid" data-entity-slug="slug">@Name</span>`
+   - On save: extract entity IDs from mention nodes
+
+2. **Plain textarea (comments, captures)** — comments, capture editor
+   - Reuse pattern from existing `comment-form.tsx` mention system
+   - Extend to query entities (not just project members)
+   - Store as text: `@EntityName` with separate mention tracking
+
+3. **Markdown editor (project descriptions)** — project form
+   - Same textarea approach as comments
+
+### 2B. Mention Parsing & Persistence
+
+**On every save** (note update, comment create, task description update, capture save):
+
+1. Parse content for `@mentions` (from Tiptap nodes or text regex)
+2. Resolve entity IDs from slugs
+3. Diff against existing `entity_mentions` for this source
+4. Insert new mentions, delete removed mentions
+
+**Pattern:** Create a `useMentionSync(sourceType, sourceId)` hook that handles this diff logic. Call it from each save handler.
+
+### 2C. Files to Modify
+
+| File | Change |
+|------|--------|
+| `src/components/shared/rich-text-editor.tsx` | Add Tiptap mention extension, entity autocomplete |
+| `src/components/comments/comment-form.tsx` | Extend existing @mention to include entities |
+| `src/components/capture/capture-editor.tsx` | Add @mention support to textarea |
+| `src/components/shared/markdown-editor.tsx` | Add @mention support |
+| `src/components/shared/markdown-renderer.tsx` | Render @mentions as styled pills/links |
+| `src/hooks/use-notes.ts` | Call mention sync on note save |
+| `src/hooks/use-captures.ts` | Call mention sync on capture save |
+| `src/components/comments/comment-item.tsx` | Call mention sync on comment create |
+| `src/components/task/task-form.tsx` | Call mention sync on description save |
+
+---
+
+## Phase 3: AI Memory Refresh
+
+### 3A. API Route
+
+**File:** `src/app/api/ai/entity-memory/route.ts`
+
+```
+POST /api/ai/entity-memory
+Body: { entityId: string }
+Auth: Supabase session (must be workspace member)
+Rate limit: 5 req/min (new bucket: aiEntityMemory)
+Model: Claude Sonnet 4.6 (needs reasoning to extract relevant portions)
+Timeout: 60 seconds
+```
+
+**Pipeline:**
+1. Fetch entity (foundational_context, current ai_memory)
+2. Fetch all entity_mentions → resolve source content (notes, comments, tasks, captures)
+3. Build prompt:
+   ```
+   You are analyzing content for the entity "{name}" ({entity_type}).
+
+   FOUNDATIONAL CONTEXT (what this entity is):
+   {foundational_context}
+
+   CURRENT MEMORY (previous synthesis, may be empty):
+   {ai_memory}
+
+   SOURCES (content that mentions this entity):
+   [Source 1: Note "Weekly COMO Meeting" - Mar 12]
+   {full note content}
+
+   [Source 2: Task comment on "Research Apple Pay"]
+   {full comment content}
+
+   ...
+
+   INSTRUCTIONS:
+   - Extract ONLY the portions of each source that are relevant to this entity
+   - Ignore content about other topics even if in the same document
+   - Synthesize into a structured summary: key findings, decisions, open questions, action items
+   - Preserve important details (names, dates, specific technical facts)
+   - Note which source each piece of information came from
+   - If previous memory exists, merge new information (don't lose old knowledge unless contradicted)
+   ```
+4. Save response to `entities.ai_memory` + update `memory_refreshed_at`
+5. Return updated memory
+
+### 3B. Entity Page Integration
+
+On the entity detail page (`/entities/[id]`), the Memory tab shows:
+- Current AI memory (rendered as markdown)
+- "Refresh Memory" button
+- "Last refreshed: 3 days ago" timestamp
+- Badge: "12 new mentions since last refresh"
+- Loading state during refresh with progress indicator
+
+---
+
+## Phase 4: Migration Tooling (Existing Data → New Model)
+
+### 4A. Migration Page
+
+**File:** `src/app/settings/migrate/page.tsx`
+
+A temporary admin page (accessible from Settings) with three steps:
+
+**Step 1: Create Products**
+- Simple form: name + description
+- List of created products with edit/delete
+- Pre-populated suggestions based on existing project names
+
+**Step 2: Convert Projects → Initiatives**
+- Shows all existing projects in a list
+- For each project: multi-select dropdown to pick which product(s) it maps to
+- "Convert" button per project:
+  1. Creates an entity (type: "initiative") for the project
+  2. Sets `projects.entity_id` to the new entity
+  3. Creates `entity_links` (initiative_product) for each selected product
+- Bulk "Convert All" with default 1:1 product mapping
+
+**Step 3: Verify**
+- Shows Products → Initiatives → Task counts
+- Highlights any orphaned projects (not yet converted)
+- "Migration complete" confirmation when all projects are linked
+
+### 4B. What This Does NOT Change
+
+- Existing pages still read from `projects` table
+- Sidebar still shows projects
+- Task views unchanged
+- Zero UI regressions — migration only backfills new columns
+
+---
+
+## Phase 5: Portfolio View (New UI Reading From Entity Model)
+
+> **Note:** This phase is future work. Documenting the vision so the data model supports it.
+
+**`/products`** — Portfolio page showing all products:
+- Card per product: name, initiative count, task rollup, capture count
+- Click into product → see linked initiatives with progress
+
+**Sidebar evolution:**
+- "Projects" becomes "Initiatives" in label
+- "Products" appears as new top-level nav item
+- "Entities" page becomes the unified view for all entity types
+
+**Initiative pages (`/projects/[id]`):**
+- Add "Linked Products" section to project header
+- Add "Linked Stakeholders" section
+- Everything else stays the same (tasks, notes, kanban, etc.)
+
+---
+
+## Implementation Order
+
+```
+Phase 1A: SQL migration (entities, entity_links, entity_mentions tables)
+Phase 1B: TypeScript types
+Phase 1C: Data hooks (use-entities, use-entity-links, use-entity-mentions)
+Phase 1D: Entity CRUD pages (/entities, /entities/[id])
+Phase 1E: Sidebar nav update
+    ↓
+Phase 2A: Mention autocomplete component
+Phase 2B: Tiptap mention extension (notes, task descriptions)
+Phase 2C: Textarea mention support (comments, captures)
+Phase 2D: Mention parsing & persistence (useMentionSync)
+Phase 2E: Mention rendering in markdown-renderer
+    ↓
+Phase 3A: AI memory refresh API route
+Phase 3B: Entity page Memory tab with refresh button
+    ↓
+Phase 4A: Migration page (settings/migrate)
+Phase 4B: Convert existing projects → products + initiatives
+    ↓
+Phase 5: Portfolio view (future — data model supports it from Phase 1)
+```
+
+---
+
+## Key Design Decisions
+
+### Why `entities` table instead of separate `products`/`stakeholders` tables?
+
+Single table = uniform @mention system. The autocomplete queries one table. Mentions link to one table. AI memory works the same for any entity type. Adding new types (e.g., "system", "team", "competitor") is just a new `entity_type` value, no schema change.
+
+### Why keep `projects` table instead of migrating to `entities`?
+
+Projects have deep integration throughout the app (tasks, notes, sections, comments, activity log, RLS policies, sidebar). Replacing `projects` with entities would be a massive refactor with high regression risk. Instead, bridge via `projects.entity_id` — projects reference their entity counterpart, existing code is unaffected.
+
+### Why manual memory refresh instead of automatic?
+
+1. Avoids burning AI calls on every save
+2. User controls when half-formed thoughts crystallize into memory
+3. Predictable costs (user-initiated, not event-driven)
+4. Can show "X new mentions since last refresh" as a prompt
+
+### Why one `entity_mentions` table instead of separate junction tables?
+
+The original plan had `entity_projects`, `entity_tasks`, `entity_notes`. But @mentions can come from any text surface (comments too), and the mention source might expand (chat messages in MVP 4). A single polymorphic `entity_mentions` table with `source_type` + `source_id` is simpler and extensible.
+
+### Why slugs for @mention matching?
+
+Users type `@OnlineOrdering` not `@4f43b086-cdfd...`. Slugs (lowercase, no spaces: "onlineordering" or "online-ordering") enable fast prefix matching in the autocomplete and reliable parsing from saved text.
+
+---
+
+## Files Created (New)
+
+| File | Purpose |
+|------|---------|
+| `supabase/migrations/YYYYMMDD_entities.sql` | Database migration |
+| `src/hooks/use-entities.ts` | Entity CRUD hook |
+| `src/hooks/use-entity-links.ts` | Entity relationship hook |
+| `src/hooks/use-entity-mentions.ts` | Mention tracking hook |
+| `src/components/entity/entity-list.tsx` | Entity list page component |
+| `src/components/entity/entity-detail.tsx` | Entity detail page component |
+| `src/components/entity/entity-form.tsx` | Create/edit entity form |
+| `src/components/entity/entity-memory.tsx` | AI memory display + refresh |
+| `src/components/entity/entity-mentions-list.tsx` | List of all mentions |
+| `src/components/entity/entity-links-panel.tsx` | Linked entities panel |
+| `src/components/shared/mention-autocomplete.tsx` | Reusable @mention dropdown |
+| `src/app/entities/page.tsx` | Entity list page |
+| `src/app/entities/[id]/page.tsx` | Entity detail page |
+| `src/app/api/ai/entity-memory/route.ts` | AI memory refresh endpoint |
+| `src/app/settings/migrate/page.tsx` | Migration tooling page |
+
+## Files Modified (Existing)
+
+| File | Change |
+|------|--------|
+| `src/types/database.ts` | Add Entity, EntityLink, EntityMention types |
+| `src/components/shared/rich-text-editor.tsx` | Add Tiptap @mention extension |
+| `src/components/shared/markdown-editor.tsx` | Add @mention autocomplete |
+| `src/components/shared/markdown-renderer.tsx` | Render @mention pills |
+| `src/components/comments/comment-form.tsx` | Extend @mention to include entities |
+| `src/components/capture/capture-editor.tsx` | Add @mention support |
+| `src/components/layout/sidebar.tsx` | Add Entities nav item |
+| `src/components/layout/mobile-bottom-nav.tsx` | Add Entities to mobile nav |
+| `src/hooks/use-notes.ts` | Call mention sync on save |
+| `src/hooks/use-captures.ts` | Call mention sync on save |
+| `src/lib/rate-limit/limiter.ts` | Add aiEntityMemory bucket |
+| `CLAUDE.md` | Document new patterns, localStorage keys |
+| `docs/TECHNICAL_GUIDE.md` | Document entity architecture |
+| `docs/initiatives/MEMORY_LAYER.md` | Update MVP 2 status |
+
+---
+
+## Relationship to MEMORY_LAYER.md MVPs
+
+| Original MVP | New Status |
+|-------------|-----------|
+| MVP 1 (Workspaces + Captures) | ✅ Complete (pending SQL migration) — unchanged |
+| MVP 2 (Entities + Brain Dump) | **Replaced by this plan** (Phases 1-4). Brain dump deferred to after @mention system is working. |
+| MVP 3 (Embeddings + Search) | Unchanged — builds on entity_mentions for richer embedding |
+| MVP 4 (Chat + Task Creation) | Unchanged — entity memory becomes additional RAG context |
+| MVP 5 (Oracle) | Unchanged — can detect entity knowledge gaps |
+
+### Brain Dump: Deferred, Not Removed
+
+The brain dump feature from original MVP 2 is deferred to after Phase 3 (AI Memory) is working. Rationale: the @mention + manual refresh flow is the primary way to build entity memory. Brain dump is a power-user shortcut for bootstrapping — it's more valuable once the entity system is live and can receive the extracted data.
+
+When implemented, brain dump will use the same `entities` table and `foundational_context` field. The extraction pipeline writes to the same structures.
