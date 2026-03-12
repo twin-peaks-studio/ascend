@@ -233,13 +233,8 @@ export function useProjectMutations() {
         // Validate input
         const validated = createProjectSchema.parse(input);
 
-        if (!activeWorkspace) {
-          toast.error("No workspace selected");
-          return null;
-        }
-
         const insertData: ProjectInsert = {
-          workspace_id: activeWorkspace.id,
+          workspace_id: activeWorkspace?.id ?? null,
           title: validated.title,
           description: validated.description ?? null,
           status: validated.status,

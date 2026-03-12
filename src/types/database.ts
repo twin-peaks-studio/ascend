@@ -24,7 +24,7 @@ export type Database = {
       projects: {
         Row: {
           id: string;
-          workspace_id: string;
+          workspace_id: string | null;
           title: string;
           description: string | null;
           status: "active" | "completed" | "archived";
@@ -38,7 +38,7 @@ export type Database = {
         };
         Insert: {
           id?: string;
-          workspace_id: string;
+          workspace_id?: string | null;
           title: string;
           description?: string | null;
           status?: "active" | "completed" | "archived";
@@ -449,7 +449,7 @@ export type Database = {
         Row: {
           id: string;
           project_id: string | null;
-          workspace_id: string;
+          workspace_id: string | null;
           title: string;
           content: string | null;
           capture_type: "meeting_note" | "document" | "media" | "thought" | null;
@@ -461,7 +461,7 @@ export type Database = {
         Insert: {
           id?: string;
           project_id?: string | null;
-          workspace_id: string;
+          workspace_id?: string | null;
           title: string;
           content?: string | null;
           capture_type?: "meeting_note" | "document" | "media" | "thought" | null;
