@@ -156,7 +156,7 @@ export function useProjects() {
   } = useQuery({
     queryKey: projectKeys.list(user?.id ?? "", workspaceId),
     queryFn: () => fetchProjectsForUser(user!.id, workspaceId),
-    enabled: !!user && !!workspaceId,
+    enabled: !!user,
     staleTime: 30 * 1000, // Consider fresh for 30s
     refetchOnWindowFocus: true, // Refetch when returning from background
   });

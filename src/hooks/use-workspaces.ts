@@ -54,7 +54,9 @@ async function fetchWorkspacesForUser(userId: string): Promise<Workspace[]> {
       userId,
       error: memberResult.error,
     });
-    throw memberResult.error;
+    // Return empty array instead of throwing — workspace tables may not
+    // have proper RLS policies yet. Other features should still work.
+    return [];
   }
 
   const workspaceIds =
@@ -80,7 +82,7 @@ async function fetchWorkspacesForUser(userId: string): Promise<Workspace[]> {
       userId,
       error: workspacesResult.error,
     });
-    throw workspacesResult.error;
+    return [];
   }
 
   return (workspacesResult.data as Workspace[]) || [];

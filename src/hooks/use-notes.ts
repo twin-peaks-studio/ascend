@@ -197,6 +197,11 @@ export function useNoteMutations() {
         return null;
       }
 
+      if (!activeWorkspace) {
+        toast.error("No workspace selected");
+        return null;
+      }
+
       try {
         setLoading(true);
         const supabase = getClient();
@@ -204,7 +209,7 @@ export function useNoteMutations() {
         const validated = createNoteSchema.parse(input);
 
         const insertData: NoteInsert = {
-          workspace_id: activeWorkspace!.id,
+          workspace_id: activeWorkspace.id,
           project_id: validated.project_id,
           title: validated.title,
           content: validated.content ?? null,
