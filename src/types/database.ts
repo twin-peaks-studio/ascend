@@ -24,6 +24,7 @@ export type Database = {
       projects: {
         Row: {
           id: string;
+          workspace_id: string;
           title: string;
           description: string | null;
           status: "active" | "completed" | "archived";
@@ -37,6 +38,7 @@ export type Database = {
         };
         Insert: {
           id?: string;
+          workspace_id: string;
           title: string;
           description?: string | null;
           status?: "active" | "completed" | "archived";
@@ -50,6 +52,7 @@ export type Database = {
         };
         Update: {
           id?: string;
+          workspace_id?: string;
           title?: string;
           description?: string | null;
           status?: "active" | "completed" | "archived";
@@ -67,6 +70,13 @@ export type Database = {
             columns: ["created_by"];
             isOneToOne: false;
             referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "projects_workspace_id_fkey";
+            columns: ["workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "workspaces";
             referencedColumns: ["id"];
           }
         ];

@@ -14,6 +14,7 @@ import { getClient } from "@/lib/supabase/client-manager";
 import { withTimeout, TIMEOUTS } from "@/lib/utils/with-timeout";
 import { logger } from "@/lib/logger/logger";
 import { useAuth } from "@/hooks/use-auth";
+import { useWorkspaceContext } from "@/contexts/workspace-context";
 import type { Note, NoteWithRelations, Task, TaskWithProject } from "@/types";
 import type { NoteInsert, NoteUpdate, NoteTaskInsert } from "@/types/database";
 import { taskKeys } from "@/hooks/use-tasks";
@@ -186,6 +187,7 @@ export function useNote(noteId: string | null) {
 export function useNoteMutations() {
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
+  const { activeWorkspace } = useWorkspaceContext();
   const queryClient = useQueryClient();
 
   const createNote = useCallback(
@@ -202,6 +204,7 @@ export function useNoteMutations() {
         const validated = createNoteSchema.parse(input);
 
         const insertData: NoteInsert = {
+          workspace_id: activeWorkspace!.id,
           project_id: validated.project_id,
           title: validated.title,
           content: validated.content ?? null,
@@ -233,7 +236,7 @@ export function useNoteMutations() {
         setLoading(false);
       }
     },
-    [user, queryClient]
+    [user, activeWorkspace, queryClient]
   );
 
   const updateNote = useCallback(

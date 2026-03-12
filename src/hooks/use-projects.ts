@@ -216,6 +216,7 @@ export function useProject(projectId: string | null) {
 export function useProjectMutations() {
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
+  const { activeWorkspace } = useWorkspaceContext();
   const queryClient = useQueryClient();
 
   const createProject = useCallback(
@@ -232,7 +233,13 @@ export function useProjectMutations() {
         // Validate input
         const validated = createProjectSchema.parse(input);
 
+        if (!activeWorkspace) {
+          toast.error("No workspace selected");
+          return null;
+        }
+
         const insertData: ProjectInsert = {
+          workspace_id: activeWorkspace.id,
           title: validated.title,
           description: validated.description ?? null,
           status: validated.status,
@@ -279,7 +286,7 @@ export function useProjectMutations() {
         setLoading(false);
       }
     },
-    [user, queryClient]
+    [user, activeWorkspace, queryClient]
   );
 
   const updateProject = useCallback(
