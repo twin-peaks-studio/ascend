@@ -323,6 +323,35 @@ export type CreateCaptureInput = z.infer<typeof createCaptureSchema>;
 export type UpdateCaptureInput = z.infer<typeof updateCaptureSchema>;
 
 // ============================================
+// Entity Schemas
+// ============================================
+
+export const entityTypeSchema = z.enum(["product", "initiative", "stakeholder"]);
+
+/**
+ * Schema for creating a new entity (product, initiative, stakeholder)
+ */
+export const createEntitySchema = z.object({
+  workspace_id: z.string().uuid("Invalid workspace ID"),
+  entity_type: entityTypeSchema,
+  name: safeRequiredString(200),
+  description: safeOptionalString(1000),
+  foundational_context: safeOptionalString(50000),
+});
+
+/**
+ * Schema for updating an existing entity
+ */
+export const updateEntitySchema = z.object({
+  name: safeRequiredString(200).optional(),
+  description: safeOptionalString(1000),
+  foundational_context: safeOptionalString(50000),
+});
+
+export type CreateEntityInput = z.infer<typeof createEntitySchema>;
+export type UpdateEntityInput = z.infer<typeof updateEntitySchema>;
+
+// ============================================
 // Feedback Form Schemas
 // ============================================
 
