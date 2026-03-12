@@ -67,9 +67,9 @@ async function fetchProjectsForUser(userId: string, workspaceId?: string): Promi
     `
   );
 
-  // Filter by workspace if provided
+  // Filter by workspace if provided — also include unscoped (null) projects
   if (workspaceId) {
-    query = query.eq("workspace_id", workspaceId);
+    query = query.or(`workspace_id.eq.${workspaceId},workspace_id.is.null`);
   }
 
   // Build OR filter based on what IDs we have
