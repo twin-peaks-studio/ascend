@@ -54,6 +54,7 @@ async function fetchWorkspacesForUser(userId: string): Promise<Workspace[]> {
       userId,
       error: memberResult.error,
     });
+    console.warn("[workspaces] workspace_members query failed:", memberResult.error.message, memberResult.error.code);
     // Return empty array instead of throwing — workspace tables may not
     // have proper RLS policies yet. Other features should still work.
     return [];
@@ -63,7 +64,10 @@ async function fetchWorkspacesForUser(userId: string): Promise<Workspace[]> {
     memberResult.data?.map((m: { workspace_id: string }) => m.workspace_id) ||
     [];
 
+  console.log("[workspaces] membership query returned", memberResult.data?.length ?? 0, "rows, workspaceIds:", workspaceIds);
+
   if (workspaceIds.length === 0) {
+    console.warn("[workspaces] No workspace memberships found for user", userId);
     return [];
   }
 
@@ -82,9 +86,11 @@ async function fetchWorkspacesForUser(userId: string): Promise<Workspace[]> {
       userId,
       error: workspacesResult.error,
     });
+    console.warn("[workspaces] workspaces query failed:", workspacesResult.error.message, workspacesResult.error.code);
     return [];
   }
 
+  console.log("[workspaces] fetched", workspacesResult.data?.length ?? 0, "workspaces:", workspacesResult.data?.map((w: Workspace) => ({ id: w.id, name: w.name })));
   return (workspacesResult.data as Workspace[]) || [];
 }
 

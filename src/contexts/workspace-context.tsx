@@ -65,10 +65,15 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
 
   // Auto-select first workspace when workspaces load and no selection exists
   useEffect(() => {
+    console.log("[workspace-context] state:", { loading, workspaceCount: workspaces.length, activeId, storedId: typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEY) : null });
     if (!loading && workspaces.length > 0 && !activeId) {
       const firstId = workspaces[0].id;
+      console.log("[workspace-context] auto-selecting first workspace:", firstId);
       setActiveId(firstId);
       localStorage.setItem(STORAGE_KEY, firstId);
+    }
+    if (!loading && workspaces.length === 0) {
+      console.warn("[workspace-context] No workspaces available — activeWorkspace will be null");
     }
   }, [loading, workspaces, activeId]);
 
