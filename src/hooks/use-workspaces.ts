@@ -148,29 +148,34 @@ export function useWorkspaceMutations() {
 
         const validated = createWorkspaceSchema.parse(input);
 
+        // Generate ID client-side so we can insert without .select().
+        // The SELECT RLS policy requires workspace_members membership,
+        // but we can't add the member until after the workspace exists.
+        // Using .select() would fail because PostgREST tries to read
+        // back the row before the member row is created.
+        const workspaceId = crypto.randomUUID();
+
         const insertData: WorkspaceInsert = {
+          id: workspaceId,
           name: validated.name,
           type: validated.type,
           created_by: user.id,
         };
 
-        const { data, error } = await withTimeout(
+        const { error } = await withTimeout(
           supabase
             .from("workspaces")
             .insert(insertData)
-            .select()
-            .single()
             .then((res) => res),
           TIMEOUTS.MUTATION
         );
 
         if (error) throw error;
-        const workspace = data as Workspace;
 
         // Add creator as owner member
         const { error: memberError } = await withTimeout(
           supabase.from("workspace_members").insert({
-            workspace_id: workspace.id,
+            workspace_id: workspaceId,
             user_id: user.id,
             role: "owner",
             invited_by: user.id,
@@ -180,8 +185,18 @@ export function useWorkspaceMutations() {
 
         if (memberError) throw memberError;
 
-        // Invalidate workspaces list
+        // Invalidate workspaces list to fetch the full workspace object
         queryClient.invalidateQueries({ queryKey: workspaceKeys.lists() });
+
+        // Construct minimal workspace object for immediate return
+        const workspace: Workspace = {
+          id: workspaceId,
+          name: validated.name,
+          type: validated.type,
+          created_by: user.id,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
 
         toast.success("Workspace created successfully");
         return workspace;
