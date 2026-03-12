@@ -17,13 +17,13 @@ import { QuickCapture } from "@/components/capture/quick-capture";
 import { useCaptures } from "@/hooks/use-captures";
 import { useWorkspaceContext } from "@/contexts/workspace-context";
 
-export default function CapturesPage() {
+function CapturesContent() {
   const { activeWorkspace } = useWorkspaceContext();
   const { days, loading } = useCaptures(activeWorkspace?.id ?? null);
   const [showNew, setShowNew] = useState(false);
 
   return (
-    <AppShell>
+    <>
       <Header title="Captures" />
 
       <div className="px-4 lg:px-8 py-4 max-w-3xl mx-auto space-y-4">
@@ -58,6 +58,14 @@ export default function CapturesPage() {
           <CaptureEditor onSaved={() => setShowNew(false)} />
         </SheetContent>
       </Sheet>
+    </>
+  );
+}
+
+export default function CapturesPage() {
+  return (
+    <AppShell>
+      <CapturesContent />
     </AppShell>
   );
 }
