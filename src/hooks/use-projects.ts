@@ -233,6 +233,7 @@ export function useProjectMutations() {
         // Validate input
         const validated = createProjectSchema.parse(input);
 
+        console.log("[createProject] activeWorkspace at call time:", activeWorkspace);
         if (!activeWorkspace) {
           toast.error("No workspace selected");
           return null;
