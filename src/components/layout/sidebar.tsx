@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { AscendLogo } from "@/components/ascend-logo";
 import { useProjects } from "@/hooks/use-projects";
 import { useSidebar } from "@/hooks/use-sidebar";
 import { useWorkspaceContext } from "@/contexts/workspace-context";
@@ -172,12 +173,13 @@ export function Sidebar({ onShowFeedback, onAiCreate }: SidebarProps) {
           isCollapsed ? "w-16" : "w-64"
         )}
       >
-        {/* Workspace Switcher */}
+        {/* Logo + Workspace Switcher */}
         <div className={cn(
-          "flex h-16 items-center border-b",
-          isCollapsed ? "justify-center px-2" : "px-4"
+          "flex h-16 items-center gap-2 border-b",
+          isCollapsed ? "justify-center px-2" : "px-6"
         )}>
-          <WorkspaceSwitcher isCollapsed={isCollapsed} />
+          <AscendLogo className="h-8 w-auto shrink-0" />
+          {!isCollapsed && <span className="text-lg font-semibold">Ascend</span>}
         </div>
 
         {/* Navigation */}
