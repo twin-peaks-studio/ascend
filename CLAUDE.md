@@ -102,6 +102,24 @@ Key files:
 - `src/app/forms/[slug]/layout.tsx` — standalone layout (no Sidebar/AppShell)
 - `src/components/forms/public/tracker-view.tsx` — standalone tracker UI (NOT reusing KanbanBoard/TaskListItem)
 
+### Workspaces & Captures (Memory Layer MVP 1)
+
+Workspaces (`src/contexts/workspace-context.tsx`) provide workspace isolation. Every project belongs to a workspace via `workspace_id`. The `WorkspaceProvider` wraps the app inside `AppShell` and persists the active workspace in localStorage (`active-workspace-id`).
+
+**Workspace types:** `"standard"` (basic project container) and `"intelligence"` (unlocks Captures, daily journal). The `isIntelligence` flag from `useWorkspaceContext()` controls whether the Captures nav item appears in sidebar/mobile nav.
+
+**Captures** are notes with `capture_type` set (not null). They live in the existing `notes` table with added columns: `workspace_id`, `capture_type`, `occurred_at`. Standard notes have `capture_type = null`. The captures hook (`use-captures.ts`) is separate from `use-notes.ts`.
+
+**Switching workspaces** calls `queryClient.clear()` to reset all React Query caches, ensuring data is refetched for the new workspace context.
+
+Key files:
+- `src/contexts/workspace-context.tsx` — `WorkspaceProvider`, `useWorkspaceContext()`
+- `src/hooks/use-workspaces.ts` — workspace CRUD
+- `src/hooks/use-workspace-members.ts` — member management
+- `src/hooks/use-captures.ts` — capture CRUD with daily grouping
+- `src/components/workspace/workspace-switcher.tsx` — dropdown in sidebar header
+- `src/components/capture/` — capture-list, capture-editor, quick-capture
+
 ### Project Status & Sidebar Filtering
 
 Projects have a `status` field (`"active" | "completed" | "archived"`). The sidebar (`src/components/layout/sidebar.tsx`) filters out archived projects before rendering — if you add new status values, update this filter accordingly.
@@ -115,6 +133,7 @@ Task view preferences are persisted in localStorage so they survive page navigat
 - `tasks-project-filter` — selected project IDs (global tasks page)
 - `tasks-assignee-filter` / `project-tasks-assignee-filter` — selected assignee filter IDs
 - `tasks-show-completed` / `project-tasks-show-completed` — whether completed (done) tasks are visible
+- `active-workspace-id` — currently selected workspace ID (used by `WorkspaceProvider`)
 
 When adding new filterable state to task pages, follow this pattern: initialize with a `useState` lazy initializer that reads from localStorage, and persist on every change via a `useCallback` handler.
 

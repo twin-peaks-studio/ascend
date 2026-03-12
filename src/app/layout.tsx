@@ -7,6 +7,7 @@ import { QueryProvider } from "@/providers/query-provider";
 import { AppRecoveryProvider } from "@/providers/app-recovery-provider";
 import { AuthProvider } from "@/hooks/use-auth";
 import { SidebarProvider } from "@/hooks/use-sidebar";
+import { WorkspaceProvider } from "@/contexts/workspace-context";
 
 const inter = Inter({
   variable: "--font-geist-sans",
@@ -43,7 +44,9 @@ export default function RootLayout({
           <AppRecoveryProvider>
             <AuthProvider>
               <SidebarProvider>
-                {children}
+                <WorkspaceProvider>
+                  {children}
+                </WorkspaceProvider>
               </SidebarProvider>
             </AuthProvider>
           </AppRecoveryProvider>

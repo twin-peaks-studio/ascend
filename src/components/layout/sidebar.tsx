@@ -14,12 +14,15 @@ import {
   Newspaper,
   CalendarDays,
   Sparkles,
+  BookOpen,
 } from "lucide-react";
-import { AscendLogo } from "@/components/ascend-logo";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { AscendLogo } from "@/components/ascend-logo";
 import { useProjects } from "@/hooks/use-projects";
 import { useSidebar } from "@/hooks/use-sidebar";
+import { useWorkspaceContext } from "@/contexts/workspace-context";
+import { WorkspaceSwitcher } from "@/components/workspace/workspace-switcher";
 import type { ProjectWithRelations } from "@/types";
 
 interface NavItem {
@@ -60,12 +63,20 @@ interface NavLinksProps {
   pathname: string;
   projects: ProjectWithRelations[];
   isCollapsed: boolean;
+  isIntelligence: boolean;
 }
 
-function NavLinks({ pathname, projects, isCollapsed }: NavLinksProps) {
+function NavLinks({ pathname, projects, isCollapsed, isIntelligence }: NavLinksProps) {
+  // Build nav items dynamically based on workspace type
+  const allNavItems = [
+    ...navItems,
+    ...(isIntelligence
+      ? [{ href: "/captures", label: "Captures", icon: BookOpen }]
+      : []),
+  ];
   return (
     <nav className="flex-1 space-y-1 px-2 py-4 overflow-y-auto">
-      {navItems.map((item) => {
+      {allNavItems.map((item) => {
         const isActive =
           item.href === "/projects"
             ? pathname === "/projects"
@@ -151,6 +162,7 @@ export function Sidebar({ onShowFeedback, onAiCreate }: SidebarProps) {
   const { projects } = useProjects();
   const activeProjects = projects.filter((p) => p.status !== "archived");
   const { isCollapsed, toggleSidebar } = useSidebar();
+  const { isIntelligence } = useWorkspaceContext();
 
   return (
     <>
@@ -161,7 +173,7 @@ export function Sidebar({ onShowFeedback, onAiCreate }: SidebarProps) {
           isCollapsed ? "w-16" : "w-64"
         )}
       >
-        {/* Logo */}
+        {/* Logo + Workspace Switcher */}
         <div className={cn(
           "flex h-16 items-center gap-2 border-b",
           isCollapsed ? "justify-center px-2" : "px-6"
@@ -171,7 +183,7 @@ export function Sidebar({ onShowFeedback, onAiCreate }: SidebarProps) {
         </div>
 
         {/* Navigation */}
-        <NavLinks pathname={pathname} projects={activeProjects} isCollapsed={isCollapsed} />
+        <NavLinks pathname={pathname} projects={activeProjects} isCollapsed={isCollapsed} isIntelligence={isIntelligence} />
 
         {/* Bottom section */}
         <div className="border-t p-4 space-y-2">

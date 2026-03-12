@@ -266,6 +266,63 @@ export type UpdateNoteInput = z.infer<typeof updateNoteSchema>;
 export type CreateNoteTaskInput = z.infer<typeof createNoteTaskSchema>;
 
 // ============================================
+// Workspace Schemas
+// ============================================
+
+export const workspaceTypeSchema = z.enum(["standard", "intelligence"]);
+
+/**
+ * Schema for creating a new workspace
+ */
+export const createWorkspaceSchema = z.object({
+  name: safeRequiredString(100),
+  type: workspaceTypeSchema.default("standard"),
+});
+
+/**
+ * Schema for updating an existing workspace
+ */
+export const updateWorkspaceSchema = z.object({
+  name: safeRequiredString(100).optional(),
+  type: workspaceTypeSchema.optional(),
+});
+
+export type CreateWorkspaceInput = z.infer<typeof createWorkspaceSchema>;
+export type UpdateWorkspaceInput = z.infer<typeof updateWorkspaceSchema>;
+
+// ============================================
+// Capture Schemas
+// ============================================
+
+export const captureTypeSchema = z.enum(["meeting_note", "document", "media", "thought"]);
+
+/**
+ * Schema for creating a new capture (intelligence workspace note)
+ */
+export const createCaptureSchema = z.object({
+  workspace_id: z.string().uuid("Invalid workspace ID"),
+  project_id: z.string().uuid("Invalid project ID").nullable().optional(),
+  title: safeRequiredString(200),
+  content: safeOptionalString(50000),
+  capture_type: captureTypeSchema.default("thought"),
+  occurred_at: z.string().datetime().nullable().optional(),
+});
+
+/**
+ * Schema for updating an existing capture
+ */
+export const updateCaptureSchema = z.object({
+  title: safeRequiredString(200).optional(),
+  content: safeOptionalString(50000),
+  project_id: z.string().uuid("Invalid project ID").nullable().optional(),
+  capture_type: captureTypeSchema.optional(),
+  occurred_at: z.string().datetime().nullable().optional(),
+});
+
+export type CreateCaptureInput = z.infer<typeof createCaptureSchema>;
+export type UpdateCaptureInput = z.infer<typeof updateCaptureSchema>;
+
+// ============================================
 // Feedback Form Schemas
 // ============================================
 

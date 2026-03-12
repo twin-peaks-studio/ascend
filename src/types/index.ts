@@ -46,7 +46,15 @@ export type {
   FeedbackSubmission,
   FeedbackSubmissionInsert,
   FeedbackSubmissionUpdate,
+  Workspace,
+  WorkspaceInsert,
+  WorkspaceUpdate,
+  WorkspaceMember,
+  WorkspaceMemberInsert,
+  WorkspaceMemberUpdate,
 } from "./database";
+
+export type { WorkspaceType, CaptureType } from "./database";
 
 import type {
   Project as DBProject,
@@ -59,6 +67,8 @@ import type {
   Notification as DBNotification,
   ActivityLog as DBActivityLog,
   FeedbackForm as DBFeedbackForm,
+  Workspace as DBWorkspace,
+  WorkspaceMember as DBWorkspaceMember,
 } from "./database";
 
 /**
@@ -273,6 +283,29 @@ export const PROJECT_STATUS_CONFIG = {
     bgColor: "bg-muted",
   },
 } as const;
+
+// ─── Workspaces ──────────────────────────────────────────────────────────────
+
+/**
+ * Workspace with member count
+ */
+export interface WorkspaceWithMembers extends DBWorkspace {
+  memberCount: number;
+}
+
+/**
+ * Workspace member with profile loaded
+ */
+export interface WorkspaceMemberWithProfile extends DBWorkspaceMember {
+  profile: DBProfile;
+}
+
+/**
+ * Capture (intelligence workspace note) with relations
+ */
+export interface CaptureWithRelations extends DBNote {
+  project: DBProject | null;
+}
 
 // ─── Feedback Forms ───────────────────────────────────────────────────────────
 
