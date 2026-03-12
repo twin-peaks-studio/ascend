@@ -1,12 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   CheckSquare,
   FolderKanban,
-  Folder,
   Settings,
   PanelLeftClose,
   PanelLeft,
@@ -15,15 +15,17 @@ import {
   CalendarDays,
   Sparkles,
   BookOpen,
+  Briefcase,
+  Brain,
+  Plus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { AscendLogo } from "@/components/ascend-logo";
-import { useProjects } from "@/hooks/use-projects";
 import { useSidebar } from "@/hooks/use-sidebar";
 import { useWorkspaceContext } from "@/contexts/workspace-context";
-import { WorkspaceSwitcher } from "@/components/workspace/workspace-switcher";
-import type { ProjectWithRelations } from "@/types";
+import { CreateWorkspaceDialog } from "@/components/workspace/create-workspace-dialog";
+import type { Workspace } from "@/types";
 
 interface NavItem {
   href: string;
@@ -61,12 +63,13 @@ interface SidebarProps {
 
 interface NavLinksProps {
   pathname: string;
-  projects: ProjectWithRelations[];
+  workspaces: Workspace[];
   isCollapsed: boolean;
   isIntelligence: boolean;
+  onNewWorkspace: () => void;
 }
 
-function NavLinks({ pathname, projects, isCollapsed, isIntelligence }: NavLinksProps) {
+function NavLinks({ pathname, workspaces, isCollapsed, isIntelligence, onNewWorkspace }: NavLinksProps) {
   // Build nav items dynamically based on workspace type
   const allNavItems = [
     ...navItems,
@@ -102,18 +105,30 @@ function NavLinks({ pathname, projects, isCollapsed, isIntelligence }: NavLinksP
           </Link>
         );
       })}
-      {projects.length > 0 && !isCollapsed && (
+
+      {/* Workspaces section */}
+      {!isCollapsed && (
         <>
-          <div className="px-3 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-            Your projects
+          <div className="flex items-center justify-between px-3 py-1.5">
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Workspaces
+            </span>
+            <button
+              onClick={onNewWorkspace}
+              className="text-muted-foreground hover:text-foreground transition-colors"
+              title="New Workspace"
+            >
+              <Plus className="h-3.5 w-3.5" />
+            </button>
           </div>
-          {projects.map((project) => {
-            const href = `/projects/${project.id}`;
+          {workspaces.map((ws) => {
+            const href = `/workspaces/${ws.id}`;
             const isActive = pathname === href || pathname.startsWith(`${href}/`);
+            const WsIcon = ws.type === "intelligence" ? Brain : Briefcase;
 
             return (
               <Link
-                key={project.id}
+                key={ws.id}
                 href={href}
                 className={cn(
                   "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
@@ -122,22 +137,32 @@ function NavLinks({ pathname, projects, isCollapsed, isIntelligence }: NavLinksP
                     : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                 )}
               >
-                <Folder className="h-5 w-5 shrink-0" />
-                <span className="truncate">{project.title || "Untitled project"}</span>
+                <WsIcon className="h-5 w-5 shrink-0" />
+                <span className="truncate">{ws.name}</span>
               </Link>
             );
           })}
+          {workspaces.length === 0 && (
+            <button
+              onClick={onNewWorkspace}
+              className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors w-full"
+            >
+              <Plus className="h-5 w-5 shrink-0" />
+              <span>Create a workspace</span>
+            </button>
+          )}
         </>
       )}
-      {projects.length > 0 && isCollapsed && (
+      {isCollapsed && workspaces.length > 0 && (
         <div className="pt-2 border-t border-border/40">
-          {projects.slice(0, 3).map((project) => {
-            const href = `/projects/${project.id}`;
+          {workspaces.slice(0, 3).map((ws) => {
+            const href = `/workspaces/${ws.id}`;
             const isActive = pathname === href || pathname.startsWith(`${href}/`);
+            const WsIcon = ws.type === "intelligence" ? Brain : Briefcase;
 
             return (
               <Link
-                key={project.id}
+                key={ws.id}
                 href={href}
                 className={cn(
                   "flex items-center justify-center rounded-lg px-2 py-2 text-sm font-medium transition-colors",
@@ -145,9 +170,9 @@ function NavLinks({ pathname, projects, isCollapsed, isIntelligence }: NavLinksP
                     ? "bg-primary text-primary-foreground"
                     : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                 )}
-                title={project.title || "Untitled project"}
+                title={ws.name}
               >
-                <Folder className="h-5 w-5 shrink-0" />
+                <WsIcon className="h-5 w-5 shrink-0" />
               </Link>
             );
           })}
@@ -159,10 +184,9 @@ function NavLinks({ pathname, projects, isCollapsed, isIntelligence }: NavLinksP
 
 export function Sidebar({ onShowFeedback, onAiCreate }: SidebarProps) {
   const pathname = usePathname();
-  const { projects } = useProjects();
-  const activeProjects = projects.filter((p) => p.status !== "archived");
   const { isCollapsed, toggleSidebar } = useSidebar();
-  const { isIntelligence } = useWorkspaceContext();
+  const { workspaces, isIntelligence } = useWorkspaceContext();
+  const [showCreateWorkspace, setShowCreateWorkspace] = useState(false);
 
   return (
     <>
@@ -173,7 +197,7 @@ export function Sidebar({ onShowFeedback, onAiCreate }: SidebarProps) {
           isCollapsed ? "w-16" : "w-64"
         )}
       >
-        {/* Logo + Workspace Switcher */}
+        {/* Logo */}
         <div className={cn(
           "flex h-16 items-center gap-2 border-b",
           isCollapsed ? "justify-center px-2" : "px-6"
@@ -183,7 +207,13 @@ export function Sidebar({ onShowFeedback, onAiCreate }: SidebarProps) {
         </div>
 
         {/* Navigation */}
-        <NavLinks pathname={pathname} projects={activeProjects} isCollapsed={isCollapsed} isIntelligence={isIntelligence} />
+        <NavLinks
+          pathname={pathname}
+          workspaces={workspaces}
+          isCollapsed={isCollapsed}
+          isIntelligence={isIntelligence}
+          onNewWorkspace={() => setShowCreateWorkspace(true)}
+        />
 
         {/* Bottom section */}
         <div className="border-t p-4 space-y-2">
@@ -306,6 +336,11 @@ export function Sidebar({ onShowFeedback, onAiCreate }: SidebarProps) {
         </div>
       </aside>
 
+      {/* Create Workspace Dialog */}
+      <CreateWorkspaceDialog
+        open={showCreateWorkspace}
+        onOpenChange={setShowCreateWorkspace}
+      />
     </>
   );
 }

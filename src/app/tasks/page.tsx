@@ -10,13 +10,14 @@ import { KanbanBoard } from "@/components/board";
 import { TaskDialog, QuickAddTask, TaskListView, TaskSortSelect } from "@/components/task";
 import { Button } from "@/components/ui/button";
 import { parseSortOptionKey, type TaskSortField, type TaskSortDirection } from "@/lib/task-sort";
-import { ProjectFilter, PROJECT_FILTER_NO_PROJECT, AssigneeFilter, ASSIGNEE_FILTER_ASSIGNED_TO_ME, ASSIGNEE_FILTER_UNASSIGNED } from "@/components/filters";
+import { ProjectFilter, PROJECT_FILTER_NO_PROJECT, AssigneeFilter, ASSIGNEE_FILTER_ASSIGNED_TO_ME, ASSIGNEE_FILTER_UNASSIGNED, WorkspaceFilter } from "@/components/filters";
 import { useTasksByStatus, useTaskMutations } from "@/hooks/use-tasks";
 import { useRealtimeTasksGlobal } from "@/hooks/use-realtime-tasks";
 import { useProjects } from "@/hooks/use-projects";
 import { useProfiles } from "@/hooks/use-profiles";
 import { useIsMobile } from "@/hooks/use-media-query";
 import { useAuth } from "@/hooks/use-auth";
+import { useWorkspaceContext } from "@/contexts/workspace-context";
 import type { TaskWithProject, TaskStatus, Project } from "@/types";
 import type { CreateTaskInput, UpdateTaskInput } from "@/lib/validation";
 import { DeleteConfirmationDialog } from "@/components/ui/delete-confirmation-dialog";
@@ -28,6 +29,7 @@ export default function TasksPage() {
   const { profiles } = useProfiles();
   const isMobile = useIsMobile();
   const { user } = useAuth();
+  const { workspaces } = useWorkspaceContext();
   const {
     createTask,
     updateTask,
@@ -110,6 +112,19 @@ export default function TasksPage() {
     localStorage.setItem("tasks-assignee-filter", JSON.stringify(ids));
   }, []);
 
+  // Workspace filter state - persisted in localStorage
+  const [selectedWorkspaceIds, setSelectedWorkspaceIds] = useState<string[]>(() => {
+    if (typeof window === 'undefined') return [];
+    try {
+      const stored = localStorage.getItem("tasks-workspace-filter");
+      return stored ? JSON.parse(stored) : [];
+    } catch { return []; }
+  });
+  const handleWorkspacesChange = useCallback((ids: string[]) => {
+    setSelectedWorkspaceIds(ids);
+    localStorage.setItem("tasks-workspace-filter", JSON.stringify(ids));
+  }, []);
+
   // Show/hide completed tasks state - persisted in localStorage, hidden by default
   const [showCompleted, setShowCompleted] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
@@ -121,14 +136,38 @@ export default function TasksPage() {
     localStorage.setItem("tasks-show-completed", show ? "true" : "false");
   }, []);
 
+  // Build a set of project IDs belonging to selected workspaces
+  const workspaceProjectIds = useMemo(() => {
+    if (selectedWorkspaceIds.length === 0) return null; // null = no filter
+    const ids = new Set<string>();
+    for (const project of projects) {
+      if (project.workspace_id && selectedWorkspaceIds.includes(project.workspace_id)) {
+        ids.add(project.id);
+      }
+    }
+    return ids;
+  }, [selectedWorkspaceIds, projects]);
+
+  // Stage 0: Filter tasks by workspace
+  const workspaceFilteredTasks = useMemo(() => {
+    if (!workspaceProjectIds) return tasks;
+    return tasks.filter((task) => task.project_id && workspaceProjectIds.has(task.project_id));
+  }, [tasks, workspaceProjectIds]);
+
+  // Filter projects list for the project filter dropdown (scoped to selected workspaces)
+  const filteredProjectsForFilter = useMemo(() => {
+    if (selectedWorkspaceIds.length === 0) return projects;
+    return projects.filter((p) => p.workspace_id && selectedWorkspaceIds.includes(p.workspace_id));
+  }, [projects, selectedWorkspaceIds]);
+
   // Stage 1: Filter tasks by selected projects
   const projectFilteredTasks = useMemo(() => {
-    if (selectedProjectIds.length === 0) return tasks;
-    return tasks.filter((task) => {
+    if (selectedProjectIds.length === 0) return workspaceFilteredTasks;
+    return workspaceFilteredTasks.filter((task) => {
       const key = task.project_id ?? PROJECT_FILTER_NO_PROJECT;
       return selectedProjectIds.includes(key);
     });
-  }, [tasks, selectedProjectIds]);
+  }, [workspaceFilteredTasks, selectedProjectIds]);
 
   // Stage 2: Filter by assignee
   const assigneeFilteredTasks = useMemo(() => {
@@ -374,9 +413,16 @@ export default function TasksPage() {
         {/* Filters and sorting - desktop only, mobile uses bottom nav filter sheet */}
         <div className="mb-4 hidden items-center justify-between gap-2 lg:flex">
           <div className="flex items-center gap-2">
+            {workspaces.length > 1 && (
+              <WorkspaceFilter
+                workspaces={workspaces}
+                selectedWorkspaceIds={selectedWorkspaceIds}
+                onWorkspacesChange={handleWorkspacesChange}
+              />
+            )}
             <ProjectFilter
-              projects={projects as Project[]}
-              tasks={tasks}
+              projects={filteredProjectsForFilter as Project[]}
+              tasks={workspaceFilteredTasks}
               selectedProjectIds={selectedProjectIds}
               onProjectsChange={handleProjectsChange}
             />

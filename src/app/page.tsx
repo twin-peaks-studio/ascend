@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
 import {
   FolderKanban,
@@ -21,6 +21,8 @@ import { useProjects, useProjectMutations } from "@/hooks/use-projects";
 import { useTasks, useTaskMutations } from "@/hooks/use-tasks";
 import { useProfiles } from "@/hooks/use-profiles";
 import { useIsMobile } from "@/hooks/use-media-query";
+import { useWorkspaceContext } from "@/contexts/workspace-context";
+import { WorkspaceFilter } from "@/components/filters";
 import type { CreateProjectInput, UpdateProjectInput, CreateTaskInput } from "@/lib/validation";
 
 interface StatCardProps {
@@ -72,14 +74,31 @@ function Dashboard() {
   const isMobile = useIsMobile();
   const { createProject, loading: mutationLoading } = useProjectMutations();
   const { createTask, loading: taskMutationLoading } = useTaskMutations();
+  const { workspaces } = useWorkspaceContext();
   const [showProjectDialog, setShowProjectDialog] = useState(false);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const [selectedWorkspaceIds, setSelectedWorkspaceIds] = useState<string[]>([]);
+  const handleWorkspacesChange = useCallback((ids: string[]) => {
+    setSelectedWorkspaceIds(ids);
+  }, []);
 
-  // Calculate stats
-  const totalProjects = projects.filter((p) => p.status === "active").length;
-  const todoTasks = tasks.filter((t) => t.status === "todo").length;
-  const inProgressTasks = tasks.filter((t) => t.status === "in-progress").length;
-  const doneTasks = tasks.filter((t) => t.status === "done").length;
+  // Filter by workspace
+  const filteredProjects = useMemo(() => {
+    if (selectedWorkspaceIds.length === 0) return projects;
+    return projects.filter((p) => p.workspace_id && selectedWorkspaceIds.includes(p.workspace_id));
+  }, [projects, selectedWorkspaceIds]);
+
+  const filteredTasks = useMemo(() => {
+    if (selectedWorkspaceIds.length === 0) return tasks;
+    const wsProjectIds = new Set(filteredProjects.map((p) => p.id));
+    return tasks.filter((t) => t.project_id && wsProjectIds.has(t.project_id));
+  }, [tasks, selectedWorkspaceIds, filteredProjects]);
+
+  // Calculate stats from filtered data
+  const totalProjects = filteredProjects.filter((p) => p.status === "active").length;
+  const todoTasks = filteredTasks.filter((t) => t.status === "todo").length;
+  const inProgressTasks = filteredTasks.filter((t) => t.status === "in-progress").length;
+  const doneTasks = filteredTasks.filter((t) => t.status === "done").length;
 
   // Handle project creation
   const handleCreateProject = useCallback(
@@ -137,6 +156,17 @@ function Dashboard() {
       />
 
       <div className="p-4 md:p-6 space-y-6">
+        {/* Workspace filter */}
+        {workspaces.length > 1 && (
+          <div className="flex items-center gap-2">
+            <WorkspaceFilter
+              workspaces={workspaces}
+              selectedWorkspaceIds={selectedWorkspaceIds}
+              onWorkspacesChange={handleWorkspacesChange}
+            />
+          </div>
+        )}
+
         {/* Stats grid */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard
@@ -188,7 +218,7 @@ function Dashboard() {
                     />
                   ))}
                 </div>
-              ) : projects.length === 0 ? (
+              ) : filteredProjects.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-8 text-center">
                   <FolderKanban className="h-10 w-10 text-muted-foreground mb-2" />
                   <p className="text-sm text-muted-foreground mb-4">
@@ -204,7 +234,7 @@ function Dashboard() {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {projects.slice(0, 5).map((project) => (
+                  {filteredProjects.slice(0, 5).map((project) => (
                     <Link
                       key={project.id}
                       href={`/projects/${project.id}`}

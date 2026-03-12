@@ -78,6 +78,7 @@ export const projectPrioritySchema = z.enum(["low", "medium", "high", "urgent"])
  * Schema for creating a new project
  */
 export const createProjectSchema = z.object({
+  workspace_id: z.string().uuid("Invalid workspace ID"),
   title: safeRequiredString(100),
   description: safeLongText(),
   status: projectStatusSchema.default("active"),

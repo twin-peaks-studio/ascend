@@ -16,6 +16,7 @@ interface ProjectDialogProps {
   project?: Project | null;
   onSubmit: (data: CreateProjectInput | UpdateProjectInput) => Promise<void>;
   loading?: boolean;
+  workspaceId?: string;
 }
 
 export function ProjectDialog({
@@ -24,6 +25,7 @@ export function ProjectDialog({
   project,
   onSubmit,
   loading = false,
+  workspaceId,
 }: ProjectDialogProps) {
   const isEditing = !!project;
 
@@ -46,6 +48,7 @@ export function ProjectDialog({
           onCancel={() => onOpenChange(false)}
           isEditing={isEditing}
           loading={loading}
+          workspaceId={workspaceId}
         />
       </DialogContent>
     </Dialog>

@@ -14,7 +14,6 @@ import { getClient } from "@/lib/supabase/client-manager";
 import { withTimeout, TIMEOUTS } from "@/lib/utils/with-timeout";
 import { logger } from "@/lib/logger/logger";
 import { useAuth } from "@/hooks/use-auth";
-import { useWorkspaceContext } from "@/contexts/workspace-context";
 import type { Project, ProjectWithRelations } from "@/types";
 import type { ProjectInsert, ProjectUpdate } from "@/types/database";
 import {
@@ -142,11 +141,9 @@ async function fetchProjectById(projectId: string): Promise<ProjectWithRelations
  * Hook to fetch all projects with their tasks
  * Uses React Query for deduplication - multiple components calling this = 1 request
  */
-export function useProjects() {
+export function useProjects(workspaceId?: string) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const { activeWorkspace } = useWorkspaceContext();
-  const workspaceId = activeWorkspace?.id;
 
   const {
     data: projects = [],
@@ -216,7 +213,6 @@ export function useProject(projectId: string | null) {
 export function useProjectMutations() {
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
-  const { activeWorkspace } = useWorkspaceContext();
   const queryClient = useQueryClient();
 
   const createProject = useCallback(
@@ -233,13 +229,8 @@ export function useProjectMutations() {
         // Validate input
         const validated = createProjectSchema.parse(input);
 
-        if (!activeWorkspace) {
-          toast.error("No workspace selected");
-          return null;
-        }
-
         const insertData: ProjectInsert = {
-          workspace_id: activeWorkspace.id,
+          workspace_id: validated.workspace_id,
           title: validated.title,
           description: validated.description ?? null,
           status: validated.status,
@@ -286,7 +277,7 @@ export function useProjectMutations() {
         setLoading(false);
       }
     },
-    [user, activeWorkspace, queryClient]
+    [user, queryClient]
   );
 
   const updateProject = useCallback(

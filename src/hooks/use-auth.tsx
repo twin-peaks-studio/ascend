@@ -447,6 +447,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               error: profileError
             });
           }
+
+          // Create a default workspace for the new user
+          const { data: workspace, error: wsError } = await supabase
+            .from("workspaces")
+            .insert({
+              name: "My Workspace",
+              type: "standard",
+              created_by: authData.user.id,
+            })
+            .select("id")
+            .single();
+
+          if (wsError) {
+            logger.error("Error creating default workspace", {
+              userId: authData.user.id,
+              error: wsError,
+            });
+          } else if (workspace) {
+            const wsId = (workspace as { id: string }).id;
+            const { error: memberError } = await supabase
+              .from("workspace_members")
+              .insert({
+                workspace_id: wsId,
+                user_id: authData.user.id,
+                role: "owner",
+                invited_by: authData.user.id,
+              });
+
+            if (memberError) {
+              logger.error("Error adding user to default workspace", {
+                userId: authData.user.id,
+                workspaceId: wsId,
+                error: memberError,
+              });
+            }
+          }
         }
 
         setState((prev) => ({ ...prev, loading: false }));
