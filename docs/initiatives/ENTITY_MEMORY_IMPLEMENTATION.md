@@ -41,7 +41,9 @@ Stored in entities.ai_memory
 
 ---
 
-## Phase 1: Database + Entities CRUD (No UI Changes to Existing Pages)
+## Phase 1: Database Schema + Migration Tooling (Migrate First, Build Later)
+
+The guiding principle: **migrate existing data before building new features.** All new tables are additive. Existing pages are unaffected. The migration UI lets you reorganize your current projects into the new Product → Initiative model before any app-level changes.
 
 ### 1A. Database Migration
 
@@ -204,7 +206,7 @@ export interface EntityMention {
 }
 ```
 
-### 1C. Data Hooks
+### 1C. Data Hooks (Minimal — Just Enough for Migration)
 
 **File:** `src/hooks/use-entities.ts`
 
@@ -224,30 +226,62 @@ useEntityLinks(entityId) — all links for an entity (both directions)
 useEntityLinkMutations() — create/delete links between entities
 ```
 
-**File:** `src/hooks/use-entity-mentions.ts`
+### 1D. Migration Tooling UI
 
-```
-useEntityMentions(entityId) — all mentions of an entity with source content
-useMentionParser() — parses @mentions from text, returns entity IDs
-useSaveMentions(sourceType, sourceId) — saves parsed mentions to DB
-```
+**File:** `src/app/settings/migrate/page.tsx`
 
-### 1D. Entity CRUD Pages
+A temporary admin page (accessible from Settings) with three steps:
+
+**Step 1: Create Products**
+- Simple form: name + description + foundational context
+- List of created products with edit/delete
+- Pre-populated suggestions based on existing project names
+
+**Step 2: Convert Projects → Initiatives**
+- Shows all existing projects in a list
+- For each project: multi-select dropdown to pick which product(s) it maps to
+- "Convert" button per project:
+  1. Creates an entity (type: "initiative") for the project
+  2. Sets `projects.entity_id` to the new entity
+  3. Creates `entity_links` (initiative_product) for each selected product
+- Bulk "Convert All" with default 1:1 product mapping
+
+**Step 3: Verify**
+- Shows Products → Initiatives → Task counts
+- Highlights any orphaned projects (not yet converted)
+- "Migration complete" confirmation when all projects are linked
+
+### 1E. What This Does NOT Change
+
+- Existing pages still read from `projects` table
+- Sidebar still shows projects
+- Task views unchanged
+- Zero UI regressions — migration only backfills new columns
+
+---
+
+## Phase 2: Entity CRUD Pages + Navigation
+
+Once data is migrated, expose entities in the UI.
+
+### 2A. Entity List Page
 
 **`/entities`** — List all entities grouped by type (Products, Initiatives, Stakeholders)
 - Shows count of mentions, linked entities
 - "New Entity" button with type picker
 - Search/filter by type
 
+### 2B. Entity Detail Page
+
 **`/entities/[id]`** — Entity detail page with tabs:
 - **Overview**: Name, description, foundational context (editable)
-- **Memory**: AI-synthesized memory + "Refresh Memory" button + last refreshed timestamp
-- **Mentions**: All content that references this entity (notes, comments, tasks)
+- **Memory**: AI-synthesized memory + "Refresh Memory" button + last refreshed timestamp (empty until Phase 4)
+- **Mentions**: All content that references this entity (empty until Phase 3)
 - **Links**: Connected products/initiatives/stakeholders
 - **For Products**: Shows linked initiatives with task rollup
 - **For Initiatives**: Shows linked products + tasks
 
-### 1E. Sidebar Navigation
+### 2C. Sidebar Navigation
 
 Add to sidebar (intelligence workspaces only, below Captures):
 - "Entities" link with `Box` or `Network` icon
@@ -259,9 +293,9 @@ Add to sidebar (intelligence workspaces only, below Captures):
 
 ---
 
-## Phase 2: @Mention System (All Text Surfaces)
+## Phase 3: @Mention System (All Text Surfaces)
 
-### 2A. Mention Autocomplete Component
+### 3A. Mention Autocomplete Component
 
 **File:** `src/components/shared/mention-autocomplete.tsx`
 
@@ -287,7 +321,7 @@ This needs to integrate with **three different editor types:**
 3. **Markdown editor (project descriptions)** — project form
    - Same textarea approach as comments
 
-### 2B. Mention Parsing & Persistence
+### 3B. Mention Parsing & Persistence
 
 **On every save** (note update, comment create, task description update, capture save):
 
@@ -298,7 +332,15 @@ This needs to integrate with **three different editor types:**
 
 **Pattern:** Create a `useMentionSync(sourceType, sourceId)` hook that handles this diff logic. Call it from each save handler.
 
-### 2C. Files to Modify
+**File:** `src/hooks/use-entity-mentions.ts`
+
+```
+useEntityMentions(entityId) — all mentions of an entity with source content
+useMentionParser() — parses @mentions from text, returns entity IDs
+useSaveMentions(sourceType, sourceId) — saves parsed mentions to DB
+```
+
+### 3C. Files to Modify
 
 | File | Change |
 |------|--------|
@@ -314,9 +356,9 @@ This needs to integrate with **three different editor types:**
 
 ---
 
-## Phase 3: AI Memory Refresh
+## Phase 4: AI Memory Refresh
 
-### 3A. API Route
+### 4A. API Route
 
 **File:** `src/app/api/ai/entity-memory/route.ts`
 
@@ -362,7 +404,7 @@ Timeout: 60 seconds
 4. Save response to `entities.ai_memory` + update `memory_refreshed_at`
 5. Return updated memory
 
-### 3B. Entity Page Integration
+### 4B. Entity Page Integration
 
 On the entity detail page (`/entities/[id]`), the Memory tab shows:
 - Current AI memory (rendered as markdown)
@@ -370,42 +412,6 @@ On the entity detail page (`/entities/[id]`), the Memory tab shows:
 - "Last refreshed: 3 days ago" timestamp
 - Badge: "12 new mentions since last refresh"
 - Loading state during refresh with progress indicator
-
----
-
-## Phase 4: Migration Tooling (Existing Data → New Model)
-
-### 4A. Migration Page
-
-**File:** `src/app/settings/migrate/page.tsx`
-
-A temporary admin page (accessible from Settings) with three steps:
-
-**Step 1: Create Products**
-- Simple form: name + description
-- List of created products with edit/delete
-- Pre-populated suggestions based on existing project names
-
-**Step 2: Convert Projects → Initiatives**
-- Shows all existing projects in a list
-- For each project: multi-select dropdown to pick which product(s) it maps to
-- "Convert" button per project:
-  1. Creates an entity (type: "initiative") for the project
-  2. Sets `projects.entity_id` to the new entity
-  3. Creates `entity_links` (initiative_product) for each selected product
-- Bulk "Convert All" with default 1:1 product mapping
-
-**Step 3: Verify**
-- Shows Products → Initiatives → Task counts
-- Highlights any orphaned projects (not yet converted)
-- "Migration complete" confirmation when all projects are linked
-
-### 4B. What This Does NOT Change
-
-- Existing pages still read from `projects` table
-- Sidebar still shows projects
-- Task views unchanged
-- Zero UI regressions — migration only backfills new columns
 
 ---
 
@@ -432,25 +438,30 @@ A temporary admin page (accessible from Settings) with three steps:
 ## Implementation Order
 
 ```
-Phase 1A: SQL migration (entities, entity_links, entity_mentions tables)
-Phase 1B: TypeScript types
-Phase 1C: Data hooks (use-entities, use-entity-links, use-entity-mentions)
-Phase 1D: Entity CRUD pages (/entities, /entities/[id])
-Phase 1E: Sidebar nav update
+Phase 1: DATABASE + MIGRATION (migrate first, build later)
+  1A: SQL migration (entities, entity_links, entity_mentions tables + bridge columns)
+  1B: TypeScript types
+  1C: Data hooks (use-entities, use-entity-links — minimal for migration)
+  1D: Migration tooling UI (/settings/migrate)
+  1E: Verify migration — no regressions, data is clean
     ↓
-Phase 2A: Mention autocomplete component
-Phase 2B: Tiptap mention extension (notes, task descriptions)
-Phase 2C: Textarea mention support (comments, captures)
-Phase 2D: Mention parsing & persistence (useMentionSync)
-Phase 2E: Mention rendering in markdown-renderer
+Phase 2: ENTITY CRUD + NAVIGATION (view what you migrated)
+  2A: Entity list page (/entities)
+  2B: Entity detail page (/entities/[id]) with tabs
+  2C: Sidebar nav update (Entities link)
     ↓
-Phase 3A: AI memory refresh API route
-Phase 3B: Entity page Memory tab with refresh button
+Phase 3: @MENTION SYSTEM (inline entity linking everywhere)
+  3A: Mention autocomplete component
+  3B: Tiptap mention extension (notes, task descriptions)
+  3C: Textarea mention support (comments, captures)
+  3D: Mention parsing & persistence (useMentionSync)
+  3E: Mention rendering in markdown-renderer
     ↓
-Phase 4A: Migration page (settings/migrate)
-Phase 4B: Convert existing projects → products + initiatives
+Phase 4: AI MEMORY REFRESH (entity intelligence)
+  4A: AI memory refresh API route
+  4B: Entity page Memory tab with refresh button
     ↓
-Phase 5: Portfolio view (future — data model supports it from Phase 1)
+Phase 5: PORTFOLIO VIEW (future — data model supports it from Phase 1)
 ```
 
 ---
@@ -484,23 +495,23 @@ Users type `@OnlineOrdering` not `@4f43b086-cdfd...`. Slugs (lowercase, no space
 
 ## Files Created (New)
 
-| File | Purpose |
-|------|---------|
-| `supabase/migrations/YYYYMMDD_entities.sql` | Database migration |
-| `src/hooks/use-entities.ts` | Entity CRUD hook |
-| `src/hooks/use-entity-links.ts` | Entity relationship hook |
-| `src/hooks/use-entity-mentions.ts` | Mention tracking hook |
-| `src/components/entity/entity-list.tsx` | Entity list page component |
-| `src/components/entity/entity-detail.tsx` | Entity detail page component |
-| `src/components/entity/entity-form.tsx` | Create/edit entity form |
-| `src/components/entity/entity-memory.tsx` | AI memory display + refresh |
-| `src/components/entity/entity-mentions-list.tsx` | List of all mentions |
-| `src/components/entity/entity-links-panel.tsx` | Linked entities panel |
-| `src/components/shared/mention-autocomplete.tsx` | Reusable @mention dropdown |
-| `src/app/entities/page.tsx` | Entity list page |
-| `src/app/entities/[id]/page.tsx` | Entity detail page |
-| `src/app/api/ai/entity-memory/route.ts` | AI memory refresh endpoint |
-| `src/app/settings/migrate/page.tsx` | Migration tooling page |
+| File | Phase | Purpose |
+|------|-------|---------|
+| `supabase/migrations/YYYYMMDD_entities.sql` | 1A | Database migration |
+| `src/hooks/use-entities.ts` | 1C | Entity CRUD hook |
+| `src/hooks/use-entity-links.ts` | 1C | Entity relationship hook |
+| `src/app/settings/migrate/page.tsx` | 1D | Migration tooling page |
+| `src/components/entity/entity-list.tsx` | 2A | Entity list page component |
+| `src/components/entity/entity-detail.tsx` | 2B | Entity detail page component |
+| `src/components/entity/entity-form.tsx` | 2B | Create/edit entity form |
+| `src/components/entity/entity-links-panel.tsx` | 2B | Linked entities panel |
+| `src/app/entities/page.tsx` | 2A | Entity list page |
+| `src/app/entities/[id]/page.tsx` | 2B | Entity detail page |
+| `src/hooks/use-entity-mentions.ts` | 3D | Mention tracking hook |
+| `src/components/shared/mention-autocomplete.tsx` | 3A | Reusable @mention dropdown |
+| `src/components/entity/entity-memory.tsx` | 4B | AI memory display + refresh |
+| `src/components/entity/entity-mentions-list.tsx` | 4B | List of all mentions |
+| `src/app/api/ai/entity-memory/route.ts` | 4A | AI memory refresh endpoint |
 
 ## Files Modified (Existing)
 
