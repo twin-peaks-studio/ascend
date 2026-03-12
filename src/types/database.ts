@@ -351,30 +351,123 @@ export type Database = {
           }
         ];
       };
-      notes: {
+      workspaces: {
         Row: {
           id: string;
-          project_id: string;
-          title: string;
-          content: string | null;
+          name: string;
+          type: "standard" | "intelligence";
           created_by: string;
           created_at: string;
           updated_at: string;
         };
         Insert: {
           id?: string;
-          project_id: string;
-          title: string;
-          content?: string | null;
+          name: string;
+          type?: "standard" | "intelligence";
           created_by: string;
           created_at?: string;
           updated_at?: string;
         };
         Update: {
           id?: string;
-          project_id?: string;
+          name?: string;
+          type?: "standard" | "intelligence";
+          created_by?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "workspaces_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      workspace_members: {
+        Row: {
+          id: string;
+          workspace_id: string;
+          user_id: string;
+          role: "owner" | "admin" | "member";
+          invited_by: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          workspace_id: string;
+          user_id: string;
+          role?: "owner" | "admin" | "member";
+          invited_by: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          workspace_id?: string;
+          user_id?: string;
+          role?: "owner" | "admin" | "member";
+          invited_by?: string;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "workspace_members_workspace_id_fkey";
+            columns: ["workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "workspaces";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "workspace_members_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "workspace_members_invited_by_fkey";
+            columns: ["invited_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      notes: {
+        Row: {
+          id: string;
+          project_id: string | null;
+          workspace_id: string;
+          title: string;
+          content: string | null;
+          capture_type: "meeting_note" | "document" | "media" | "thought" | null;
+          occurred_at: string | null;
+          created_by: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          project_id?: string | null;
+          workspace_id: string;
+          title: string;
+          content?: string | null;
+          capture_type?: "meeting_note" | "document" | "media" | "thought" | null;
+          occurred_at?: string | null;
+          created_by: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          project_id?: string | null;
+          workspace_id?: string;
           title?: string;
           content?: string | null;
+          capture_type?: "meeting_note" | "document" | "media" | "thought" | null;
+          occurred_at?: string | null;
           created_by?: string;
           created_at?: string;
           updated_at?: string;
@@ -385,6 +478,13 @@ export type Database = {
             columns: ["project_id"];
             isOneToOne: false;
             referencedRelation: "projects";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "notes_workspace_id_fkey";
+            columns: ["workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "workspaces";
             referencedColumns: ["id"];
           },
           {
@@ -818,3 +918,14 @@ export type FeedbackFormUpdate = UpdateTables<"feedback_forms">;
 export type FeedbackSubmission = Tables<"feedback_submissions">;
 export type FeedbackSubmissionInsert = InsertTables<"feedback_submissions">;
 export type FeedbackSubmissionUpdate = UpdateTables<"feedback_submissions">;
+
+export type Workspace = Tables<"workspaces">;
+export type WorkspaceInsert = InsertTables<"workspaces">;
+export type WorkspaceUpdate = UpdateTables<"workspaces">;
+
+export type WorkspaceMember = Tables<"workspace_members">;
+export type WorkspaceMemberInsert = InsertTables<"workspace_members">;
+export type WorkspaceMemberUpdate = UpdateTables<"workspace_members">;
+
+export type WorkspaceType = "standard" | "intelligence";
+export type CaptureType = "meeting_note" | "document" | "media" | "thought";

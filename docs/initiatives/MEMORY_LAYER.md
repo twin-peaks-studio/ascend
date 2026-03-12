@@ -1,7 +1,7 @@
 # Memory Layer Initiative
 
-> **Status:** Planning Complete — MVP 1 Development Next
-> **Last Updated:** March 11, 2026
+> **Status:** MVP 1 Implementation Complete — Pending SQL Migration
+> **Last Updated:** March 12, 2026
 
 ---
 
@@ -241,7 +241,7 @@ Each MVP is independently deployable and adds real usable value. Each is tested 
 | MVP | Name | What It Delivers | Status |
 |-----|------|-----------------|--------|
 | **0** | Initiative Documentation | This document + plan alignment | ✅ Complete |
-| **1** | Workspaces + Captures | Workspace isolation, daily journal view, quick capture | 🔲 Not Started |
+| **1** | Workspaces + Captures | Workspace isolation, daily journal view, quick capture | ✅ Complete (pending SQL migration) |
 | **2** | Entities + Brain Dump | Entity tagging system, brain dump extraction, entity detail pages | 🔲 Not Started |
 | **3** | Embeddings + Semantic Search | Auto-embedding, vector search, enhanced search dialog | 🔲 Not Started |
 | **4** | AI Chat (RAG + Task Creation) | Chat panel, source citations, model selector, task creation from chat | 🔲 Not Started |

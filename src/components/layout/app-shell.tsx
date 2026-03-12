@@ -10,6 +10,7 @@ import { AuthDialog } from "../auth";
 import { FeedbackDialog } from "../feedback-dialog";
 import { ConversationalTaskModal } from "../ai";
 import { TimerProvider, useTimerContext } from "@/contexts/timer-context";
+import { WorkspaceProvider } from "@/contexts/workspace-context";
 import { useSidebar } from "@/hooks/use-sidebar";
 import { useAuth } from "@/hooks/use-auth";
 import { useRecoveryState } from "@/hooks/use-recovery";
@@ -223,6 +224,7 @@ export function AppShell({
 
   return (
     <TimerProvider>
+    <WorkspaceProvider>
     <ThemeContext.Provider value={{ isDark, toggleTheme, mounted: themeMounted }}>
     <SearchContext.Provider value={{ openSearch: handleOpenSearch }}>
       <FeedbackContext.Provider value={{ openFeedback: handleOpenFeedback }}>
@@ -288,6 +290,7 @@ export function AppShell({
       </FeedbackContext.Provider>
     </SearchContext.Provider>
     </ThemeContext.Provider>
+    </WorkspaceProvider>
     </TimerProvider>
   );
 }

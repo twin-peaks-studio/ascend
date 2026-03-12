@@ -14,6 +14,7 @@ import { getClient } from "@/lib/supabase/client-manager";
 import { withTimeout, TIMEOUTS } from "@/lib/utils/with-timeout";
 import { logger } from "@/lib/logger/logger";
 import { useAuth } from "@/hooks/use-auth";
+import { useWorkspaceContext } from "@/contexts/workspace-context";
 import type { Project, ProjectWithRelations } from "@/types";
 import type { ProjectInsert, ProjectUpdate } from "@/types/database";
 import {
@@ -29,15 +30,16 @@ import { toast } from "sonner";
 export const projectKeys = {
   all: ["projects"] as const,
   lists: () => [...projectKeys.all, "list"] as const,
-  list: (userId: string) => [...projectKeys.lists(), userId] as const,
+  list: (userId: string, workspaceId?: string) =>
+    [...projectKeys.lists(), userId, workspaceId ?? "all"] as const,
   details: () => [...projectKeys.all, "detail"] as const,
   detail: (id: string) => [...projectKeys.details(), id] as const,
 };
 
 /**
- * Fetch all projects for a user
+ * Fetch all projects for a user, optionally filtered by workspace
  */
-async function fetchProjectsForUser(userId: string): Promise<ProjectWithRelations[]> {
+async function fetchProjectsForUser(userId: string, workspaceId?: string): Promise<ProjectWithRelations[]> {
   const supabase = getClient();
 
   // First get project IDs where user is a member
@@ -64,6 +66,11 @@ async function fetchProjectsForUser(userId: string): Promise<ProjectWithRelation
       documents:project_documents(*)
     `
   );
+
+  // Filter by workspace if provided
+  if (workspaceId) {
+    query = query.eq("workspace_id", workspaceId);
+  }
 
   // Build OR filter based on what IDs we have
   if (memberProjectIds.length > 0) {
@@ -138,6 +145,8 @@ async function fetchProjectById(projectId: string): Promise<ProjectWithRelations
 export function useProjects() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { activeWorkspace } = useWorkspaceContext();
+  const workspaceId = activeWorkspace?.id;
 
   const {
     data: projects = [],
@@ -145,9 +154,9 @@ export function useProjects() {
     error,
     refetch,
   } = useQuery({
-    queryKey: projectKeys.list(user?.id ?? ""),
-    queryFn: () => fetchProjectsForUser(user!.id),
-    enabled: !!user, // Only run when user is logged in
+    queryKey: projectKeys.list(user?.id ?? "", workspaceId),
+    queryFn: () => fetchProjectsForUser(user!.id, workspaceId),
+    enabled: !!user && !!workspaceId,
     staleTime: 30 * 1000, // Consider fresh for 30s
     refetchOnWindowFocus: true, // Refetch when returning from background
   });
@@ -160,7 +169,7 @@ export function useProjects() {
     // For optimistic updates - set projects directly in cache
     setProjects: (updater: ProjectWithRelations[] | ((prev: ProjectWithRelations[]) => ProjectWithRelations[])) => {
       queryClient.setQueryData(
-        projectKeys.list(user?.id ?? ""),
+        projectKeys.list(user?.id ?? "", workspaceId),
         typeof updater === "function" ? updater(projects) : updater
       );
     },
