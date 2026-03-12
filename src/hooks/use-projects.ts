@@ -67,9 +67,9 @@ async function fetchProjectsForUser(userId: string, workspaceId?: string): Promi
     `
   );
 
-  // Filter by workspace if provided — also include unscoped (null) projects
+  // Filter by workspace if provided
   if (workspaceId) {
-    query = query.or(`workspace_id.eq.${workspaceId},workspace_id.is.null`);
+    query = query.eq("workspace_id", workspaceId);
   }
 
   // Build OR filter based on what IDs we have
@@ -233,8 +233,13 @@ export function useProjectMutations() {
         // Validate input
         const validated = createProjectSchema.parse(input);
 
+        if (!activeWorkspace) {
+          toast.error("No workspace selected");
+          return null;
+        }
+
         const insertData: ProjectInsert = {
-          workspace_id: activeWorkspace?.id ?? null,
+          workspace_id: activeWorkspace.id,
           title: validated.title,
           description: validated.description ?? null,
           status: validated.status,
