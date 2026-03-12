@@ -90,7 +90,7 @@ async function fetchWorkspacesForUser(userId: string): Promise<Workspace[]> {
     return [];
   }
 
-  console.log("[workspaces] fetched", workspacesResult.data?.length ?? 0, "workspaces:", workspacesResult.data?.map((w: Workspace) => ({ id: w.id, name: w.name })));
+  console.log("[workspaces] fetched", workspacesResult.data?.length ?? 0, "workspaces:", (workspacesResult.data as Workspace[] | null)?.map((w) => ({ id: w.id, name: w.name })));
   return (workspacesResult.data as Workspace[]) || [];
 }
 
