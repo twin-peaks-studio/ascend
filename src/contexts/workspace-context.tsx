@@ -35,16 +35,18 @@ interface WorkspaceContextValue {
   isIntelligence: boolean;
 }
 
-const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
+const SSR_DEFAULT: WorkspaceContextValue = {
+  activeWorkspace: null,
+  workspaces: [],
+  loading: true,
+  setActiveWorkspaceId: () => {},
+  isIntelligence: false,
+};
+
+const WorkspaceContext = createContext<WorkspaceContextValue>(SSR_DEFAULT);
 
 export function useWorkspaceContext() {
-  const context = useContext(WorkspaceContext);
-  if (!context) {
-    throw new Error(
-      "useWorkspaceContext must be used within WorkspaceProvider"
-    );
-  }
-  return context;
+  return useContext(WorkspaceContext);
 }
 
 interface WorkspaceProviderProps {
