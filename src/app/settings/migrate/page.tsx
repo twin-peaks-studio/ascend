@@ -270,7 +270,9 @@ function CreateProductsStep({ workspace, onNext }: { workspace: Workspace; onNex
 
 function ConvertProjectsStep({ workspace, onNext }: { workspace: Workspace; onNext: () => void }) {
   const { user } = useAuth();
-  const { projects, loading: projectsLoading, refetch: refetchProjects } = useProjects(workspace.id);
+  // Fetch ALL user projects (no workspace filter) so we can move projects between workspaces
+  const { projects: allProjects, loading: projectsLoading, refetch: refetchProjects } = useProjects();
+  const { workspaces } = useWorkspaces();
   const { entities: products } = useEntities(workspace.id, "product");
   const { entities: initiatives, refetch: refetchInitiatives } = useEntities(
     workspace.id,
@@ -283,9 +285,15 @@ function ConvertProjectsStep({ workspace, onNext }: { workspace: Workspace; onNe
   const [productSelections, setProductSelections] = useState<Record<string, string[]>>({});
   const [converting, setConverting] = useState<string | null>(null);
 
-  // Check which projects are already converted (have entity_id set)
+  // Show projects that are NOT already in this workspace (available to move here)
+  // plus projects already in this workspace that haven't been converted yet
+  const projects = allProjects.filter(
+    (p) => p.workspace_id !== workspace.id || !p.entity_id
+  );
+
+  // Check which projects are already converted (have entity_id set AND are in this workspace)
   const convertedProjectIds = new Set(
-    projects.filter((p) => p.entity_id).map((p) => p.id)
+    allProjects.filter((p) => p.entity_id && p.workspace_id === workspace.id).map((p) => p.id)
   );
 
   const toggleProduct = useCallback((projectId: string, productId: string) => {
@@ -325,12 +333,12 @@ function ConvertProjectsStep({ workspace, onNext }: { workspace: Workspace; onNe
           await createLink(initiative.id, productId, "initiative_product");
         }
 
-        // 3. Set projects.entity_id
+        // 3. Set projects.entity_id and ensure project is in this workspace
         const supabase = getClient();
         const { error } = await withTimeout(
           supabase
             .from("projects")
-            .update({ entity_id: initiative.id })
+            .update({ entity_id: initiative.id, workspace_id: workspace.id })
             .eq("id", projectId),
           TIMEOUTS.MUTATION
         );
@@ -353,7 +361,7 @@ function ConvertProjectsStep({ workspace, onNext }: { workspace: Workspace; onNe
   );
 
   const unconvertedProjects = projects.filter((p) => !convertedProjectIds.has(p.id));
-  const convertedProjects = projects.filter((p) => convertedProjectIds.has(p.id));
+  const convertedProjects = allProjects.filter((p) => convertedProjectIds.has(p.id));
 
   return (
     <div className="space-y-6">
@@ -361,7 +369,8 @@ function ConvertProjectsStep({ workspace, onNext }: { workspace: Workspace; onNe
         <h2 className="text-lg font-semibold mb-1">Link Projects to Products</h2>
         <p className="text-sm text-muted-foreground mb-4">
           Each project becomes an initiative. Select which product(s) each project belongs to.
-          Initiatives can span multiple products.
+          Initiatives can span multiple products. Projects from other workspaces will be moved
+          into this workspace when converted.
         </p>
 
         {projectsLoading ? (
@@ -377,11 +386,16 @@ function ConvertProjectsStep({ workspace, onNext }: { workspace: Workspace; onNe
                 className="p-4 rounded-md border bg-card space-y-3"
               >
                 <div className="flex items-center justify-between">
-                  <div>
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-medium">{project.title}</span>
-                    <Badge variant="outline" className="ml-2 text-xs">
+                    <Badge variant="outline" className="text-xs">
                       {project.status}
                     </Badge>
+                    {project.workspace_id !== workspace.id && (
+                      <Badge variant="secondary" className="text-xs">
+                        from: {workspaces.find((w) => w.id === project.workspace_id)?.name ?? "Unknown"}
+                      </Badge>
+                    )}
                   </div>
                   <Button
                     size="sm"
