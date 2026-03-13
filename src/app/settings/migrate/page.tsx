@@ -5,7 +5,7 @@ import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { useWorkspaceContext } from "@/contexts/workspace-context";
+import { useWorkspaces } from "@/hooks/use-workspaces";
 import { useProjects } from "@/hooks/use-projects";
 import { useEntities, useEntityMutations } from "@/hooks/use-entities";
 import { useEntityLinks, useEntityLinkMutations } from "@/hooks/use-entity-links";
@@ -24,12 +24,21 @@ import {
   CheckCircle2,
   Loader2,
 } from "lucide-react";
-import type { Entity } from "@/types/database";
+import type { Entity, Workspace } from "@/types/database";
 
 type MigrationStep = "products" | "convert" | "verify";
 
 export default function MigratePage() {
   const [step, setStep] = useState<MigrationStep>("products");
+  const { workspaces, loading: workspacesLoading } = useWorkspaces();
+  const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string | null>(null);
+
+  const selectedWorkspace = workspaces.find((w) => w.id === selectedWorkspaceId) ?? null;
+
+  // Auto-select first workspace once loaded
+  if (!selectedWorkspaceId && workspaces.length > 0) {
+    setSelectedWorkspaceId(workspaces[0].id);
+  }
 
   return (
     <AppShell>
@@ -39,6 +48,31 @@ export default function MigratePage() {
           <p className="text-muted-foreground mt-1">
             Set up the Product → Initiative model for your workspace
           </p>
+        </div>
+
+        {/* Workspace selector */}
+        <div className="mb-6">
+          <label className="text-sm font-medium mb-1.5 block">Workspace</label>
+          {workspacesLoading ? (
+            <p className="text-sm text-muted-foreground">Loading workspaces...</p>
+          ) : workspaces.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No workspaces found. Create one first.</p>
+          ) : (
+            <select
+              value={selectedWorkspaceId ?? ""}
+              onChange={(e) => {
+                setSelectedWorkspaceId(e.target.value);
+                setStep("products");
+              }}
+              className="w-full max-w-xs rounded-md border border-input bg-background px-3 py-2 text-sm"
+            >
+              {workspaces.map((w) => (
+                <option key={w.id} value={w.id}>
+                  {w.name} ({w.type})
+                </option>
+              ))}
+            </select>
+          )}
         </div>
 
         {/* Step indicator */}
@@ -65,9 +99,15 @@ export default function MigratePage() {
           />
         </div>
 
-        {step === "products" && <CreateProductsStep onNext={() => setStep("convert")} />}
-        {step === "convert" && <ConvertProjectsStep onNext={() => setStep("verify")} />}
-        {step === "verify" && <VerifyStep />}
+        {selectedWorkspace ? (
+          <>
+            {step === "products" && <CreateProductsStep workspace={selectedWorkspace} onNext={() => setStep("convert")} />}
+            {step === "convert" && <ConvertProjectsStep workspace={selectedWorkspace} onNext={() => setStep("verify")} />}
+            {step === "verify" && <VerifyStep workspace={selectedWorkspace} />}
+          </>
+        ) : (
+          <p className="text-sm text-muted-foreground">Select a workspace above to begin migration.</p>
+        )}
       </div>
     </AppShell>
   );
@@ -105,18 +145,17 @@ function StepIndicator({
 // Step 1: Create Products
 // ============================================================
 
-function CreateProductsStep({ onNext }: { onNext: () => void }) {
-  const { activeWorkspace } = useWorkspaceContext();
-  const { entities: products, loading, refetch } = useEntities(activeWorkspace?.id ?? null, "product");
+function CreateProductsStep({ workspace, onNext }: { workspace: Workspace; onNext: () => void }) {
+  const { entities: products, loading, refetch } = useEntities(workspace.id, "product");
   const { createEntity, deleteEntity, loading: mutating } = useEntityMutations();
   const [newName, setNewName] = useState("");
   const [newDescription, setNewDescription] = useState("");
 
   const handleCreate = useCallback(async () => {
-    if (!newName.trim() || !activeWorkspace) return;
+    if (!newName.trim()) return;
 
     const result = await createEntity({
-      workspace_id: activeWorkspace.id,
+      workspace_id: workspace.id,
       entity_type: "product",
       name: newName.trim(),
       description: newDescription.trim() || undefined,
@@ -127,7 +166,7 @@ function CreateProductsStep({ onNext }: { onNext: () => void }) {
       setNewDescription("");
       refetch();
     }
-  }, [newName, newDescription, activeWorkspace, createEntity, refetch]);
+  }, [newName, newDescription, workspace.id, createEntity, refetch]);
 
   const handleDelete = useCallback(
     async (id: string) => {
@@ -229,13 +268,12 @@ function CreateProductsStep({ onNext }: { onNext: () => void }) {
 // Step 2: Convert Projects → Initiatives
 // ============================================================
 
-function ConvertProjectsStep({ onNext }: { onNext: () => void }) {
-  const { activeWorkspace } = useWorkspaceContext();
+function ConvertProjectsStep({ workspace, onNext }: { workspace: Workspace; onNext: () => void }) {
   const { user } = useAuth();
-  const { projects, loading: projectsLoading, refetch: refetchProjects } = useProjects();
-  const { entities: products } = useEntities(activeWorkspace?.id ?? null, "product");
+  const { projects, loading: projectsLoading, refetch: refetchProjects } = useProjects(workspace.id);
+  const { entities: products } = useEntities(workspace.id, "product");
   const { entities: initiatives, refetch: refetchInitiatives } = useEntities(
-    activeWorkspace?.id ?? null,
+    workspace.id,
     "initiative"
   );
   const { createEntity } = useEntityMutations();
@@ -262,7 +300,7 @@ function ConvertProjectsStep({ onNext }: { onNext: () => void }) {
 
   const convertProject = useCallback(
     async (projectId: string, projectTitle: string) => {
-      if (!activeWorkspace || !user) return;
+      if (!user) return;
 
       const selectedProducts = productSelections[projectId] || [];
       if (selectedProducts.length === 0) {
@@ -275,7 +313,7 @@ function ConvertProjectsStep({ onNext }: { onNext: () => void }) {
 
         // 1. Create initiative entity
         const initiative = await createEntity({
-          workspace_id: activeWorkspace.id,
+          workspace_id: workspace.id,
           entity_type: "initiative",
           name: projectTitle,
         });
@@ -311,7 +349,7 @@ function ConvertProjectsStep({ onNext }: { onNext: () => void }) {
         setConverting(null);
       }
     },
-    [activeWorkspace, user, productSelections, createEntity, createLink, refetchProjects, refetchInitiatives]
+    [workspace.id, user, productSelections, createEntity, createLink, refetchProjects, refetchInitiatives]
   );
 
   const unconvertedProjects = projects.filter((p) => !convertedProjectIds.has(p.id));
@@ -432,11 +470,10 @@ function ConvertProjectsStep({ onNext }: { onNext: () => void }) {
 // Step 3: Verify
 // ============================================================
 
-function VerifyStep() {
-  const { activeWorkspace } = useWorkspaceContext();
-  const { projects } = useProjects();
-  const { entities: products } = useEntities(activeWorkspace?.id ?? null, "product");
-  const { entities: initiatives } = useEntities(activeWorkspace?.id ?? null, "initiative");
+function VerifyStep({ workspace }: { workspace: Workspace }) {
+  const { projects } = useProjects(workspace.id);
+  const { entities: products } = useEntities(workspace.id, "product");
+  const { entities: initiatives } = useEntities(workspace.id, "initiative");
 
   const convertedCount = projects.filter((p) => p.entity_id).length;
   const unconvertedCount = projects.length - convertedCount;
