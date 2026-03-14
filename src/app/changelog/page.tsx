@@ -67,19 +67,13 @@ const changelog: ChangelogEntry[] = [
   {
     date: "March 14, 2026",
     version: "0.20.0",
-    title: "New — Entity System: Products, Initiatives & Entity Pages",
-    description: "Browse and manage products, initiatives, and stakeholders with dedicated pages. Link products to projects from the properties panel and capture thoughts instantly with a global keyboard shortcut.",
+    title: "New — Entity System: Workspace Tabs for Products, Entities & Captures",
+    description: "Intelligence workspaces now have dedicated tabs for Captures, Products, and Entities alongside Projects. Link products to projects from the properties panel and capture thoughts with a global keyboard shortcut.",
     features: [
       {
         icon: Network,
-        title: "Entity List & Detail Pages",
-        description: "New /entities page shows all entities grouped by type (Products, Initiatives, Stakeholders) with search and filter. Click any entity to view its detail page with Overview, Links, Memory, and Mentions tabs.",
-        tag: "new",
-      },
-      {
-        icon: Package,
-        title: "Products Page",
-        description: "New /products page provides a focused view of all products in your workspace. Create new products directly and click through to entity details.",
+        title: "Entity & Product Tabs in Workspace",
+        description: "Intelligence workspaces now show Captures, Products, and Entities tabs when you click a workspace in the sidebar. Browse all entities grouped by type with search and filter, or view only products. Click any entity to see its detail page with Overview, Links, Memory, and Mentions tabs.",
         tag: "new",
       },
       {

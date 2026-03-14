@@ -25,8 +25,6 @@ import {
   CalendarDays,
   Sparkles,
   BookOpen,
-  Package,
-  Network,
 } from "lucide-react";
 import { useWorkspaceContext } from "@/contexts/workspace-context";
 import { cn } from "@/lib/utils";
@@ -314,7 +312,7 @@ export function MobileBottomNav({
           <div className="flex items-center gap-2">
             {/* Main Nav Items - Pill Container */}
             <div className="flex flex-1 items-center justify-around rounded-full bg-card/95 px-1 py-1.5 shadow-lg ring-1 ring-border/50 backdrop-blur-md dark:bg-card/90">
-              {[...navItems, ...(isIntelligence ? [{ href: "/captures", label: "Captures", icon: BookOpen }, { href: "/products", label: "Products", icon: Package }, { href: "/entities", label: "Entities", icon: Network }] : [])].map((item) => {
+              {[...navItems, ...(isIntelligence ? [{ href: "/captures", label: "Captures", icon: BookOpen }] : [])].map((item) => {
                 const isActive =
                   pathname === item.href ||
                   (item.href !== "/" && pathname.startsWith(item.href));

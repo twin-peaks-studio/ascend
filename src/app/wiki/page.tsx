@@ -853,8 +853,8 @@ const sections: WikiSection[] = [
       {
         heading: "Browsing Entities",
         paragraphs: [
-          "Navigate to the Entities page from the sidebar (available in intelligence workspaces). You'll see all entities grouped by type with search and filter pills. Click any entity to view its detail page.",
-          "The Products page provides a focused view showing only products in your workspace.",
+          "Click on an intelligence workspace in the sidebar to open it. You'll see tabs at the top: Projects, Captures, Products, and Entities. Select the Entities tab to see all entities grouped by type with search and filter pills. Click any entity to view its detail page.",
+          "The Products tab shows only product entities — things you ship like apps, platforms, and services.",
         ],
       },
       {

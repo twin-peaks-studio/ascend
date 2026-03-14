@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Plus, Briefcase, Brain, Settings2, Trash2 } from "lucide-react";
+import { Plus, Briefcase, Brain, Trash2, FolderKanban, BookOpen, Package, Network } from "lucide-react";
 import { AppShell, Header } from "@/components/layout";
 import { ProjectCard, ProjectDialog } from "@/components/project";
 import { Button } from "@/components/ui/button";
@@ -12,8 +12,14 @@ import { DeleteConfirmationDialog } from "@/components/ui/delete-confirmation-di
 import { useProjects, useProjectMutations } from "@/hooks/use-projects";
 import { useWorkspaceContext } from "@/contexts/workspace-context";
 import { useWorkspaceMutations } from "@/hooks/use-workspaces";
+import { WorkspaceCapturesTab } from "@/components/workspace/workspace-captures-tab";
+import { WorkspaceProductsTab } from "@/components/workspace/workspace-products-tab";
+import { WorkspaceEntitiesTab } from "@/components/workspace/workspace-entities-tab";
+import { cn } from "@/lib/utils";
 import type { ProjectStatus } from "@/types";
 import type { CreateProjectInput, UpdateProjectInput } from "@/lib/validation";
+
+type WorkspaceTab = "projects" | "captures" | "products" | "entities";
 
 function WorkspaceContent() {
   const params = useParams();
@@ -26,10 +32,13 @@ function WorkspaceContent() {
   const { createProject, deleteProject, loading: mutationLoading } = useProjectMutations();
   const { deleteWorkspace, loading: wsLoading } = useWorkspaceMutations();
 
+  const [activeTab, setActiveTab] = useState<WorkspaceTab>("projects");
   const [showProjectDialog, setShowProjectDialog] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [deleteWsConfirm, setDeleteWsConfirm] = useState(false);
   const [statusFilter, setStatusFilter] = useState<ProjectStatus | "all">("all");
+
+  const isIntelligence = workspace?.type === "intelligence";
 
   const filteredProjects =
     statusFilter === "all"
@@ -39,7 +48,6 @@ function WorkspaceContent() {
   const handleCreateProject = useCallback(
     async (data: CreateProjectInput | UpdateProjectInput) => {
       const input = data as CreateProjectInput;
-      // Ensure workspace_id is set to this workspace
       await createProject({ ...input, workspace_id: workspaceId });
       refetch();
     },
@@ -76,7 +84,18 @@ function WorkspaceContent() {
     );
   }
 
-  const WsIcon = workspace?.type === "intelligence" ? Brain : Briefcase;
+  const WsIcon = isIntelligence ? Brain : Briefcase;
+
+  const workspaceTabs: { key: WorkspaceTab; label: string; icon: React.ElementType }[] = [
+    { key: "projects", label: "Projects", icon: FolderKanban },
+    ...(isIntelligence
+      ? [
+          { key: "captures" as WorkspaceTab, label: "Captures", icon: BookOpen },
+          { key: "products" as WorkspaceTab, label: "Products", icon: Package },
+          { key: "entities" as WorkspaceTab, label: "Entities", icon: Network },
+        ]
+      : []),
+  ];
 
   return (
     <>
@@ -90,7 +109,7 @@ function WorkspaceContent() {
             <div>
               <h2 className="text-xl font-semibold">{workspace?.name}</h2>
               <Badge variant="secondary" className="mt-1">
-                {workspace?.type === "intelligence" ? "Intelligence" : "Standard"}
+                {isIntelligence ? "Intelligence" : "Standard"}
               </Badge>
             </div>
           </div>
@@ -104,61 +123,104 @@ function WorkspaceContent() {
               <Trash2 className="h-4 w-4" />
               Delete
             </Button>
-            <Button size="sm" className="gap-1.5" onClick={() => setShowProjectDialog(true)}>
-              <Plus className="h-4 w-4" />
-              New Project
-            </Button>
+            {activeTab === "projects" && (
+              <Button size="sm" className="gap-1.5" onClick={() => setShowProjectDialog(true)}>
+                <Plus className="h-4 w-4" />
+                New Project
+              </Button>
+            )}
           </div>
         </div>
 
-        {/* Project filter tabs */}
-        <Tabs
-          value={statusFilter}
-          onValueChange={(v) => setStatusFilter(v as ProjectStatus | "all")}
-        >
-          <TabsList>
-            <TabsTrigger value="all">All</TabsTrigger>
-            <TabsTrigger value="active">Active</TabsTrigger>
-            <TabsTrigger value="completed">Completed</TabsTrigger>
-            <TabsTrigger value="archived">Archived</TabsTrigger>
-          </TabsList>
-        </Tabs>
+        {/* Workspace-level tabs (for intelligence workspaces) */}
+        {workspaceTabs.length > 1 && (
+          <div className="flex gap-1 border-b overflow-x-auto">
+            {workspaceTabs.map((tab) => {
+              const TabIcon = tab.icon;
+              return (
+                <button
+                  key={tab.key}
+                  onClick={() => setActiveTab(tab.key)}
+                  className={cn(
+                    "flex items-center gap-1.5 px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap",
+                    activeTab === tab.key
+                      ? "border-primary text-foreground"
+                      : "border-transparent text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  <TabIcon className="h-4 w-4" />
+                  {tab.label}
+                </button>
+              );
+            })}
+          </div>
+        )}
 
-        {/* Projects grid */}
-        {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <div
-                key={i}
-                className="h-40 rounded-lg border bg-card animate-pulse"
-              />
-            ))}
-          </div>
-        ) : filteredProjects.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground">
-            <Briefcase className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p className="text-lg font-medium">No projects yet</p>
-            <p className="text-sm mt-1">
-              Create your first project in this workspace.
-            </p>
-            <Button
-              className="mt-4"
-              onClick={() => setShowProjectDialog(true)}
+        {/* Tab content */}
+        {activeTab === "projects" && (
+          <>
+            {/* Project status filter */}
+            <Tabs
+              value={statusFilter}
+              onValueChange={(v) => setStatusFilter(v as ProjectStatus | "all")}
             >
-              <Plus className="h-4 w-4 mr-1.5" />
-              New Project
-            </Button>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredProjects.map((project) => (
-              <ProjectCard
-                key={project.id}
-                project={project}
-                onDelete={() => setDeleteConfirm(project.id)}
-              />
-            ))}
-          </div>
+              <TabsList>
+                <TabsTrigger value="all">All</TabsTrigger>
+                <TabsTrigger value="active">Active</TabsTrigger>
+                <TabsTrigger value="completed">Completed</TabsTrigger>
+                <TabsTrigger value="archived">Archived</TabsTrigger>
+              </TabsList>
+            </Tabs>
+
+            {/* Projects grid */}
+            {loading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="h-40 rounded-lg border bg-card animate-pulse"
+                  />
+                ))}
+              </div>
+            ) : filteredProjects.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <Briefcase className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p className="text-lg font-medium">No projects yet</p>
+                <p className="text-sm mt-1">
+                  Create your first project in this workspace.
+                </p>
+                <Button
+                  className="mt-4"
+                  onClick={() => setShowProjectDialog(true)}
+                >
+                  <Plus className="h-4 w-4 mr-1.5" />
+                  New Project
+                </Button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredProjects.map((project) => (
+                  <ProjectCard
+                    key={project.id}
+                    project={project}
+                    onDelete={() => setDeleteConfirm(project.id)}
+                  />
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
+        {activeTab === "captures" && (
+          <WorkspaceCapturesTab workspaceId={workspaceId} />
+        )}
+
+        {activeTab === "products" && (
+          <WorkspaceProductsTab workspaceId={workspaceId} />
+        )}
+
+        {activeTab === "entities" && (
+          <WorkspaceEntitiesTab workspaceId={workspaceId} />
         )}
       </div>
 

@@ -2,9 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Plus, Package, Lightbulb, Search } from "lucide-react";
-import { AppShell } from "@/components/layout";
-import { Header } from "@/components/layout";
+import { Plus, Package, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -14,14 +12,8 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { useEntities, useEntityMutations, generateSlug } from "@/hooks/use-entities";
-import { useWorkspaceContext } from "@/contexts/workspace-context";
 
-interface CreateProductFormProps {
-  workspaceId: string;
-  onCreated: () => void;
-}
-
-function CreateProductForm({ workspaceId, onCreated }: CreateProductFormProps) {
+function CreateProductForm({ workspaceId, onCreated }: { workspaceId: string; onCreated: () => void }) {
   const { createEntity, loading } = useEntityMutations();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -47,9 +39,7 @@ function CreateProductForm({ workspaceId, onCreated }: CreateProductFormProps) {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label htmlFor="product-name" className="text-sm font-medium mb-1.5 block">
-          Name
-        </label>
+        <label htmlFor="product-name" className="text-sm font-medium mb-1.5 block">Name</label>
         <Input
           id="product-name"
           value={name}
@@ -58,9 +48,7 @@ function CreateProductForm({ workspaceId, onCreated }: CreateProductFormProps) {
           autoFocus
         />
         {name.trim() && (
-          <p className="text-xs text-muted-foreground mt-1">
-            Slug: @{generateSlug(name)}
-          </p>
+          <p className="text-xs text-muted-foreground mt-1">Slug: @{generateSlug(name)}</p>
         )}
       </div>
 
@@ -83,10 +71,12 @@ function CreateProductForm({ workspaceId, onCreated }: CreateProductFormProps) {
   );
 }
 
-function ProductsContent() {
-  const { activeWorkspace } = useWorkspaceContext();
-  const { entities: products, loading } = useEntities(activeWorkspace?.id ?? null, "product");
-  const { entities: initiatives } = useEntities(activeWorkspace?.id ?? null, "initiative");
+interface WorkspaceProductsTabProps {
+  workspaceId: string;
+}
+
+export function WorkspaceProductsTab({ workspaceId }: WorkspaceProductsTabProps) {
+  const { entities: products, loading } = useEntities(workspaceId, "product");
   const [showCreate, setShowCreate] = useState(false);
   const [search, setSearch] = useState("");
 
@@ -99,9 +89,7 @@ function ProductsContent() {
 
   return (
     <>
-      <Header title="Products" />
-
-      <div className="px-4 lg:px-8 py-4 max-w-3xl mx-auto space-y-4">
+      <div className="space-y-4">
         {/* Search and create */}
         <div className="flex gap-2">
           <div className="relative flex-1">
@@ -151,33 +139,24 @@ function ProductsContent() {
           </div>
         ) : (
           <div className="space-y-2">
-            {filtered.map((product) => {
-              // Count linked initiatives (this is a simple approach —
-              // a proper count would come from entity_links, but for now
-              // we show the product card and link to its detail page)
-              return (
-                <Link
-                  key={product.id}
-                  href={`/entities/${product.id}`}
-                  className="block p-4 rounded-lg border bg-card hover:bg-accent transition-colors"
-                >
-                  <div className="flex items-start gap-3">
-                    <Package className="h-5 w-5 shrink-0 text-blue-500 mt-0.5" />
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium">{product.name}</p>
-                      {product.description && (
-                        <p className="text-sm text-muted-foreground mt-0.5">
-                          {product.description}
-                        </p>
-                      )}
-                    </div>
-                    <span className="text-xs text-muted-foreground shrink-0">
-                      @{product.slug}
-                    </span>
+            {filtered.map((product) => (
+              <Link
+                key={product.id}
+                href={`/entities/${product.id}`}
+                className="block p-4 rounded-lg border bg-card hover:bg-accent transition-colors"
+              >
+                <div className="flex items-start gap-3">
+                  <Package className="h-5 w-5 shrink-0 text-blue-500 mt-0.5" />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium">{product.name}</p>
+                    {product.description && (
+                      <p className="text-sm text-muted-foreground mt-0.5">{product.description}</p>
+                    )}
                   </div>
-                </Link>
-              );
-            })}
+                  <span className="text-xs text-muted-foreground shrink-0">@{product.slug}</span>
+                </div>
+              </Link>
+            ))}
           </div>
         )}
       </div>
@@ -188,22 +167,12 @@ function ProductsContent() {
           <SheetHeader className="pb-4">
             <SheetTitle>New Product</SheetTitle>
           </SheetHeader>
-          {activeWorkspace && (
-            <CreateProductForm
-              workspaceId={activeWorkspace.id}
-              onCreated={() => setShowCreate(false)}
-            />
-          )}
+          <CreateProductForm
+            workspaceId={workspaceId}
+            onCreated={() => setShowCreate(false)}
+          />
         </SheetContent>
       </Sheet>
     </>
-  );
-}
-
-export default function ProductsPage() {
-  return (
-    <AppShell>
-      <ProductsContent />
-    </AppShell>
   );
 }

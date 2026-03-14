@@ -3,8 +3,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Plus, Package, Lightbulb, Users, Network, Search } from "lucide-react";
-import { AppShell } from "@/components/layout";
-import { Header } from "@/components/layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -14,7 +12,6 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { useEntities, useEntityMutations, generateSlug } from "@/hooks/use-entities";
-import { useWorkspaceContext } from "@/contexts/workspace-context";
 import { cn } from "@/lib/utils";
 import type { EntityType } from "@/types/database";
 
@@ -29,12 +26,7 @@ const ENTITY_TYPE_CONFIG: Record<
 
 const ENTITY_TYPES: EntityType[] = ["product", "initiative", "stakeholder"];
 
-interface CreateEntityFormProps {
-  workspaceId: string;
-  onCreated: () => void;
-}
-
-function CreateEntityForm({ workspaceId, onCreated }: CreateEntityFormProps) {
+function CreateEntityForm({ workspaceId, onCreated }: { workspaceId: string; onCreated: () => void }) {
   const { createEntity, loading } = useEntityMutations();
   const [name, setName] = useState("");
   const [entityType, setEntityType] = useState<EntityType>("product");
@@ -87,9 +79,7 @@ function CreateEntityForm({ workspaceId, onCreated }: CreateEntityFormProps) {
       </div>
 
       <div>
-        <label htmlFor="entity-name" className="text-sm font-medium mb-1.5 block">
-          Name
-        </label>
+        <label htmlFor="entity-name" className="text-sm font-medium mb-1.5 block">Name</label>
         <Input
           id="entity-name"
           value={name}
@@ -98,9 +88,7 @@ function CreateEntityForm({ workspaceId, onCreated }: CreateEntityFormProps) {
           autoFocus
         />
         {name.trim() && (
-          <p className="text-xs text-muted-foreground mt-1">
-            Slug: @{generateSlug(name)}
-          </p>
+          <p className="text-xs text-muted-foreground mt-1">Slug: @{generateSlug(name)}</p>
         )}
       </div>
 
@@ -123,9 +111,12 @@ function CreateEntityForm({ workspaceId, onCreated }: CreateEntityFormProps) {
   );
 }
 
-function EntitiesContent() {
-  const { activeWorkspace } = useWorkspaceContext();
-  const { entities, loading } = useEntities(activeWorkspace?.id ?? null);
+interface WorkspaceEntitiesTabProps {
+  workspaceId: string;
+}
+
+export function WorkspaceEntitiesTab({ workspaceId }: WorkspaceEntitiesTabProps) {
+  const { entities, loading } = useEntities(workspaceId);
   const [showCreate, setShowCreate] = useState(false);
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState<EntityType | "all">("all");
@@ -139,7 +130,6 @@ function EntitiesContent() {
     return true;
   });
 
-  // Group by type
   const grouped = ENTITY_TYPES.map((type) => ({
     type,
     config: ENTITY_TYPE_CONFIG[type],
@@ -148,9 +138,7 @@ function EntitiesContent() {
 
   return (
     <>
-      <Header title="Entities" />
-
-      <div className="px-4 lg:px-8 py-4 max-w-3xl mx-auto space-y-4">
+      <div className="space-y-4">
         {/* Search and create */}
         <div className="flex gap-2">
           <div className="relative flex-1">
@@ -169,7 +157,7 @@ function EntitiesContent() {
         </div>
 
         {/* Type filter pills */}
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <button
             onClick={() => setFilterType("all")}
             className={cn(
@@ -229,7 +217,6 @@ function EntitiesContent() {
             )}
           </div>
         ) : filterType === "all" ? (
-          // Grouped view
           grouped.map(({ type, config, items }) => {
             const Icon = config.icon;
             return (
@@ -252,14 +239,10 @@ function EntitiesContent() {
                       <div className="flex-1 min-w-0">
                         <p className="font-medium truncate">{entity.name}</p>
                         {entity.description && (
-                          <p className="text-sm text-muted-foreground truncate">
-                            {entity.description}
-                          </p>
+                          <p className="text-sm text-muted-foreground truncate">{entity.description}</p>
                         )}
                       </div>
-                      <span className="text-xs text-muted-foreground">
-                        @{entity.slug}
-                      </span>
+                      <span className="text-xs text-muted-foreground">@{entity.slug}</span>
                     </Link>
                   ))}
                 </div>
@@ -267,7 +250,6 @@ function EntitiesContent() {
             );
           })
         ) : (
-          // Flat view when filtered by type
           <div className="space-y-1">
             {filtered.map((entity) => {
               const config = ENTITY_TYPE_CONFIG[entity.entity_type as EntityType];
@@ -282,14 +264,10 @@ function EntitiesContent() {
                   <div className="flex-1 min-w-0">
                     <p className="font-medium truncate">{entity.name}</p>
                     {entity.description && (
-                      <p className="text-sm text-muted-foreground truncate">
-                        {entity.description}
-                      </p>
+                      <p className="text-sm text-muted-foreground truncate">{entity.description}</p>
                     )}
                   </div>
-                  <span className="text-xs text-muted-foreground">
-                    @{entity.slug}
-                  </span>
+                  <span className="text-xs text-muted-foreground">@{entity.slug}</span>
                 </Link>
               );
             })}
@@ -303,22 +281,12 @@ function EntitiesContent() {
           <SheetHeader className="pb-4">
             <SheetTitle>New Entity</SheetTitle>
           </SheetHeader>
-          {activeWorkspace && (
-            <CreateEntityForm
-              workspaceId={activeWorkspace.id}
-              onCreated={() => setShowCreate(false)}
-            />
-          )}
+          <CreateEntityForm
+            workspaceId={workspaceId}
+            onCreated={() => setShowCreate(false)}
+          />
         </SheetContent>
       </Sheet>
     </>
-  );
-}
-
-export default function EntitiesPage() {
-  return (
-    <AppShell>
-      <EntitiesContent />
-    </AppShell>
   );
 }
