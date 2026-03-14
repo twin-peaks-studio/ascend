@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useMemo } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -72,7 +72,9 @@ import { STATUS_CONFIG, PRIORITY_CONFIG } from "@/types";
 export default function ProjectDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const projectId = params.id as string;
+  const workspaceId = searchParams.get("workspace");
 
   const { project, setProject, loading, refetch } = useProject(projectId);
   const { documents, refetch: refetchDocuments } = useProjectDocuments(projectId);
@@ -362,9 +364,9 @@ export default function ProjectDetailPage() {
         <div className="border-b px-4 py-2 flex items-center justify-between bg-background">
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" asChild>
-              <Link href="/projects">
+              <Link href={workspaceId ? `/workspaces/${workspaceId}` : "/projects"}>
                 <ArrowLeft className="h-4 w-4 mr-1" />
-                Projects
+                {workspaceId ? "Workspace" : "Projects"}
               </Link>
             </Button>
             <span className="text-muted-foreground">/</span>

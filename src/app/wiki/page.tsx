@@ -860,8 +860,16 @@ const sections: WikiSection[] = [
       {
         heading: "Entity Detail Page",
         paragraphs: [
-          "Each entity has a detail page with four tabs: Overview (name, description, foundational context), Links (connected products/initiatives), Memory (AI-synthesized knowledge — coming soon), and Mentions (where this entity is referenced — coming soon).",
+          "Each entity has a detail page with five tabs: Overview (name, description, foundational context), Journal (timestamped knowledge entries), Links (connected products/initiatives), Memory (AI-synthesized knowledge — coming soon), and Mentions (where this entity is referenced — coming soon).",
         ],
+      },
+      {
+        heading: "Entity Journal (Brain Dump)",
+        paragraphs: [
+          "The Journal tab is where you record evolving knowledge about an entity. Click 'Add Entry' and write anything — decisions made, preferences, constraints, history. Each entry is timestamped and can be edited or deleted later.",
+          "This is separate from Foundational Context (Overview tab), which is for permanent truths that rarely change. Journal entries capture knowledge that evolves over time. When the AI memory refresh system is built, it will synthesize both sources into a coherent ai_memory blob.",
+        ],
+        tip: "Think of Foundational Context as the entity's Wikipedia intro, and the Journal as a running log of everything you learn about it.",
       },
       {
         heading: "Linking Products to Projects",

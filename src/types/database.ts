@@ -1013,6 +1013,48 @@ export type Database = {
           }
         ];
       };
+      entity_context_entries: {
+        Row: {
+          id: string;
+          entity_id: string;
+          content: string;
+          created_by: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          entity_id: string;
+          content: string;
+          created_by: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          entity_id?: string;
+          content?: string;
+          created_by?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "entity_context_entries_entity_id_fkey";
+            columns: ["entity_id"];
+            isOneToOne: false;
+            referencedRelation: "entities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "entity_context_entries_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
@@ -1113,6 +1155,10 @@ export type EntityLinkInsert = InsertTables<"entity_links">;
 
 export type EntityMention = Tables<"entity_mentions">;
 export type EntityMentionInsert = InsertTables<"entity_mentions">;
+
+export type EntityContextEntry = Tables<"entity_context_entries">;
+export type EntityContextEntryInsert = InsertTables<"entity_context_entries">;
+export type EntityContextEntryUpdate = UpdateTables<"entity_context_entries">;
 
 export type EntityType = "product" | "initiative" | "stakeholder";
 export type EntityLinkType = "initiative_product" | "stakeholder_product" | "stakeholder_initiative";

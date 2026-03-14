@@ -204,6 +204,7 @@ function WorkspaceContent() {
                     key={project.id}
                     project={project}
                     onDelete={() => setDeleteConfirm(project.id)}
+                    workspaceId={workspaceId}
                   />
                 ))}
               </div>

@@ -142,7 +142,7 @@ export function WorkspaceProductsTab({ workspaceId }: WorkspaceProductsTabProps)
             {filtered.map((product) => (
               <Link
                 key={product.id}
-                href={`/entities/${product.id}`}
+                href={`/entities/${product.id}?workspace=${workspaceId}`}
                 className="block p-4 rounded-lg border bg-card hover:bg-accent transition-colors"
               >
                 <div className="flex items-start gap-3">

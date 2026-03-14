@@ -68,13 +68,25 @@ const changelog: ChangelogEntry[] = [
     date: "March 14, 2026",
     version: "0.20.0",
     title: "New — Entity System: Workspace Tabs for Products, Entities & Captures",
-    description: "Intelligence workspaces now have dedicated tabs for Captures, Products, and Entities alongside Projects. Link products to projects from the properties panel and capture thoughts with a global keyboard shortcut.",
+    description: "Intelligence workspaces now have tabs for Captures, Products, and Entities. Entity detail pages include a new Journal tab for brain-dumping evolving knowledge. Navigation between workspaces, projects, and entities now works correctly in both directions.",
     features: [
       {
         icon: Network,
         title: "Entity & Product Tabs in Workspace",
-        description: "Intelligence workspaces now show Captures, Products, and Entities tabs when you click a workspace in the sidebar. Browse all entities grouped by type with search and filter, or view only products. Click any entity to see its detail page with Overview, Links, Memory, and Mentions tabs.",
+        description: "Intelligence workspaces now show Captures, Products, and Entities tabs when you click a workspace in the sidebar. Browse all entities grouped by type with search and filter, or view only products. Click any entity to see its detail page.",
         tag: "new",
+      },
+      {
+        icon: BookOpen,
+        title: "Entity Journal (Brain Dump)",
+        description: "Each entity detail page now has a Journal tab for recording evolving knowledge. Add timestamped context entries about any product, initiative, or stakeholder. Journal entries will be synthesized into AI memory alongside foundational context during memory refresh.",
+        tag: "new",
+      },
+      {
+        icon: ArrowLeft,
+        title: "Workspace-Aware Navigation",
+        description: "Clicking a project or entity from a workspace now preserves the back-navigation link. The 'Back' button correctly returns you to the workspace you came from, not to a global page.",
+        tag: "improved",
       },
       {
         icon: Layers,

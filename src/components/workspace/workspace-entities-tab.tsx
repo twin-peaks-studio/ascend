@@ -232,7 +232,7 @@ export function WorkspaceEntitiesTab({ workspaceId }: WorkspaceEntitiesTabProps)
                   {items.map((entity) => (
                     <Link
                       key={entity.id}
-                      href={`/entities/${entity.id}`}
+                      href={`/entities/${entity.id}?workspace=${workspaceId}`}
                       className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-accent transition-colors"
                     >
                       <Icon className={cn("h-5 w-5 shrink-0", config.color)} />
@@ -257,7 +257,7 @@ export function WorkspaceEntitiesTab({ workspaceId }: WorkspaceEntitiesTabProps)
               return (
                 <Link
                   key={entity.id}
-                  href={`/entities/${entity.id}`}
+                  href={`/entities/${entity.id}?workspace=${workspaceId}`}
                   className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-accent transition-colors"
                 >
                   <Icon className={cn("h-5 w-5 shrink-0", config.color)} />

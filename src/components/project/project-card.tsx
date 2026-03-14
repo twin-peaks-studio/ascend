@@ -19,9 +19,11 @@ import { PROJECT_STATUS_CONFIG } from "@/types";
 interface ProjectCardProps {
   project: ProjectWithRelations;
   onDelete?: (projectId: string) => void;
+  /** When rendered inside a workspace, pass the workspace ID to enable correct back-navigation */
+  workspaceId?: string;
 }
 
-export function ProjectCard({ project, onDelete }: ProjectCardProps) {
+export function ProjectCard({ project, onDelete, workspaceId }: ProjectCardProps) {
   const statusConfig = PROJECT_STATUS_CONFIG[project.status];
 
   // Calculate task counts by status
@@ -29,8 +31,12 @@ export function ProjectCard({ project, onDelete }: ProjectCardProps) {
   const completedCount = project.tasks?.filter(t => t.status === "done").length || 0;
   const inProgressCount = project.tasks?.filter(t => t.status === "in-progress").length || 0;
 
+  const projectHref = workspaceId
+    ? `/projects/${project.id}?workspace=${workspaceId}`
+    : `/projects/${project.id}`;
+
   return (
-    <Link href={`/projects/${project.id}`}>
+    <Link href={projectHref}>
       <Card className="group relative transition-all hover:shadow-md cursor-pointer">
         {/* Color indicator bar */}
         <div
@@ -65,7 +71,7 @@ export function ProjectCard({ project, onDelete }: ProjectCardProps) {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
                 <DropdownMenuItem asChild>
-                  <Link href={`/projects/${project.id}`}>
+                  <Link href={projectHref}>
                     <ExternalLink className="h-4 w-4 mr-2" />
                     View Details
                   </Link>

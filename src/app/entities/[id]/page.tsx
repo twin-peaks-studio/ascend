@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -15,6 +15,9 @@ import {
   AtSign,
   Save,
   X,
+  BookOpen,
+  Plus,
+  MoreHorizontal,
 } from "lucide-react";
 import { AppShell } from "@/components/layout";
 import { Header } from "@/components/layout";
@@ -31,10 +34,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useEntity, useEntityMutations } from "@/hooks/use-entities";
 import { useEntityLinks } from "@/hooks/use-entity-links";
+import { useEntityContextEntries, useEntityContextEntryMutations } from "@/hooks/use-entity-context-entries";
 import { cn } from "@/lib/utils";
-import type { EntityType } from "@/types/database";
+import type { EntityType, EntityContextEntry } from "@/types/database";
 
 const ENTITY_TYPE_CONFIG: Record<
   EntityType,
@@ -45,15 +55,101 @@ const ENTITY_TYPE_CONFIG: Record<
   stakeholder: { label: "Stakeholder", icon: Users, color: "text-green-500" },
 };
 
-type Tab = "overview" | "links" | "memory" | "mentions";
+type Tab = "overview" | "journal" | "links" | "memory" | "mentions";
+
+function JournalEntryCard({
+  entry,
+  entityId,
+  onUpdate,
+  onDelete,
+  mutating,
+}: {
+  entry: EntityContextEntry;
+  entityId: string;
+  onUpdate: (id: string, entityId: string, content: string) => Promise<boolean>;
+  onDelete: (id: string, entityId: string) => Promise<boolean>;
+  mutating: boolean;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [editContent, setEditContent] = useState(entry.content);
+
+  const handleSave = async () => {
+    const success = await onUpdate(entry.id, entityId, editContent);
+    if (success) setEditing(false);
+  };
+
+  return (
+    <div className="rounded-lg border bg-card p-4">
+      {editing ? (
+        <div className="space-y-3">
+          <Textarea
+            value={editContent}
+            onChange={(e) => setEditContent(e.target.value)}
+            rows={4}
+            autoFocus
+          />
+          <div className="flex gap-2 justify-end">
+            <Button variant="outline" size="sm" onClick={() => { setEditing(false); setEditContent(entry.content); }}>
+              Cancel
+            </Button>
+            <Button size="sm" onClick={handleSave} disabled={!editContent.trim() || mutating}>
+              Save
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="flex items-start justify-between gap-2">
+            <p className="text-sm whitespace-pre-wrap flex-1">{entry.content}</p>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0">
+                  <MoreHorizontal className="h-3.5 w-3.5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setEditing(true)}>
+                  <Pencil className="h-3.5 w-3.5 mr-2" />
+                  Edit
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => onDelete(entry.id, entityId)}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <Trash2 className="h-3.5 w-3.5 mr-2" />
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+          <p className="text-xs text-muted-foreground mt-2">
+            {new Date(entry.created_at).toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+              hour: "numeric",
+              minute: "2-digit",
+            })}
+            {entry.updated_at !== entry.created_at && " (edited)"}
+          </p>
+        </>
+      )}
+    </div>
+  );
+}
 
 function EntityDetailContent() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const entityId = params.id as string;
+  const workspaceId = searchParams.get("workspace");
+
   const { entity, loading: entityLoading } = useEntity(entityId);
   const { links, loading: linksLoading } = useEntityLinks(entityId);
+  const { entries, loading: entriesLoading } = useEntityContextEntries(entityId);
   const { updateEntity, deleteEntity, loading: mutating } = useEntityMutations();
+  const { createEntry, updateEntry, deleteEntry, loading: entryMutating } = useEntityContextEntryMutations();
 
   const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [editing, setEditing] = useState(false);
@@ -61,6 +157,12 @@ function EntityDetailContent() {
   const [editDescription, setEditDescription] = useState("");
   const [editContext, setEditContext] = useState("");
   const [showDelete, setShowDelete] = useState(false);
+  const [newEntry, setNewEntry] = useState("");
+  const [showNewEntry, setShowNewEntry] = useState(false);
+
+  // Build the back link — navigate to workspace if we came from one
+  const backHref = workspaceId ? `/workspaces/${workspaceId}` : "/";
+  const backLabel = workspaceId ? "Workspace" : "Home";
 
   if (entityLoading) {
     return (
@@ -81,7 +183,7 @@ function EntityDetailContent() {
         <div className="px-4 lg:px-8 py-4 max-w-3xl mx-auto text-center py-12">
           <p className="text-muted-foreground">Entity not found</p>
           <Button variant="outline" size="sm" asChild className="mt-3">
-            <Link href="/entities">Back to Entities</Link>
+            <Link href={backHref}>Back to {backLabel}</Link>
           </Button>
         </div>
       </>
@@ -116,7 +218,16 @@ function EntityDetailContent() {
   const handleDelete = async () => {
     const success = await deleteEntity(entity.id);
     if (success) {
-      router.push("/entities");
+      router.push(backHref);
+    }
+  };
+
+  const handleAddEntry = async () => {
+    if (!newEntry.trim()) return;
+    const result = await createEntry(entity.id, newEntry);
+    if (result) {
+      setNewEntry("");
+      setShowNewEntry(false);
     }
   };
 
@@ -129,6 +240,7 @@ function EntityDetailContent() {
 
   const tabs: { key: Tab; label: string; icon: React.ElementType }[] = [
     { key: "overview", label: "Overview", icon: Pencil },
+    { key: "journal", label: `Journal (${entries.length})`, icon: BookOpen },
     { key: "links", label: `Links (${links.length})`, icon: Link2 },
     { key: "memory", label: "Memory", icon: Brain },
     { key: "mentions", label: "Mentions", icon: AtSign },
@@ -143,9 +255,9 @@ function EntityDetailContent() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="sm" asChild>
-              <Link href="/entities">
+              <Link href={backHref}>
                 <ArrowLeft className="h-4 w-4 mr-1" />
-                Entities
+                {backLabel}
               </Link>
             </Button>
             <span className={cn("flex items-center gap-1.5 text-sm font-medium", config.color)}>
@@ -173,7 +285,7 @@ function EntityDetailContent() {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 border-b">
+        <div className="flex gap-1 border-b overflow-x-auto">
           {tabs.map((tab) => {
             const TabIcon = tab.icon;
             return (
@@ -181,7 +293,7 @@ function EntityDetailContent() {
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
                 className={cn(
-                  "flex items-center gap-1.5 px-3 py-2 text-sm font-medium border-b-2 transition-colors",
+                  "flex items-center gap-1.5 px-3 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap",
                   activeTab === tab.key
                     ? "border-primary text-foreground"
                     : "border-transparent text-muted-foreground hover:text-foreground"
@@ -218,12 +330,12 @@ function EntityDetailContent() {
                 <div>
                   <label className="text-sm font-medium mb-1.5 block">Foundational Context</label>
                   <p className="text-xs text-muted-foreground mb-2">
-                    Teach the AI what this {config.label.toLowerCase()} is. Include key details, history, and context that should always be known.
+                    Permanent truth about this {config.label.toLowerCase()}. This is always preserved — never summarized away by the AI.
                   </p>
                   <Textarea
                     value={editContext}
                     onChange={(e) => setEditContext(e.target.value)}
-                    placeholder={`What should the AI know about ${entity.name}?`}
+                    placeholder={`What should always be known about ${entity.name}?`}
                     rows={8}
                   />
                 </div>
@@ -258,7 +370,7 @@ function EntityDetailContent() {
                 ) : (
                   <div className="rounded-lg border border-dashed p-6 text-center">
                     <p className="text-sm text-muted-foreground mb-2">
-                      No foundational context yet. Add context to teach the AI about this {config.label.toLowerCase()}.
+                      No foundational context yet. Add permanent truths about this {config.label.toLowerCase()}.
                     </p>
                     <Button variant="outline" size="sm" onClick={startEditing}>
                       Add Context
@@ -266,6 +378,83 @@ function EntityDetailContent() {
                   </div>
                 )}
               </>
+            )}
+          </div>
+        )}
+
+        {activeTab === "journal" && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">
+                  Evolving knowledge about this {config.label.toLowerCase()}. Add context over time — the AI memory refresh will synthesize it all.
+                </p>
+              </div>
+              <Button
+                size="sm"
+                onClick={() => setShowNewEntry(true)}
+                className="gap-1.5 shrink-0"
+              >
+                <Plus className="h-4 w-4" />
+                Add Entry
+              </Button>
+            </div>
+
+            {/* New entry form */}
+            {showNewEntry && (
+              <div className="rounded-lg border bg-card p-4 space-y-3">
+                <Textarea
+                  value={newEntry}
+                  onChange={(e) => setNewEntry(e.target.value)}
+                  placeholder={`What do you want to record about ${entity.name}? E.g., "Prefers async communication", "Recently migrated to React", "Reports to VP of Product"...`}
+                  rows={4}
+                  autoFocus
+                />
+                <div className="flex gap-2 justify-end">
+                  <Button variant="outline" size="sm" onClick={() => { setShowNewEntry(false); setNewEntry(""); }}>
+                    Cancel
+                  </Button>
+                  <Button size="sm" onClick={handleAddEntry} disabled={!newEntry.trim() || entryMutating}>
+                    {entryMutating ? "Adding..." : "Add Entry"}
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Entries list */}
+            {entriesLoading ? (
+              <div className="space-y-3">
+                {[1, 2].map((i) => (
+                  <div key={i} className="h-24 rounded-lg bg-muted animate-pulse" />
+                ))}
+              </div>
+            ) : entries.length === 0 && !showNewEntry ? (
+              <div className="rounded-lg border border-dashed p-8 text-center">
+                <BookOpen className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground mb-1">
+                  No journal entries yet.
+                </p>
+                <p className="text-xs text-muted-foreground mb-3">
+                  Brain dump everything you know about this {config.label.toLowerCase()} — decisions made, quirks, constraints, history.
+                </p>
+                <Button variant="outline" size="sm" onClick={() => setShowNewEntry(true)}>
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add your first entry
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {entries.map((entry) => (
+                  <JournalEntryCard
+                    key={entry.id}
+                    entry={entry}
+                    entityId={entity.id}
+                    onUpdate={updateEntry}
+                    onDelete={deleteEntry}
+                    mutating={entryMutating}
+                  />
+                ))}
+              </div>
             )}
           </div>
         )}
@@ -293,7 +482,7 @@ function EntityDetailContent() {
                 return (
                   <Link
                     key={link.id}
-                    href={`/entities/${linkedEntity.id}`}
+                    href={`/entities/${linkedEntity.id}${workspaceId ? `?workspace=${workspaceId}` : ""}`}
                     className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-accent transition-colors"
                   >
                     <LinkedIcon className={cn("h-5 w-5 shrink-0", linkedConfig?.color)} />
@@ -328,7 +517,7 @@ function EntityDetailContent() {
                   No AI memory yet.
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  AI memory will be available once @mentions and the memory refresh system are built (Phase 4).
+                  Memory is synthesized from foundational context + journal entries + @mentions. The refresh system will be built in Phase 4.
                 </p>
               </div>
             )}
@@ -354,7 +543,7 @@ function EntityDetailContent() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete {entity.name}?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete this {config.label.toLowerCase()} and all its links and mentions. This action cannot be undone.
+              This will permanently delete this {config.label.toLowerCase()} and all its links, journal entries, and mentions. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
