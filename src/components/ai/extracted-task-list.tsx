@@ -13,12 +13,19 @@ import { Button } from "@/components/ui/button";
 import { ExtractedTaskItem } from "./extracted-task-item";
 import type { ExtractedTask } from "@/lib/ai/types";
 
+interface ProjectOption {
+  id: string;
+  title: string;
+}
+
 interface ExtractedTaskListProps {
   tasks: ExtractedTask[];
   onUpdateTask: (id: string, updates: Partial<ExtractedTask>) => void;
   onToggleSelection: (id: string) => void;
   onSelectAll: () => void;
   onDeselectAll: () => void;
+  /** When provided, show per-task project selector (used for captures) */
+  projects?: ProjectOption[];
 }
 
 export function ExtractedTaskList({
@@ -27,6 +34,7 @@ export function ExtractedTaskList({
   onToggleSelection,
   onSelectAll,
   onDeselectAll,
+  projects,
 }: ExtractedTaskListProps) {
   const selectedCount = tasks.filter((t) => t.selected).length;
   const allSelected = selectedCount === tasks.length;
@@ -58,6 +66,7 @@ export function ExtractedTaskList({
               task={task}
               onUpdate={(updates) => onUpdateTask(task.id, updates)}
               onToggleSelection={() => onToggleSelection(task.id)}
+              projects={projects}
             />
           ))}
         </div>

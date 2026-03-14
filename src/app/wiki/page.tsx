@@ -879,7 +879,14 @@ const sections: WikiSection[] = [
         ],
       },
       {
-        tip: "Use Cmd/Ctrl + Shift + C from any page to quickly capture a thought without leaving your current context.",
+        heading: "Capture Detail Page",
+        paragraphs: [
+          "Click any capture to open its full detail page. This mirrors the project notes experience: inline title editing, Tiptap rich text editor with auto-save, capture metadata (type, date, optional project link), and a linked tasks section.",
+          "You can create tasks inline from a capture by selecting a target project. Each capture can also use 'Extract Tasks with AI' — the AI analyzes your content and suggests tasks. Since captures aren't tied to a single project, you can assign each extracted task to a different project.",
+        ],
+      },
+      {
+        tip: "Captures use the same rich text editor and AI extraction as project notes — the full editing experience is identical.",
       },
     ],
   },
@@ -894,7 +901,6 @@ const sections: WikiSection[] = [
         list: [
           "Cmd/Ctrl + K — Open global search or quick create task",
           "Cmd/Ctrl + P — Quick create project (from Dashboard)",
-          "Cmd/Ctrl + Shift + C — Quick capture (intelligence workspaces only)",
           "Cmd/Ctrl + / — Show keyboard shortcuts dialog",
           "? — Show keyboard shortcuts dialog (alternative)",
           "Escape — Close any open dialog or cancel current action",

@@ -68,7 +68,7 @@ const changelog: ChangelogEntry[] = [
     date: "March 14, 2026",
     version: "0.20.0",
     title: "New — Entity System: Workspace Tabs for Products, Entities & Captures",
-    description: "Intelligence workspaces now have tabs for Captures, Products, and Entities. Entity detail pages include a new Journal tab for brain-dumping evolving knowledge. Navigation between workspaces, projects, and entities now works correctly in both directions.",
+    description: "Captures now have the full note experience: rich text editor, linked tasks, and AI task extraction. Entity detail pages include a Journal tab. Navigation between workspaces, projects, and entities works correctly in both directions.",
     features: [
       {
         icon: Network,
@@ -95,10 +95,10 @@ const changelog: ChangelogEntry[] = [
         tag: "new",
       },
       {
-        icon: Keyboard,
-        title: "Quick Capture Keyboard Shortcut",
-        description: "Press Ctrl+Shift+C (or Cmd+Shift+C on Mac) from anywhere in an intelligence workspace to instantly open a quick capture modal. Capture a thought without leaving your current page.",
-        tag: "new",
+        icon: FileText,
+        title: "Captures: Full Note Experience",
+        description: "Captures now have the same rich editing experience as project notes: Tiptap rich text editor with auto-save, linked tasks section, inline task creation, and AI task extraction. Each extracted task can be assigned to a different project.",
+        tag: "improved",
       },
     ],
   },

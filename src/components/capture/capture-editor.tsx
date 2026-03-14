@@ -13,7 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { RichTextEditor } from "@/components/shared";
 import {
   Select,
   SelectContent,
@@ -218,11 +218,11 @@ export function CaptureEditor({ capture, onSaved }: CaptureEditorProps) {
       </div>
 
       {/* Content */}
-      <Textarea
-        placeholder="Write your capture..."
+      <RichTextEditor
         value={content}
-        onChange={(e) => setContent(e.target.value)}
-        className="min-h-[200px] resize-y"
+        onChange={(val) => setContent(val)}
+        placeholder="Write your capture..."
+        minHeight={200}
       />
 
       {/* Actions */}

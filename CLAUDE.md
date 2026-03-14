@@ -110,15 +110,13 @@ Workspaces (`src/contexts/workspace-context.tsx`) provide workspace isolation. E
 
 **Workspace detail page tabs:** Intelligence workspaces show tabs at `/workspaces/[id]`: Projects, Captures, Products, Entities. Standard workspaces only show the Projects grid (no tab bar). Tab components live in `src/components/workspace/workspace-*-tab.tsx`.
 
-**Captures** are notes with `capture_type` set (not null). They live in the existing `notes` table with added columns: `workspace_id`, `capture_type`, `occurred_at`. Standard notes have `capture_type = null`. The captures hook (`use-captures.ts`) is separate from `use-notes.ts`.
+**Captures** are notes with `capture_type` set (not null). They live in the existing `notes` table with added columns: `workspace_id`, `capture_type`, `occurred_at`. Standard notes have `capture_type = null`. The captures hook (`use-captures.ts`) is separate from `use-notes.ts`. Captures have the same full editing experience as notes: Tiptap rich text editor with auto-save, linked tasks via `note_tasks` junction table, inline task creation (requires selecting a project), and AI task extraction with per-task project assignment.
 
 **Entities** (products, initiatives, stakeholders) are managed per-workspace. The entity detail page (`/entities/[id]`) has five tabs: Overview, Journal, Links, Memory, Mentions. Journal entries (`entity_context_entries` table) are timestamped knowledge dumps that feed into the AI memory refresh alongside `foundational_context`.
 
 **Workspace-aware navigation:** When navigating from a workspace to a project or entity, pass `?workspace=[wsId]` in the URL. The target page reads this to build the correct back link (e.g., back to `/workspaces/[wsId]` instead of `/projects`). `ProjectCard` accepts a `workspaceId` prop for this.
 
 **Switching workspaces** calls `queryClient.clear()` to reset all React Query caches, ensuring data is refetched for the new workspace context.
-
-**Quick Capture Modal:** `Ctrl+Shift+C` (or `Cmd+Shift+C`) opens a global quick capture dialog from anywhere. Only available in intelligence workspaces. Rendered in `AppShell` via `QuickCaptureModal`.
 
 Key files:
 - `src/contexts/workspace-context.tsx` — `WorkspaceProvider`, `useWorkspaceContext()`
@@ -132,7 +130,8 @@ Key files:
 - `src/components/workspace/workspace-captures-tab.tsx` — captures tab content
 - `src/components/workspace/workspace-products-tab.tsx` — products tab content
 - `src/components/workspace/workspace-entities-tab.tsx` — entities tab content
-- `src/components/capture/` — capture-list, capture-editor, quick-capture, quick-capture-modal
+- `src/app/captures/[id]/page.tsx` — capture detail page (mirrors note detail: rich text, tasks, AI extraction)
+- `src/components/capture/` — capture-list, capture-editor
 
 ### Project Status & Sidebar Filtering
 

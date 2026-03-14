@@ -11,7 +11,6 @@ import {
 } from "@/components/ui/sheet";
 import { CaptureList } from "@/components/capture/capture-list";
 import { CaptureEditor } from "@/components/capture/capture-editor";
-import { QuickCapture } from "@/components/capture/quick-capture";
 import { useCaptures } from "@/hooks/use-captures";
 
 interface WorkspaceCapturesTabProps {
@@ -25,11 +24,6 @@ export function WorkspaceCapturesTab({ workspaceId }: WorkspaceCapturesTabProps)
   return (
     <>
       <div className="space-y-4">
-        {/* Quick capture bar */}
-        <div className="rounded-lg border bg-card p-3">
-          <QuickCapture />
-        </div>
-
         {/* New capture button */}
         <div className="flex justify-end">
           <Button

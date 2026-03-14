@@ -305,6 +305,7 @@ export interface WorkspaceMemberWithProfile extends DBWorkspaceMember {
  */
 export interface CaptureWithRelations extends DBNote {
   project: DBProject | null;
+  tasks: TaskWithProject[];
 }
 
 // ─── Feedback Forms ───────────────────────────────────────────────────────────

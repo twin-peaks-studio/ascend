@@ -9,7 +9,7 @@ import { SearchDialog } from "../search";
 import { AuthDialog } from "../auth";
 import { FeedbackDialog } from "../feedback-dialog";
 import { ConversationalTaskModal } from "../ai";
-import { QuickCaptureModal } from "../capture/quick-capture-modal";
+
 import { TimerProvider, useTimerContext } from "@/contexts/timer-context";
 import { useSidebar } from "@/hooks/use-sidebar";
 import { useAuth } from "@/hooks/use-auth";
@@ -280,8 +280,6 @@ export function AppShell({
             Uses usePathname() internally to detect project context. */}
         <ConversationalTaskModal open={showAiCreate} onOpenChange={setShowAiCreate} />
 
-        {/* Quick capture modal — global keyboard shortcut (Ctrl+Shift+C) */}
-        <QuickCaptureModal />
 
         {/* Task dialog for timer indicator clicks */}
         <TimerTaskNavigation />

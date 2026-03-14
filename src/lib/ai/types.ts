@@ -41,6 +41,7 @@ export interface RawExtractedTask {
 export interface ExtractedTask extends RawExtractedTask {
   id: string; // Client-generated UUID for list key
   selected: boolean; // User selection state
+  projectId?: string; // Per-task project assignment (used for captures where project varies)
 }
 
 // API request body
@@ -112,6 +113,12 @@ export interface UseTaskExtractionActions {
     noteId: string,
     content: string,
     projectId: string,
+    projectTitle?: string
+  ) => Promise<void>;
+  extractFromCapture: (
+    captureId: string,
+    content: string,
+    defaultProjectId?: string,
     projectTitle?: string
   ) => Promise<void>;
   updateTask: (id: string, updates: Partial<ExtractedTask>) => void;

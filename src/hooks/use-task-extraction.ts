@@ -7,6 +7,10 @@
  * 1. Extract tasks from content via API
  * 2. Review and edit extracted tasks
  * 3. Create selected tasks and link to source
+ *
+ * Supports two modes:
+ * - Note mode: all tasks go to a single project (sourceProjectId)
+ * - Capture mode: each task can be assigned to a different project (per-task projectId)
  */
 
 import { useState, useCallback } from "react";
@@ -14,6 +18,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { getClient } from "@/lib/supabase/client-manager";
 import { useAuth } from "@/hooks/use-auth";
 import { noteKeys } from "@/hooks/use-notes";
+import { captureKeys } from "@/hooks/use-captures";
 import { taskKeys } from "@/hooks/use-tasks";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger/logger";
@@ -40,7 +45,7 @@ function generateId(): string {
  * Merges sourceText into the description so the user reviews
  * and edits the full combined text as one field.
  */
-function toClientTasks(rawTasks: RawExtractedTask[]): ExtractedTask[] {
+function toClientTasks(rawTasks: RawExtractedTask[], defaultProjectId?: string): ExtractedTask[] {
   return rawTasks.map((task) => {
     const mergedDescription = task.sourceText
       ? [task.description, `Original Content: ${task.sourceText}`]
@@ -53,6 +58,7 @@ function toClientTasks(rawTasks: RawExtractedTask[]): ExtractedTask[] {
       description: mergedDescription,
       id: generateId(),
       selected: true, // Select all by default
+      projectId: defaultProjectId,
     };
   });
 }
@@ -142,13 +148,101 @@ export function useTaskExtraction(): UseTaskExtractionReturn {
           return;
         }
 
-        setExtractedTasks(toClientTasks(data.tasks));
+        setExtractedTasks(toClientTasks(data.tasks, projectId));
         setStatus("reviewing");
       } catch (err) {
         logger.error("Task extraction failed", {
           userId: user.id,
           noteId,
           projectId,
+          error: err
+        });
+        setError({
+          type: "api_error",
+          message: "Failed to connect to AI service",
+        });
+        setStatus("error");
+      }
+    },
+    [user]
+  );
+
+  /**
+   * Extract tasks from a capture's content.
+   * Unlike notes, captures may not have a fixed project — tasks get per-task project assignment.
+   */
+  const extractFromCapture = useCallback(
+    async (
+      captureId: string,
+      content: string,
+      defaultProjectId?: string,
+      projectTitle?: string
+    ): Promise<void> => {
+      if (!user) {
+        toast.error("You must be logged in to extract tasks");
+        return;
+      }
+
+      if (!content.trim()) {
+        setError({ type: "empty_content", message: "Capture content is empty" });
+        setStatus("error");
+        return;
+      }
+
+      setStatus("extracting");
+      setError(null);
+      setSourceNoteId(captureId);
+      setSourceProjectId(defaultProjectId ?? null);
+
+      try {
+        const response = await fetch("/api/ai/extract-tasks", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            sourceType: "note", // API treats captures same as notes
+            sourceId: captureId,
+            content,
+            projectId: defaultProjectId,
+            projectTitle,
+          }),
+        });
+
+        const data: ExtractTasksResponse = await response.json();
+
+        if (!data.success) {
+          setError(data.error);
+          setStatus("error");
+
+          if (data.error.type === "rate_limit") {
+            const retryAfter = data.error.retryAfter || 60;
+            const retryMinutes = Math.ceil(retryAfter / 60);
+            toast.error(
+              `Rate limit exceeded. Please try again in ${retryMinutes} minute${retryMinutes !== 1 ? "s" : ""}.`,
+              { duration: 5000 }
+            );
+          } else if (data.error.type === "timeout") {
+            toast.error("Request timed out. Please try again.");
+          } else if (data.error.type === "empty_content") {
+            toast.error("Capture content is empty");
+          } else {
+            toast.error(data.error.message || "Failed to extract tasks");
+          }
+
+          return;
+        }
+
+        if (data.tasks.length === 0) {
+          toast.info("No actionable tasks found in this capture");
+          setStatus("idle");
+          return;
+        }
+
+        setExtractedTasks(toClientTasks(data.tasks, defaultProjectId));
+        setStatus("reviewing");
+      } catch (err) {
+        logger.error("Task extraction from capture failed", {
+          userId: user.id,
+          captureId,
           error: err
         });
         setError({
@@ -199,10 +293,11 @@ export function useTaskExtraction(): UseTaskExtractionReturn {
   }, []);
 
   /**
-   * Create all selected tasks and link them to the source note
+   * Create all selected tasks and link them to the source note/capture.
+   * Uses per-task projectId when available, falling back to sourceProjectId.
    */
   const createSelectedTasks = useCallback(async (): Promise<void> => {
-    if (!user || !sourceNoteId || !sourceProjectId) {
+    if (!user || !sourceNoteId) {
       toast.error("Missing required information to create tasks");
       return;
     }
@@ -213,20 +308,31 @@ export function useTaskExtraction(): UseTaskExtractionReturn {
       return;
     }
 
+    // Validate that all selected tasks have a project
+    const tasksWithoutProject = selectedTasks.filter(
+      (t) => !t.projectId && !sourceProjectId
+    );
+    if (tasksWithoutProject.length > 0) {
+      toast.error("All tasks must be assigned to a project");
+      return;
+    }
+
     setStatus("creating");
     setCreatedCount(0);
 
     const supabase = getClient();
     let successCount = 0;
-    const createdTasks: Task[] = [];
 
     for (const task of selectedTasks) {
+      const taskProjectId = task.projectId || sourceProjectId;
+      if (!taskProjectId) continue;
+
       try {
         // Create the task with source_type
         const { data: taskResult, error: taskError } = await supabase
           .from("tasks")
           .insert({
-            project_id: sourceProjectId,
+            project_id: taskProjectId,
             title: task.title,
             description: task.description ?? null,
             status: "todo",
@@ -242,7 +348,7 @@ export function useTaskExtraction(): UseTaskExtractionReturn {
         if (taskError) {
           logger.error("Failed to create task from extraction", {
             userId: user.id,
-            projectId: sourceProjectId,
+            projectId: taskProjectId,
             taskTitle: task.title,
             error: taskError
           });
@@ -250,9 +356,8 @@ export function useTaskExtraction(): UseTaskExtractionReturn {
         }
 
         const createdTask = taskResult as Task;
-        createdTasks.push(createdTask);
 
-        // Link task to note
+        // Link task to note/capture
         const { error: linkError } = await supabase
           .from("note_tasks")
           .insert({
@@ -261,13 +366,12 @@ export function useTaskExtraction(): UseTaskExtractionReturn {
           });
 
         if (linkError) {
-          logger.error("Failed to link task to note", {
+          logger.error("Failed to link task to source", {
             userId: user.id,
             noteId: sourceNoteId,
             taskId: createdTask.id,
             error: linkError
           });
-          // Task was created but not linked - still count as partial success
         }
 
         successCount++;
@@ -275,15 +379,16 @@ export function useTaskExtraction(): UseTaskExtractionReturn {
       } catch (err) {
         logger.error("Error creating task from extraction", {
           userId: user.id,
-          projectId: sourceProjectId,
+          projectId: taskProjectId,
           taskTitle: task.title,
           error: err
         });
       }
     }
 
-    // Invalidate caches
+    // Invalidate caches — both note and capture detail keys
     queryClient.invalidateQueries({ queryKey: noteKeys.detail(sourceNoteId) });
+    queryClient.invalidateQueries({ queryKey: captureKeys.detail(sourceNoteId) });
     queryClient.invalidateQueries({ queryKey: taskKeys.lists() });
 
     if (successCount === selectedTasks.length) {
@@ -323,6 +428,7 @@ export function useTaskExtraction(): UseTaskExtractionReturn {
     sourceProjectId,
     // Actions
     extractFromNote,
+    extractFromCapture,
     updateTask,
     toggleSelection,
     selectAll,
