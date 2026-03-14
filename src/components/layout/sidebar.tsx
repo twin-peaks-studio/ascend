@@ -18,6 +18,8 @@ import {
   Briefcase,
   Brain,
   Plus,
+  Package,
+  Network,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -74,7 +76,11 @@ function NavLinks({ pathname, workspaces, isCollapsed, isIntelligence, onNewWork
   const allNavItems = [
     ...navItems,
     ...(isIntelligence
-      ? [{ href: "/captures", label: "Captures", icon: BookOpen }]
+      ? [
+          { href: "/captures", label: "Captures", icon: BookOpen },
+          { href: "/products", label: "Products", icon: Package },
+          { href: "/entities", label: "Entities", icon: Network },
+        ]
       : []),
   ];
   return (
