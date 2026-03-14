@@ -30,6 +30,8 @@ import {
   Bell,
   History,
   ClipboardList,
+  Network,
+  Package,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -829,6 +831,51 @@ const sections: WikiSection[] = [
     ],
   },
   {
+    id: "entities-products",
+    icon: Network,
+    title: "Entities & Products",
+    description: "Organize your work around products, initiatives, and stakeholders.",
+    content: [
+      {
+        heading: "What Are Entities?",
+        paragraphs: [
+          "Entities are the things your work revolves around — the products you ship, the initiatives you're driving, and the stakeholders you work with. Each entity has a name, description, and foundational context that teaches the AI what it is.",
+        ],
+      },
+      {
+        heading: "Entity Types",
+        list: [
+          "Products — Things you ship or manage (e.g., Online Ordering, Mobile App, POS)",
+          "Initiatives — Cross-product work efforts. Your existing projects become initiatives after migration.",
+          "Stakeholders — People or groups you work with (e.g., VP of Engineering, Legal Team)",
+        ],
+      },
+      {
+        heading: "Browsing Entities",
+        paragraphs: [
+          "Navigate to the Entities page from the sidebar (available in intelligence workspaces). You'll see all entities grouped by type with search and filter pills. Click any entity to view its detail page.",
+          "The Products page provides a focused view showing only products in your workspace.",
+        ],
+      },
+      {
+        heading: "Entity Detail Page",
+        paragraphs: [
+          "Each entity has a detail page with four tabs: Overview (name, description, foundational context), Links (connected products/initiatives), Memory (AI-synthesized knowledge — coming soon), and Mentions (where this entity is referenced — coming soon).",
+        ],
+      },
+      {
+        heading: "Linking Products to Projects",
+        paragraphs: [
+          "After migrating your projects to the entity system, you can manage product links directly from the project properties sidebar. Look for the Products section — it shows linked products as removable pills, and you can add more from a dropdown.",
+          "Initiatives can span multiple products, and you can change these links at any time without going back to the migration tool.",
+        ],
+      },
+      {
+        tip: "Use Cmd/Ctrl + Shift + C from any page to quickly capture a thought without leaving your current context.",
+      },
+    ],
+  },
+  {
     id: "keyboard-shortcuts",
     icon: Keyboard,
     title: "Keyboard Shortcuts",
@@ -839,6 +886,7 @@ const sections: WikiSection[] = [
         list: [
           "Cmd/Ctrl + K — Open global search or quick create task",
           "Cmd/Ctrl + P — Quick create project (from Dashboard)",
+          "Cmd/Ctrl + Shift + C — Quick capture (intelligence workspaces only)",
           "Cmd/Ctrl + / — Show keyboard shortcuts dialog",
           "? — Show keyboard shortcuts dialog (alternative)",
           "Escape — Close any open dialog or cancel current action",

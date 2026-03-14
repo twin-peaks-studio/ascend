@@ -39,6 +39,9 @@ import {
   Paperclip,
   KeyRound,
   PanelRight,
+  Package,
+  Network,
+  Keyboard,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -61,6 +64,38 @@ interface ChangelogEntry {
 }
 
 const changelog: ChangelogEntry[] = [
+  {
+    date: "March 14, 2026",
+    version: "0.20.0",
+    title: "New — Entity System: Products, Initiatives & Entity Pages",
+    description: "Browse and manage products, initiatives, and stakeholders with dedicated pages. Link products to projects from the properties panel and capture thoughts instantly with a global keyboard shortcut.",
+    features: [
+      {
+        icon: Network,
+        title: "Entity List & Detail Pages",
+        description: "New /entities page shows all entities grouped by type (Products, Initiatives, Stakeholders) with search and filter. Click any entity to view its detail page with Overview, Links, Memory, and Mentions tabs.",
+        tag: "new",
+      },
+      {
+        icon: Package,
+        title: "Products Page",
+        description: "New /products page provides a focused view of all products in your workspace. Create new products directly and click through to entity details.",
+        tag: "new",
+      },
+      {
+        icon: Layers,
+        title: "Product Linkage in Project Properties",
+        description: "Projects that have been migrated to the entity system now show a Products section in the properties sidebar. Add or remove product links with multi-select pills — no need to go back to the migration tool.",
+        tag: "new",
+      },
+      {
+        icon: Keyboard,
+        title: "Quick Capture Keyboard Shortcut",
+        description: "Press Ctrl+Shift+C (or Cmd+Shift+C on Mac) from anywhere in an intelligence workspace to instantly open a quick capture modal. Capture a thought without leaving your current page.",
+        tag: "new",
+      },
+    ],
+  },
   {
     date: "March 8, 2026",
     version: "0.19.1",
