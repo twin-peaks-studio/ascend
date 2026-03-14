@@ -38,7 +38,7 @@ export function WorkspaceCapturesTab({ workspaceId }: WorkspaceCapturesTabProps)
         </div>
 
         {/* Daily journal */}
-        <CaptureList days={days} loading={loading} />
+        <CaptureList days={days} loading={loading} workspaceId={workspaceId} />
       </div>
 
       {/* New capture sheet (mobile-friendly) */}

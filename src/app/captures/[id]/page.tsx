@@ -15,7 +15,7 @@
  */
 
 import { useState, useCallback, useEffect, useRef, use } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -66,7 +66,13 @@ interface CaptureDetailPageProps {
 
 function CaptureDetailContent({ captureId }: { captureId: string }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const workspaceId = searchParams.get("workspace");
   const { activeWorkspace } = useWorkspaceContext();
+
+  // Back URL: return to workspace if we came from one, otherwise fall back to active workspace
+  const backWorkspaceId = workspaceId ?? activeWorkspace?.id;
+  const backUrl = backWorkspaceId ? `/workspaces/${backWorkspaceId}` : "/workspaces";
   const { capture, setCapture, loading: captureLoading } = useCapture(captureId);
   const {
     updateCapture,
@@ -244,7 +250,7 @@ function CaptureDetailContent({ captureId }: { captureId: string }) {
     setIsDeleting(true);
     const success = await deleteCapture(captureId, activeWorkspace?.id);
     if (success) {
-      router.push("/captures");
+      router.push(backUrl);
     } else {
       setIsDeleting(false);
     }
@@ -286,7 +292,7 @@ function CaptureDetailContent({ captureId }: { captureId: string }) {
           <div className="text-center">
             <p className="text-muted-foreground mb-4">Capture not found</p>
             <Button asChild>
-              <Link href="/captures">Back to Captures</Link>
+              <Link href={backUrl}>Back to Workspace</Link>
             </Button>
           </div>
         </div>
@@ -313,17 +319,17 @@ function CaptureDetailContent({ captureId }: { captureId: string }) {
         <div className="flex items-center justify-between gap-4 mb-6">
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="icon" asChild>
-              <Link href="/captures">
+              <Link href={backUrl}>
                 <ArrowLeft className="h-5 w-5" />
               </Link>
             </Button>
             <div>
               <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
                 <Link
-                  href="/captures"
+                  href={backUrl}
                   className="hover:text-foreground transition-colors"
                 >
-                  Captures
+                  Workspace
                 </Link>
                 <span>/</span>
                 <span className="flex items-center gap-1">

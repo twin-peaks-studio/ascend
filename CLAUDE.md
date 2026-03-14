@@ -106,11 +106,11 @@ Key files:
 
 Workspaces (`src/contexts/workspace-context.tsx`) provide workspace isolation. Every project belongs to a workspace via `workspace_id`. The `WorkspaceProvider` wraps the app inside `AppShell` and persists the active workspace in localStorage (`active-workspace-id`).
 
-**Workspace types:** `"standard"` (basic project container) and `"intelligence"` (unlocks Captures, daily journal, entities). The `isIntelligence` flag from `useWorkspaceContext()` controls whether the Captures nav item appears in sidebar/mobile nav.
+**Workspace types:** `"standard"` (basic project container) and `"intelligence"` (unlocks Captures, daily journal, entities).
 
 **Workspace detail page tabs:** Intelligence workspaces show tabs at `/workspaces/[id]`: Projects, Captures, Products, Entities. Standard workspaces only show the Projects grid (no tab bar). Tab components live in `src/components/workspace/workspace-*-tab.tsx`.
 
-**Captures** are notes with `capture_type` set (not null). They live in the existing `notes` table with added columns: `workspace_id`, `capture_type`, `occurred_at`. Standard notes have `capture_type = null`. The captures hook (`use-captures.ts`) is separate from `use-notes.ts`. Captures have the same full editing experience as notes: Tiptap rich text editor with auto-save, linked tasks via `note_tasks` junction table, inline task creation (requires selecting a project), and AI task extraction with per-task project assignment.
+**Captures** are notes with `capture_type` set (not null). They live in the existing `notes` table with added columns: `workspace_id`, `capture_type`, `occurred_at`. Standard notes have `capture_type = null`. The captures hook (`use-captures.ts`) is separate from `use-notes.ts`. Captures are only accessible through the workspace detail page (Captures tab) — there is no sidebar or mobile nav link. The `/captures` route redirects to the active workspace. Capture detail links include `?workspace=[id]` for correct back-navigation. Captures have the same full editing experience as notes: Tiptap rich text editor with auto-save, linked tasks via `note_tasks` junction table, inline task creation (requires selecting a project), and AI task extraction with per-task project assignment.
 
 **Entities** (products, initiatives, stakeholders) are managed per-workspace. The entity detail page (`/entities/[id]`) has five tabs: Overview, Journal, Links, Memory, Mentions. Journal entries (`entity_context_entries` table) are timestamped knowledge dumps that feed into the AI memory refresh alongside `foundational_context`.
 

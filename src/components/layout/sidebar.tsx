@@ -14,7 +14,7 @@ import {
   Newspaper,
   CalendarDays,
   Sparkles,
-  BookOpen,
+
   Briefcase,
   Brain,
   Plus,
@@ -65,17 +65,13 @@ interface NavLinksProps {
   pathname: string;
   workspaces: Workspace[];
   isCollapsed: boolean;
-  isIntelligence: boolean;
   onNewWorkspace: () => void;
 }
 
-function NavLinks({ pathname, workspaces, isCollapsed, isIntelligence, onNewWorkspace }: NavLinksProps) {
+function NavLinks({ pathname, workspaces, isCollapsed, onNewWorkspace }: NavLinksProps) {
   // Build nav items dynamically based on workspace type
   const allNavItems = [
     ...navItems,
-    ...(isIntelligence
-      ? [{ href: "/captures", label: "Captures", icon: BookOpen }]
-      : []),
   ];
   return (
     <nav className="flex-1 space-y-1 px-2 py-4 overflow-y-auto">
@@ -185,7 +181,7 @@ function NavLinks({ pathname, workspaces, isCollapsed, isIntelligence, onNewWork
 export function Sidebar({ onShowFeedback, onAiCreate }: SidebarProps) {
   const pathname = usePathname();
   const { isCollapsed, toggleSidebar } = useSidebar();
-  const { workspaces, isIntelligence } = useWorkspaceContext();
+  const { workspaces } = useWorkspaceContext();
   const [showCreateWorkspace, setShowCreateWorkspace] = useState(false);
 
   return (
@@ -211,7 +207,6 @@ export function Sidebar({ onShowFeedback, onAiCreate }: SidebarProps) {
           pathname={pathname}
           workspaces={workspaces}
           isCollapsed={isCollapsed}
-          isIntelligence={isIntelligence}
           onNewWorkspace={() => setShowCreateWorkspace(true)}
         />
 
