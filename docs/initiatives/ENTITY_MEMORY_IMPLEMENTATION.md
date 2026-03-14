@@ -291,6 +291,25 @@ Add to sidebar (intelligence workspaces only, below Captures):
 - `src/components/layout/sidebar.tsx` — add nav item
 - `src/components/layout/mobile-bottom-nav.tsx` — add to mobile nav
 
+### 2D. Product Linkage in Project Properties Panel
+
+After migration, users need a day-to-day way to manage which product(s) a project/initiative is linked to — without going back to the migration tool.
+
+**Location:** Add a "Products" section to the existing `PropertiesPanel` (`src/components/project/properties-panel.tsx`), which is already a sidebar on the project detail page (`/projects/[id]`). This is the simplest path — no new routes needed.
+
+**UI:** Multi-select pill picker (same pattern as the migration page). Shows currently linked products as removable pills, with a combobox to add more.
+
+**Capabilities:**
+- View which product(s) a project/initiative is linked to
+- Remove an `initiative_product` link (unlink from a product)
+- Add a new link to a different product
+- Link to multiple products simultaneously (initiatives can span products)
+
+**Why PropertiesPanel, not a new settings page:** `PropertiesPanel` already exists as a collapsible sidebar on the project page. Adding a section there keeps product management in context alongside other project metadata (status, dates, members). If the panel grows too crowded later, we can extract to a dedicated `/projects/[id]/settings` route.
+
+**Files to modify:**
+- `src/components/project/properties-panel.tsx` — add Products section with multi-select pills
+
 ---
 
 ## Phase 3: @Mention System (All Text Surfaces)
@@ -429,9 +448,48 @@ On the entity detail page (`/entities/[id]`), the Memory tab shows:
 - "Entities" page becomes the unified view for all entity types
 
 **Initiative pages (`/projects/[id]`):**
-- Add "Linked Products" section to project header
+- Product linkage managed via `PropertiesPanel` (see Phase 2D) — already available post-migration
 - Add "Linked Stakeholders" section
 - Everything else stays the same (tasks, notes, kanban, etc.)
+
+---
+
+## Phase 6: Teams & Sharing Verification
+
+> **Note:** This is a validation phase, not a feature build. Run through these checks before considering the entity system production-ready.
+
+### 6A. RLS Policy Verification
+
+Verify that all entity-related RLS policies work correctly for shared workspaces:
+- Workspace members can CRUD entities in their workspace
+- Workspace members can view/manage entity_links for entities in their workspace
+- Workspace members can view/manage entity_mentions in their workspace
+- Non-members cannot access any entity data from other workspaces
+- Users in multiple workspaces see only the correct entities per workspace
+
+### 6B. Product Linkage Access Control
+
+Verify that product linkage management in `PropertiesPanel` respects team boundaries:
+- All project members can view linked products
+- Members with appropriate roles can add/remove product links
+- Product links created by one member are visible to all project members
+- Switching workspaces clears product linkage data from cache (`queryClient.clear()`)
+
+### 6C. Shared Entity Editing
+
+Verify concurrent and multi-user entity management:
+- Multiple team members can edit the same entity's foundational context
+- Entity memory refresh results are visible to all workspace members
+- @mentions resolve correctly for all workspace members (not just the creator)
+- Deleting an entity cascades correctly (links, mentions) for all users
+
+### 6D. Cross-Workspace Isolation
+
+Verify that workspace isolation is airtight:
+- Entity slugs are unique per workspace (same slug allowed in different workspaces)
+- @mention autocomplete only shows entities from the active workspace
+- AI memory refresh only pulls mentions from the current workspace
+- Product linkage pills only show products from the current workspace
 
 ---
 
@@ -449,6 +507,7 @@ Phase 2: ENTITY CRUD + NAVIGATION (view what you migrated)
   2A: Entity list page (/entities)
   2B: Entity detail page (/entities/[id]) with tabs
   2C: Sidebar nav update (Entities link)
+  2D: Product linkage in PropertiesPanel (manage product links day-to-day)
     ↓
 Phase 3: @MENTION SYSTEM (inline entity linking everywhere)
   3A: Mention autocomplete component
@@ -462,6 +521,12 @@ Phase 4: AI MEMORY REFRESH (entity intelligence)
   4B: Entity page Memory tab with refresh button
     ↓
 Phase 5: PORTFOLIO VIEW (future — data model supports it from Phase 1)
+    ↓
+Phase 6: TEAMS & SHARING VERIFICATION (validate before production)
+  6A: RLS policy verification (workspace member access)
+  6B: Product linkage access control (PropertiesPanel respects roles)
+  6C: Shared entity editing (concurrent multi-user scenarios)
+  6D: Cross-workspace isolation (slugs, mentions, products scoped correctly)
 ```
 
 ---
@@ -523,6 +588,7 @@ Users type `@OnlineOrdering` not `@4f43b086-cdfd...`. Slugs (lowercase, no space
 | `src/components/shared/markdown-renderer.tsx` | Render @mention pills |
 | `src/components/comments/comment-form.tsx` | Extend @mention to include entities |
 | `src/components/capture/capture-editor.tsx` | Add @mention support |
+| `src/components/project/properties-panel.tsx` | Add Products section with multi-select pill picker for product linkage |
 | `src/components/layout/sidebar.tsx` | Add Entities nav item |
 | `src/components/layout/mobile-bottom-nav.tsx` | Add Entities to mobile nav |
 | `src/hooks/use-notes.ts` | Call mention sync on save |
