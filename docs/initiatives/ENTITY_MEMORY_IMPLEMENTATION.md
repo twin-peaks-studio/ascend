@@ -260,18 +260,66 @@ A temporary admin page (accessible from Settings) with three steps:
 
 ---
 
-## Phase 2: Entity CRUD Pages + Navigation
+## Phase 2: Entity CRUD Pages + Navigation + Workspace UX
 
-Once data is migrated, expose entities in the UI.
+Once data is migrated, expose entities in the UI and restructure how content lives within workspaces.
 
-### 2A. Entity List Page
+### 2A. Workspace Information Architecture
+
+**Key decision: captures/notes live at the workspace level, not inside projects.**
+
+A meeting note might reference 3 products and 2 initiatives. Forcing it under one project is artificial. Captures float at the workspace level and connect to products/initiatives via @mentions.
+
+**The workspace hierarchy:**
+```
+Workspace (your whole work context)
+  ├── Captures (workspace-wide notes, daily journal — not nested under projects)
+  ├── Products (things you ship)
+  ├── Initiatives/Projects (efforts that span products)
+  └── Tasks (live under initiatives, but can tag products)
+```
+
+**Sidebar structure (Option B — familiar layout, no disruption):**
+```
+Workspace Name ▾
+  ├── Today / Home
+  ├── Captures (workspace-wide — daily journal, meeting notes, thoughts)
+  ├── Products (browse products in this workspace)
+  ├── Initiatives (current projects list, same as today)
+  └── Tasks
+```
+
+Everything is scoped to the active workspace. Switching workspaces shows only that workspace's data.
+
+### 2B. Quick Capture Lives Inside the Workspace
+
+**Current state:** The quick capture button is in the sidebar, which feels disconnected from the workspace context.
+
+**New state:** Quick capture lives inside the workspace view:
+- A persistent input at the top of the captures page (type and hit enter — already exists in `/captures/page.tsx` as a `QuickCapture` component in a bordered card)
+- A keyboard shortcut that opens a quick capture modal from any page within the workspace
+- When you create a capture, it automatically belongs to the current workspace
+
+**What changes:**
+- Remove quick capture from the sidebar (currently rendered conditionally for intelligence workspaces)
+- Keep the existing `QuickCapture` component on the `/captures` page (already works this way)
+- Add a global keyboard shortcut (e.g., `Ctrl+Shift+C` or `Q`) that opens a quick capture modal from anywhere within the workspace
+- The modal uses the same `QuickCapture` component, pre-scoped to the active workspace
+
+**Files to modify:**
+- `src/components/layout/sidebar.tsx` — remove quick capture button from sidebar
+- `src/app/captures/page.tsx` — already has QuickCapture at top (no change needed)
+- New: `src/components/capture/quick-capture-modal.tsx` — global keyboard-triggered modal
+
+### 2C. Entity List Page
 
 **`/entities`** — List all entities grouped by type (Products, Initiatives, Stakeholders)
+- Scoped to the active workspace (only shows entities in this workspace)
 - Shows count of mentions, linked entities
 - "New Entity" button with type picker
 - Search/filter by type
 
-### 2B. Entity Detail Page
+### 2D. Entity Detail Page
 
 **`/entities/[id]`** — Entity detail page with tabs:
 - **Overview**: Name, description, foundational context (editable)
@@ -281,17 +329,19 @@ Once data is migrated, expose entities in the UI.
 - **For Products**: Shows linked initiatives with task rollup
 - **For Initiatives**: Shows linked products + tasks
 
-### 2C. Sidebar Navigation
+### 2E. Sidebar Navigation
 
-Add to sidebar (intelligence workspaces only, below Captures):
-- "Entities" link with `Box` or `Network` icon
+Update sidebar for intelligence workspaces:
+- "Captures" link (already exists, scoped to workspace)
+- "Products" link — new, shows products in this workspace
+- "Entities" link with `Box` or `Network` icon (browse all entity types)
 - Shows entity count badge
 
 **Files to modify:**
-- `src/components/layout/sidebar.tsx` — add nav item
+- `src/components/layout/sidebar.tsx` — add Products and Entities nav items
 - `src/components/layout/mobile-bottom-nav.tsx` — add to mobile nav
 
-### 2D. Product Linkage in Project Properties Panel
+### 2F. Product Linkage in Project Properties Panel
 
 After migration, users need a day-to-day way to manage which product(s) a project/initiative is linked to — without going back to the migration tool.
 
@@ -503,11 +553,13 @@ Phase 1: DATABASE + MIGRATION (migrate first, build later)
   1D: Migration tooling UI (/settings/migrate)
   1E: Verify migration — no regressions, data is clean
     ↓
-Phase 2: ENTITY CRUD + NAVIGATION (view what you migrated)
-  2A: Entity list page (/entities)
-  2B: Entity detail page (/entities/[id]) with tabs
-  2C: Sidebar nav update (Entities link)
-  2D: Product linkage in PropertiesPanel (manage product links day-to-day)
+Phase 2: ENTITY CRUD + NAVIGATION + WORKSPACE UX (view what you migrated)
+  2A: Workspace information architecture (captures at workspace level, not project level)
+  2B: Quick capture inside workspace (remove from sidebar, add keyboard shortcut modal)
+  2C: Entity list page (/entities) — scoped to active workspace
+  2D: Entity detail page (/entities/[id]) with tabs
+  2E: Sidebar nav update (Products, Entities links)
+  2F: Product linkage in PropertiesPanel (manage product links day-to-day)
     ↓
 Phase 3: @MENTION SYSTEM (inline entity linking everywhere)
   3A: Mention autocomplete component
@@ -552,6 +604,12 @@ Projects have deep integration throughout the app (tasks, notes, sections, comme
 
 The original plan had `entity_projects`, `entity_tasks`, `entity_notes`. But @mentions can come from any text surface (comments too), and the mention source might expand (chat messages in MVP 4). A single polymorphic `entity_mentions` table with `source_type` + `source_id` is simpler and extensible.
 
+### Why do captures live at the workspace level, not inside projects?
+
+A meeting note often references multiple products and initiatives. Nesting it under one project forces an artificial choice. Workspace-level captures connect to any number of entities via @mentions — the note floats freely, and its relationships are explicit. This also means the captures page shows your full daily journal across all your work, not fragmented per project.
+
+Quick capture stays fast: a persistent input on the captures page plus a global keyboard shortcut from anywhere in the workspace. The sidebar no longer owns the quick capture button — the workspace does.
+
 ### Why slugs for @mention matching?
 
 Users type `@OnlineOrdering` not `@4f43b086-cdfd...`. Slugs (lowercase, no spaces: "onlineordering" or "online-ordering") enable fast prefix matching in the autocomplete and reliable parsing from saved text.
@@ -566,7 +624,8 @@ Users type `@OnlineOrdering` not `@4f43b086-cdfd...`. Slugs (lowercase, no space
 | `src/hooks/use-entities.ts` | 1C | Entity CRUD hook |
 | `src/hooks/use-entity-links.ts` | 1C | Entity relationship hook |
 | `src/app/settings/migrate/page.tsx` | 1D | Migration tooling page |
-| `src/components/entity/entity-list.tsx` | 2A | Entity list page component |
+| `src/components/capture/quick-capture-modal.tsx` | 2B | Global keyboard-triggered quick capture modal |
+| `src/components/entity/entity-list.tsx` | 2C | Entity list page component |
 | `src/components/entity/entity-detail.tsx` | 2B | Entity detail page component |
 | `src/components/entity/entity-form.tsx` | 2B | Create/edit entity form |
 | `src/components/entity/entity-links-panel.tsx` | 2B | Linked entities panel |
