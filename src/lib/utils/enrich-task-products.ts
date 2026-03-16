@@ -40,6 +40,9 @@ export async function fetchProductMapForEntityIds(
   );
 
   if (error) {
+    // Graceful degradation: product badges are non-critical. If this fails,
+    // tasks still load — just without product labels. Don't throw here
+    // because this runs inside fetchTasksForUser and would break the entire task list.
     logger.error("Error fetching product links for tasks", { error });
     return productMap;
   }

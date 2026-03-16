@@ -19,7 +19,12 @@ import { useAuth } from "@/hooks/use-auth";
 import { taskKeys } from "@/hooks/use-tasks";
 import { enrichTasksWithProducts } from "@/lib/utils/enrich-task-products";
 import type { Note, Task, TaskWithProject, CaptureWithRelations, NoteTaskJoinResult } from "@/types";
-import type { NoteInsert, NoteUpdate } from "@/types/database";
+import type { NoteInsert, NoteUpdate, Project } from "@/types/database";
+
+/** Shape returned by Supabase when selecting `*, project:projects(*)` from notes. */
+interface NoteWithProjectRow extends Note {
+  project: Project | null;
+}
 import {
   createCaptureSchema,
   updateCaptureSchema,
@@ -95,8 +100,7 @@ async function fetchCaptures(
 
   if (result.error) throw result.error;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return ((result.data || []) as any[]).map((row) => ({
+  return ((result.data || []) as unknown as NoteWithProjectRow[]).map((row) => ({
     ...row,
     project: row.project ?? null,
     tasks: [], // List view doesn't load tasks
@@ -153,8 +157,7 @@ async function fetchCaptureById(
   // Enrich tasks with product labels from entity links
   await enrichTasksWithProducts(tasks);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const data = result.data as any;
+  const data = result.data as unknown as NoteWithProjectRow;
   return {
     ...data,
     project: data.project ?? null,
