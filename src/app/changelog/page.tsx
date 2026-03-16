@@ -40,6 +40,7 @@ import {
   KeyRound,
   PanelRight,
   Package,
+  CheckSquare,
   Network,
   Keyboard,
   type LucideIcon,
@@ -67,13 +68,19 @@ const changelog: ChangelogEntry[] = [
   {
     date: "March 16, 2026",
     version: "0.22.0",
-    title: "Product Labels on All Task Views",
-    description: "Every task now shows which product it belongs to, visible across all task surfaces — list view, board view, today page, notes, and captures.",
+    title: "Product Labels + Task Rollup on Entity Pages",
+    description: "Every task now shows which product it belongs to. Entity detail pages show task progress across linked initiatives and projects.",
     features: [
       {
         icon: Package,
         title: "Product Labels on Tasks",
         description: "Tasks linked to a product (via their project's entity) now display a purple product badge. Visible on the global tasks page, project tasks, kanban boards, the Today page, and note/capture task lists.",
+        tag: "new",
+      },
+      {
+        icon: CheckSquare,
+        title: "Task Rollup on Entity Pages",
+        description: "Product entity pages now show task progress for each linked initiative — with a progress bar and status breakdown. Initiative entity pages show their project's active tasks directly.",
         tag: "new",
       },
     ],

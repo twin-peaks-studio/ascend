@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
@@ -18,6 +18,9 @@ import {
   BookOpen,
   Plus,
   MoreHorizontal,
+  CheckSquare,
+  Circle,
+  CheckCircle2,
 } from "lucide-react";
 import { AppShell } from "@/components/layout";
 import { Header } from "@/components/layout";
@@ -43,6 +46,7 @@ import {
 import { useEntity, useEntityMutations } from "@/hooks/use-entities";
 import { useEntityLinks } from "@/hooks/use-entity-links";
 import { useEntityContextEntries, useEntityContextEntryMutations } from "@/hooks/use-entity-context-entries";
+import { useInitiativeTaskRollup, useProductTaskRollup, type TaskRollupSummary } from "@/hooks/use-entity-task-rollup";
 import { cn } from "@/lib/utils";
 import type { EntityType, EntityContextEntry } from "@/types/database";
 
@@ -138,6 +142,40 @@ function JournalEntryCard({
   );
 }
 
+function TaskRollupBar({ summary }: { summary: TaskRollupSummary }) {
+  if (summary.total === 0) {
+    return <span className="text-xs text-muted-foreground">No tasks</span>;
+  }
+
+  const pctDone = Math.round((summary.done / summary.total) * 100);
+  const pctInProgress = Math.round((summary.in_progress / summary.total) * 100);
+  const pctTodo = Math.round((summary.todo / summary.total) * 100);
+
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center gap-3 text-xs text-muted-foreground">
+        <span>{summary.total} task{summary.total !== 1 ? "s" : ""}</span>
+        <span className="text-muted-foreground/50">&middot;</span>
+        <span>{summary.todo} to do</span>
+        <span>{summary.in_progress} in progress</span>
+        <span className="text-green-600 dark:text-green-400">{summary.done} done</span>
+      </div>
+      {/* Progress bar */}
+      <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden flex">
+        {pctDone > 0 && (
+          <div className="bg-green-500 h-full" style={{ width: `${pctDone}%` }} />
+        )}
+        {pctInProgress > 0 && (
+          <div className="bg-blue-500 h-full" style={{ width: `${pctInProgress}%` }} />
+        )}
+        {pctTodo > 0 && (
+          <div className="bg-muted-foreground/20 h-full" style={{ width: `${pctTodo}%` }} />
+        )}
+      </div>
+    </div>
+  );
+}
+
 function EntityDetailContent() {
   const params = useParams();
   const router = useRouter();
@@ -150,6 +188,26 @@ function EntityDetailContent() {
   const { entries, loading: entriesLoading } = useEntityContextEntries(entityId);
   const { updateEntity, deleteEntity, loading: mutating } = useEntityMutations();
   const { createEntry, updateEntry, deleteEntry, loading: entryMutating } = useEntityContextEntryMutations();
+
+  // Derive linked initiative IDs for product task rollup
+  const linkedInitiativeIds = useMemo(() => {
+    if (!entity || entity.entity_type !== "product") return [];
+    return links
+      .filter((l) => l.link_type === "initiative_product")
+      .map((l) => {
+        const isSource = l.source_entity_id === entityId;
+        return isSource ? l.target_entity_id : l.source_entity_id;
+      });
+  }, [entity, links, entityId]);
+
+  // Task rollup hooks — only one fires based on entity type
+  const { data: initiativeRollup = [] } = useInitiativeTaskRollup(
+    entity?.entity_type === "initiative" ? entityId : null
+  );
+  const { data: productRollup = [] } = useProductTaskRollup(
+    entity?.entity_type === "product" ? entityId : null,
+    linkedInitiativeIds
+  );
 
   const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [editing, setEditing] = useState(false);
@@ -479,20 +537,77 @@ function EntityDetailContent() {
                 if (!linkedEntity) return null;
                 const linkedConfig = ENTITY_TYPE_CONFIG[linkedEntity.entity_type as EntityType];
                 const LinkedIcon = linkedConfig?.icon ?? Link2;
+
+                // Find task rollup for this linked entity (product → initiative rollup)
+                const rollup = entity.entity_type === "product"
+                  ? productRollup.find((r) => r.entityId === linkedEntity.id)
+                  : null;
+
                 return (
                   <Link
                     key={link.id}
                     href={`/entities/${linkedEntity.id}${workspaceId ? `?workspace=${workspaceId}` : ""}`}
-                    className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-accent transition-colors"
+                    className="flex items-start gap-3 p-3 rounded-lg border bg-card hover:bg-accent transition-colors"
                   >
-                    <LinkedIcon className={cn("h-5 w-5 shrink-0", linkedConfig?.color)} />
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate">{linkedEntity.name}</p>
-                      <p className="text-xs text-muted-foreground">{linkedConfig?.label} &middot; {link.link_type.replace(/_/g, " ")}</p>
+                    <LinkedIcon className={cn("h-5 w-5 shrink-0 mt-0.5", linkedConfig?.color)} />
+                    <div className="flex-1 min-w-0 space-y-1.5">
+                      <div>
+                        <p className="font-medium truncate">{linkedEntity.name}</p>
+                        <p className="text-xs text-muted-foreground">{linkedConfig?.label} &middot; {link.link_type.replace(/_/g, " ")}</p>
+                      </div>
+                      {rollup && <TaskRollupBar summary={rollup.summary} />}
                     </div>
                   </Link>
                 );
               })
+            )}
+
+            {/* Initiative: show task list directly */}
+            {entity.entity_type === "initiative" && initiativeRollup.length > 0 && (
+              <div className="mt-4 space-y-4">
+                <h3 className="text-sm font-medium flex items-center gap-1.5">
+                  <CheckSquare className="h-4 w-4" />
+                  Tasks
+                </h3>
+                {initiativeRollup.map((rollup) => (
+                  <div key={rollup.projectId} className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="h-2.5 w-2.5 rounded-full shrink-0"
+                        style={{ backgroundColor: rollup.projectColor }}
+                      />
+                      <span className="text-sm font-medium">{rollup.projectTitle}</span>
+                    </div>
+                    <TaskRollupBar summary={rollup.summary} />
+                    {/* Show individual tasks */}
+                    <div className="rounded-lg border bg-card divide-y">
+                      {rollup.tasks.filter((t) => t.status !== "done").slice(0, 10).map((task) => (
+                        <div key={task.id} className="flex items-center gap-2.5 py-2 px-3">
+                          {task.status === "done" ? (
+                            <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" />
+                          ) : (
+                            <Circle className={cn(
+                              "h-4 w-4 shrink-0",
+                              task.status === "in-progress" ? "text-blue-500" : "text-muted-foreground"
+                            )} />
+                          )}
+                          <span className="text-sm truncate">{task.title}</span>
+                        </div>
+                      ))}
+                      {rollup.tasks.filter((t) => t.status !== "done").length > 10 && (
+                        <div className="py-2 px-3 text-xs text-muted-foreground text-center">
+                          +{rollup.tasks.filter((t) => t.status !== "done").length - 10} more tasks
+                        </div>
+                      )}
+                      {rollup.tasks.filter((t) => t.status !== "done").length === 0 && (
+                        <div className="py-3 px-3 text-xs text-muted-foreground text-center">
+                          All tasks completed
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         )}

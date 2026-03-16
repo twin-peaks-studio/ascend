@@ -260,9 +260,9 @@ A temporary admin page (accessible from Settings) with three steps:
 
 ---
 
-## Phase 2: Entity CRUD Pages + Navigation + Workspace UX
+## Phase 2: Entity CRUD + Workspace UX
 
-Once data is migrated, expose entities in the UI and restructure how content lives within workspaces.
+Once data is migrated, expose entities in the UI and restructure how content lives within workspaces. Entities and products are accessed via workspace tabs (at `/workspaces/[id]`), not standalone routes or sidebar links.
 
 ### 2A. Workspace Information Architecture
 
@@ -279,69 +279,22 @@ Workspace (your whole work context)
   └── Tasks (live under initiatives, but can tag products)
 ```
 
-**Sidebar structure (Option B — familiar layout, no disruption):**
-```
-Workspace Name ▾
-  ├── Today / Home
-  ├── Captures (workspace-wide — daily journal, meeting notes, thoughts)
-  ├── Products (browse products in this workspace)
-  ├── Initiatives (current projects list, same as today)
-  └── Tasks
-```
+**Access pattern:** Products and Entities are accessed via workspace tabs at `/workspaces/[id]` (Products tab, Entities tab). There are no standalone routes or sidebar links for these. The sidebar continues to show Today, Captures, and Tasks. Everything is scoped to the active workspace. Switching workspaces shows only that workspace's data.
 
-Everything is scoped to the active workspace. Switching workspaces shows only that workspace's data.
-
-### 2B. Quick Capture Lives Inside the Workspace
-
-**Current state:** The quick capture button is in the sidebar, which feels disconnected from the workspace context.
-
-**New state:** Quick capture lives inside the workspace view:
-- A persistent input at the top of the captures page (type and hit enter — already exists in `/captures/page.tsx` as a `QuickCapture` component in a bordered card)
-- A keyboard shortcut that opens a quick capture modal from any page within the workspace
-- When you create a capture, it automatically belongs to the current workspace
-
-**What changes:**
-- Remove quick capture from the sidebar (currently rendered conditionally for intelligence workspaces)
-- Keep the existing `QuickCapture` component on the `/captures` page (already works this way)
-- Add a global keyboard shortcut (e.g., `Ctrl+Shift+C` or `Q`) that opens a quick capture modal from anywhere within the workspace
-- The modal uses the same `QuickCapture` component, pre-scoped to the active workspace
-
-**Files to modify:**
-- `src/components/layout/sidebar.tsx` — remove quick capture button from sidebar
-- `src/app/captures/page.tsx` — already has QuickCapture at top (no change needed)
-- New: `src/components/capture/quick-capture-modal.tsx` — global keyboard-triggered modal
-
-### 2C. Entity List Page
-
-**`/entities`** — List all entities grouped by type (Products, Initiatives, Stakeholders)
-- Scoped to the active workspace (only shows entities in this workspace)
-- Shows count of mentions, linked entities
-- "New Entity" button with type picker
-- Search/filter by type
-
-### 2D. Entity Detail Page
+### 2B. Entity Detail Page
 
 **`/entities/[id]`** — Entity detail page with tabs:
 - **Overview**: Name, description, foundational context (editable)
 - **Memory**: AI-synthesized memory + "Refresh Memory" button + last refreshed timestamp (empty until Phase 4)
 - **Mentions**: All content that references this entity (empty until Phase 3)
-- **Links**: Connected products/initiatives/stakeholders
-- **For Products**: Shows linked initiatives with task rollup
-- **For Initiatives**: Shows linked products + tasks
+- **Links**: Connected products/initiatives/stakeholders with task rollup
+- **Journal**: Timestamped knowledge entries (brain dumps, decisions, context)
+- **For Products**: The Links tab shows linked initiatives with a progress bar and task count breakdown (todo/in-progress/done)
+- **For Initiatives**: The Links tab shows linked products, plus a Tasks section listing all active tasks from the initiative's project(s) with status icons and a progress bar
 
-### 2E. Sidebar Navigation
+**Task rollup hooks:** `useInitiativeTaskRollup(entityId)` and `useProductTaskRollup(entityId, linkedInitiativeIds)` in `src/hooks/use-entity-task-rollup.ts`. These fetch tasks via the chain: entity → project (via `entity_id`) → tasks. Cached with React Query (30s staleTime).
 
-Update sidebar for intelligence workspaces:
-- "Captures" link (already exists, scoped to workspace)
-- "Products" link — new, shows products in this workspace
-- "Entities" link with `Box` or `Network` icon (browse all entity types)
-- Shows entity count badge
-
-**Files to modify:**
-- `src/components/layout/sidebar.tsx` — add Products and Entities nav items
-- `src/components/layout/mobile-bottom-nav.tsx` — add to mobile nav
-
-### 2F. Product Label on All Task Views
+### 2C. Product Label on All Task Views
 
 All task view surfaces must display the associated **product** as a visible label/badge on each task row. This gives users immediate context about which product a task relates to, without opening the task or checking the project.
 
@@ -360,7 +313,7 @@ All task view surfaces must display the associated **product** as a visible labe
 - Follow the existing design rule: do NOT add display-toggle props to `TaskListItem`. If a surface needs product data, fix the query upstream so the data is always available.
 - A task's project may link to multiple products. Decide on UX: show first product only, show all as pills, or show a "+2 more" overflow.
 
-### 2G. Product Linkage in Project Properties Panel
+### 2D. Product Linkage in Project Properties Panel
 
 After migration, users need a day-to-day way to manage which product(s) a project/initiative is linked to — without going back to the migration tool.
 
@@ -507,14 +460,9 @@ On the entity detail page (`/entities/[id]`), the Memory tab shows:
 
 > **Note:** This phase is future work. Documenting the vision so the data model supports it.
 
-**`/products`** — Portfolio page showing all products:
+**Portfolio via workspace tabs:** The Products tab at `/workspaces/[id]` serves as the portfolio view:
 - Card per product: name, initiative count, task rollup, capture count
 - Click into product → see linked initiatives with progress
-
-**Sidebar evolution:**
-- "Projects" becomes "Initiatives" in label
-- "Products" appears as new top-level nav item
-- "Entities" page becomes the unified view for all entity types
 
 **Initiative pages (`/projects/[id]`):**
 - Product linkage managed via `PropertiesPanel` (see Phase 2D) — already available post-migration
@@ -572,14 +520,11 @@ Phase 1: DATABASE + MIGRATION (migrate first, build later)
   1D: Migration tooling UI (/settings/migrate)
   1E: Verify migration — no regressions, data is clean
     ↓
-Phase 2: ENTITY CRUD + NAVIGATION + WORKSPACE UX (view what you migrated)
-  2A: Workspace information architecture (captures at workspace level, not project level)
-  2B: Quick capture inside workspace (remove from sidebar, add keyboard shortcut modal)
-  2C: Entity list page (/entities) — scoped to active workspace
-  2D: Entity detail page (/entities/[id]) with tabs
-  2E: Sidebar nav update (Products, Entities links)
-  2F: Product label on all task views (TaskListItem, TodayTaskRow, Kanban cards) ✅
-  2G: Product linkage in PropertiesPanel (manage product links day-to-day) ✅
+Phase 2: ENTITY CRUD + WORKSPACE UX (view what you migrated)
+  2A: Workspace information architecture (captures at workspace level, not project level) ✅
+  2B: Entity detail page (/entities/[id]) with tabs + task rollup ✅
+  2C: Product label on all task views (TaskListItem, TodayTaskRow, Kanban cards) ✅
+  2D: Product linkage in PropertiesPanel (manage product links day-to-day) ✅
     ↓
 Phase 3: @MENTION SYSTEM (inline entity linking everywhere)
   3A: Mention autocomplete component
@@ -628,8 +573,6 @@ The original plan had `entity_projects`, `entity_tasks`, `entity_notes`. But @me
 
 A meeting note often references multiple products and initiatives. Nesting it under one project forces an artificial choice. Workspace-level captures connect to any number of entities via @mentions — the note floats freely, and its relationships are explicit. This also means the captures page shows your full daily journal across all your work, not fragmented per project.
 
-Quick capture stays fast: a persistent input on the captures page plus a global keyboard shortcut from anywhere in the workspace. The sidebar no longer owns the quick capture button — the workspace does.
-
 ### Why slugs for @mention matching?
 
 Users type `@OnlineOrdering` not `@4f43b086-cdfd...`. Slugs (lowercase, no spaces: "onlineordering" or "online-ordering") enable fast prefix matching in the autocomplete and reliable parsing from saved text.
@@ -644,15 +587,13 @@ Users type `@OnlineOrdering` not `@4f43b086-cdfd...`. Slugs (lowercase, no space
 | `src/hooks/use-entities.ts` | 1C | Entity CRUD hook |
 | `src/hooks/use-entity-links.ts` | 1C | Entity relationship hook |
 | `src/app/settings/migrate/page.tsx` | 1D | Migration tooling page |
-| `src/components/capture/quick-capture-modal.tsx` | 2B | Global keyboard-triggered quick capture modal |
-| `src/components/entity/entity-list.tsx` | 2C | Entity list page component |
 | `src/components/entity/entity-detail.tsx` | 2B | Entity detail page component |
 | `src/components/entity/entity-form.tsx` | 2B | Create/edit entity form |
 | `src/components/entity/entity-links-panel.tsx` | 2B | Linked entities panel |
-| `src/app/entities/page.tsx` | 2A | Entity list page |
 | `src/app/entities/[id]/page.tsx` | 2B | Entity detail page |
-| `src/lib/utils/enrich-task-products.ts` | 2F | Shared utility to enrich tasks with product data from entity links |
-| `src/hooks/use-project-products.ts` | 2F | Hook to fetch products for a project's entity_id (used by project pages) |
+| `src/lib/utils/enrich-task-products.ts` | 2C | Shared utility to enrich tasks with product data from entity links |
+| `src/hooks/use-project-products.ts` | 2C | Hook to fetch products for a project's entity_id (used by project pages) |
+| `src/hooks/use-entity-task-rollup.ts` | 2B | Task rollup hooks for entity detail page (initiative + product) |
 | `src/hooks/use-entity-mentions.ts` | 3D | Mention tracking hook |
 | `src/components/shared/mention-autocomplete.tsx` | 3A | Reusable @mention dropdown |
 | `src/components/entity/entity-memory.tsx` | 4B | AI memory display + refresh |
@@ -670,8 +611,6 @@ Users type `@OnlineOrdering` not `@4f43b086-cdfd...`. Slugs (lowercase, no space
 | `src/components/comments/comment-form.tsx` | Extend @mention to include entities |
 | `src/components/capture/capture-editor.tsx` | Add @mention support |
 | `src/components/project/properties-panel.tsx` | Add Products section with multi-select pill picker for product linkage |
-| `src/components/layout/sidebar.tsx` | Add Entities nav item |
-| `src/components/layout/mobile-bottom-nav.tsx` | Add Entities to mobile nav |
 | `src/types/index.ts` | Add `TaskProduct` interface and `products` field to `TaskWithProject` |
 | `src/hooks/use-tasks.ts` | Enrich tasks with products in `fetchTasksForUser` |
 | `src/hooks/use-notes.ts` | Enrich note-linked tasks with products; call mention sync on save |
