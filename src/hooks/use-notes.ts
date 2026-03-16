@@ -15,7 +15,7 @@ import { withTimeout, TIMEOUTS } from "@/lib/utils/with-timeout";
 import { logger } from "@/lib/logger/logger";
 import { useAuth } from "@/hooks/use-auth";
 import { useWorkspaceContext } from "@/contexts/workspace-context";
-import type { Note, NoteWithRelations, Task, TaskWithProject } from "@/types";
+import type { Note, NoteWithRelations, Task, TaskWithProject, NoteTaskJoinResult } from "@/types";
 import type { NoteInsert, NoteUpdate, NoteTaskInsert } from "@/types/database";
 import { taskKeys } from "@/hooks/use-tasks";
 import { enrichTasksWithProducts } from "@/lib/utils/enrich-task-products";
@@ -27,14 +27,6 @@ import {
 } from "@/lib/validation";
 import { toast } from "sonner";
 
-/**
- * Type for the junction table query result when fetching tasks linked to a note.
- * Supabase returns this shape when we select `task:tasks(*, assignee:profiles(*), project:projects(*))` from note_tasks.
- */
-interface NoteTaskJoinResult {
-  task_id: string;
-  task: TaskWithProject | null;
-}
 
 // Query keys for cache management
 export const noteKeys = {

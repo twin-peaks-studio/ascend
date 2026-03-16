@@ -98,6 +98,15 @@ export interface TaskWithProject extends DBTask {
 }
 
 /**
+ * Shape returned by Supabase when selecting `task:tasks(...)` from `note_tasks`.
+ * Used by both use-notes.ts and use-captures.ts.
+ */
+export interface NoteTaskJoinResult {
+  task_id: string;
+  task: TaskWithProject | null;
+}
+
+/**
  * Note with project relation loaded
  */
 export interface NoteWithProject extends DBNote {

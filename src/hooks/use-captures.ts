@@ -18,7 +18,7 @@ import { logger } from "@/lib/logger/logger";
 import { useAuth } from "@/hooks/use-auth";
 import { taskKeys } from "@/hooks/use-tasks";
 import { enrichTasksWithProducts } from "@/lib/utils/enrich-task-products";
-import type { Note, Task, TaskWithProject, CaptureWithRelations } from "@/types";
+import type { Note, Task, TaskWithProject, CaptureWithRelations, NoteTaskJoinResult } from "@/types";
 import type { NoteInsert, NoteUpdate } from "@/types/database";
 import {
   createCaptureSchema,
@@ -28,13 +28,6 @@ import {
 } from "@/lib/validation";
 import { toast } from "sonner";
 
-/**
- * Type for the junction table query result when fetching tasks linked to a capture.
- */
-interface NoteTaskJoinResult {
-  task_id: string;
-  task: TaskWithProject | null;
-}
 
 // Query keys for cache management
 export const captureKeys = {
