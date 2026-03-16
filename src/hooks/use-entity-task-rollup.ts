@@ -61,7 +61,7 @@ async function fetchInitiativeTaskRollup(entityId: string): Promise<InitiativeTa
 
   if (projError) {
     logger.error("Error fetching initiative projects", { entityId, error: projError });
-    return [];
+    throw projError;
   }
 
   if (!projects || projects.length === 0) return [];
@@ -82,7 +82,7 @@ async function fetchInitiativeTaskRollup(entityId: string): Promise<InitiativeTa
 
   if (taskError) {
     logger.error("Error fetching initiative tasks", { entityId, error: taskError });
-    return [];
+    throw taskError;
   }
 
   const tasks = (rawTasks || []) as Task[];
@@ -129,7 +129,7 @@ async function fetchProductTaskRollup(
 
   if (projError) {
     logger.error("Error fetching product initiative projects", { entityId, error: projError });
-    return [];
+    throw projError;
   }
 
   if (!projects || projects.length === 0) {
@@ -157,7 +157,7 @@ async function fetchProductTaskRollup(
 
   if (taskError) {
     logger.error("Error fetching product task counts", { entityId, error: taskError });
-    return [];
+    throw taskError;
   }
 
   const tasks = (rawTasks || []) as TaskCountRow[];
@@ -210,7 +210,7 @@ function summarizeTasks(tasks: { status: string }[]): TaskRollupSummary {
  */
 export function useInitiativeTaskRollup(entityId: string | null) {
   return useQuery({
-    queryKey: entityTaskKeys.initiative(entityId ?? ""),
+    queryKey: entityId ? entityTaskKeys.initiative(entityId) : ["entity-tasks", "initiative", "disabled"],
     queryFn: () => fetchInitiativeTaskRollup(entityId!),
     enabled: !!entityId,
     staleTime: 30 * 1000,
@@ -224,7 +224,7 @@ export function useInitiativeTaskRollup(entityId: string | null) {
  */
 export function useProductTaskRollup(entityId: string | null, linkedInitiativeIds: string[]) {
   return useQuery({
-    queryKey: entityTaskKeys.product(entityId ?? ""),
+    queryKey: entityId ? entityTaskKeys.product(entityId) : ["entity-tasks", "product", "disabled"],
     queryFn: () => fetchProductTaskRollup(entityId!, linkedInitiativeIds),
     enabled: !!entityId && linkedInitiativeIds.length > 0,
     staleTime: 30 * 1000,

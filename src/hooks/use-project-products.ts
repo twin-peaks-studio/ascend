@@ -31,8 +31,8 @@ export function useProjectProducts(entityId: string | null | undefined) {
     queryKey: projectProductKeys.list(entityId ?? ""),
     queryFn: () => fetchProjectProducts(entityId!),
     enabled: !!entityId,
-    staleTime: 5 * 60 * 1000, // products rarely change
-    refetchOnWindowFocus: false,
+    staleTime: 60 * 1000, // products change infrequently but should stay reasonably fresh
+    refetchOnWindowFocus: true,
   });
 
   return products;
