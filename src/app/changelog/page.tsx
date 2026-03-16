@@ -66,6 +66,26 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: "March 16, 2026",
+    version: "0.21.1",
+    title: "Fix — Stale Tasks After AI Extraction & Deletion on Notes",
+    description: "Fixed cache invalidation bugs where deleting an AI-extracted task from a note left stale data on the note page and project tasks page.",
+    features: [
+      {
+        icon: Trash2,
+        title: "Task Deletion Syncs Note Cache",
+        description: "Deleting a task that was linked to a note now correctly removes it from the note's task list. Previously, navigating back to the note would still show the deleted task until a hard refresh.",
+        tag: "fix",
+      },
+      {
+        icon: RefreshCw,
+        title: "AI-Extracted Tasks Appear Immediately",
+        description: "After AI task extraction creates tasks on a note, the project page's active task counter and task list now update immediately. Previously, newly created tasks wouldn't appear on the project page until a hard refresh or ~30 second cache expiry.",
+        tag: "fix",
+      },
+    ],
+  },
+  {
+    date: "March 16, 2026",
     version: "0.21.0",
     title: "Mobile Navigation — Workspaces First",
     description: "The mobile bottom nav now shows Workspaces instead of Projects, reflecting the natural flow of navigating to a workspace first, then viewing its projects.",

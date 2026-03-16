@@ -20,6 +20,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { noteKeys } from "@/hooks/use-notes";
 import { captureKeys } from "@/hooks/use-captures";
 import { taskKeys } from "@/hooks/use-tasks";
+import { projectKeys } from "@/hooks/use-projects";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger/logger";
 import type {
@@ -386,10 +387,11 @@ export function useTaskExtraction(): UseTaskExtractionReturn {
       }
     }
 
-    // Invalidate caches — both note and capture detail keys
+    // Invalidate caches — note, capture, task list, and project detail keys
     queryClient.invalidateQueries({ queryKey: noteKeys.detail(sourceNoteId) });
     queryClient.invalidateQueries({ queryKey: captureKeys.detail(sourceNoteId) });
     queryClient.invalidateQueries({ queryKey: taskKeys.lists() });
+    queryClient.invalidateQueries({ queryKey: projectKeys.details() });
 
     if (successCount === selectedTasks.length) {
       toast.success(`Created ${successCount} task${successCount !== 1 ? "s" : ""}`);

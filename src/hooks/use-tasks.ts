@@ -580,6 +580,16 @@ export function useTaskMutations() {
           }
         );
 
+        // Remove from note detail caches (notes embed linked tasks via note_tasks)
+        queryClient.setQueriesData(
+          { queryKey: noteKeys.details() },
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (old: any) => {
+            if (!old?.tasks) return old;
+            return { ...old, tasks: old.tasks.filter((t: Task) => t.id !== taskId) };
+          }
+        );
+
         toast.success("Task deleted successfully");
         return true;
       } catch (err) {
