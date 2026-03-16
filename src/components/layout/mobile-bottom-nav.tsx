@@ -24,7 +24,7 @@ import {
   Eye,
   CalendarDays,
   Sparkles,
-
+  Briefcase,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -71,9 +71,9 @@ const navItems: NavItem[] = [
     icon: CheckSquare,
   },
   {
-    href: "/projects",
-    label: "Projects",
-    icon: FolderKanban,
+    href: "/workspaces",
+    label: "Spaces",
+    icon: Briefcase,
   },
 ];
 

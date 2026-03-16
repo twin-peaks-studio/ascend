@@ -748,7 +748,8 @@ const sections: WikiSection[] = [
       {
         heading: "Mobile Navigation",
         paragraphs: [
-          "On mobile and tablet devices (below the lg breakpoint), the sidebar is replaced with a bottom navigation bar featuring a floating action button for quick task creation.",
+          "On mobile and tablet devices (below the lg breakpoint), the sidebar is replaced with a bottom navigation bar. The nav includes Dashboard, Today, Tasks, Spaces (workspaces), and an AI button.",
+          "The 'Spaces' tab takes you to a list of all your workspaces. Tap a workspace to view its projects, captures, and entities. This reflects the natural hierarchy: workspace first, then projects within it.",
         ],
       },
       {

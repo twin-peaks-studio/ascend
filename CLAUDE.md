@@ -114,6 +114,8 @@ Workspaces (`src/contexts/workspace-context.tsx`) provide workspace isolation. E
 
 **Entities** (products, initiatives, stakeholders) are managed per-workspace. The entity detail page (`/entities/[id]`) has five tabs: Overview, Journal, Links, Memory, Mentions. Journal entries (`entity_context_entries` table) are timestamped knowledge dumps that feed into the AI memory refresh alongside `foundational_context`.
 
+**Mobile navigation hierarchy:** The mobile bottom nav shows "Spaces" (workspaces) instead of "Projects". Users navigate workspace → projects. The `/workspaces` list page (`src/app/workspaces/page.tsx`) shows all workspaces; tapping one navigates to `/workspaces/[id]`.
+
 **Workspace-aware navigation:** When navigating from a workspace to a project or entity, pass `?workspace=[wsId]` in the URL. The target page reads this to build the correct back link (e.g., back to `/workspaces/[wsId]` instead of `/projects`). `ProjectCard` accepts a `workspaceId` prop for this.
 
 **Switching workspaces** calls `queryClient.clear()` to reset all React Query caches, ensuring data is refetched for the new workspace context.

@@ -65,6 +65,26 @@ interface ChangelogEntry {
 
 const changelog: ChangelogEntry[] = [
   {
+    date: "March 16, 2026",
+    version: "0.21.0",
+    title: "Mobile Navigation — Workspaces First",
+    description: "The mobile bottom nav now shows Workspaces instead of Projects, reflecting the natural flow of navigating to a workspace first, then viewing its projects.",
+    features: [
+      {
+        icon: Smartphone,
+        title: "Workspaces in Mobile Nav",
+        description: "The mobile bottom navigation bar now links to Workspaces instead of Projects. Tap 'Spaces' to see all your workspaces, then select one to view its projects.",
+        tag: "improved",
+      },
+      {
+        icon: Layers,
+        title: "Workspaces List Page",
+        description: "A new /workspaces page shows all your workspaces in a simple grid. Tap any workspace to navigate to its detail page with projects, captures, and entities.",
+        tag: "new",
+      },
+    ],
+  },
+  {
     date: "March 14, 2026",
     version: "0.20.0",
     title: "New — Entity System: Workspace Tabs for Products, Entities & Captures",
