@@ -341,7 +341,26 @@ Update sidebar for intelligence workspaces:
 - `src/components/layout/sidebar.tsx` — add Products and Entities nav items
 - `src/components/layout/mobile-bottom-nav.tsx` — add to mobile nav
 
-### 2F. Product Linkage in Project Properties Panel
+### 2F. Product Label on All Task Views
+
+All task view surfaces must display the associated **product** as a visible label/badge on each task row. This gives users immediate context about which product a task relates to, without opening the task or checking the project.
+
+**Affected surfaces:**
+- `/tasks` (global task page) — `TaskListItem` in `task-list-view.tsx`
+- `/projects/[id]` and `/projects/[id]/tasks` — `TaskListItem` via `SectionedTaskListView`
+- `/projects/[id]/notes/[noteId]` — `TaskListItem` directly
+- `/today` — `TodayTaskRow` (custom row, separate from `TaskListItem`)
+- Board views (Kanban cards) — both global and project-scoped
+
+**Data flow:** Tasks → Projects → Products (via `project_products` / entity links). The product is derived from the task's project, not stored directly on the task.
+
+**Implementation notes:**
+- `TaskListItem` receives `Task | TaskWithProject`. The `TaskWithProject` type includes `project: Projects | null`. The product relationship must be resolved from the project — this likely requires extending the query to join through to products/entities, or loading products at the list level and passing them down.
+- `TodayTaskRow` is intentionally separate from `TaskListItem` — it needs the same product label but via its own implementation.
+- Follow the existing design rule: do NOT add display-toggle props to `TaskListItem`. If a surface needs product data, fix the query upstream so the data is always available.
+- A task's project may link to multiple products. Decide on UX: show first product only, show all as pills, or show a "+2 more" overflow.
+
+### 2G. Product Linkage in Project Properties Panel
 
 After migration, users need a day-to-day way to manage which product(s) a project/initiative is linked to — without going back to the migration tool.
 
@@ -559,7 +578,8 @@ Phase 2: ENTITY CRUD + NAVIGATION + WORKSPACE UX (view what you migrated)
   2C: Entity list page (/entities) — scoped to active workspace
   2D: Entity detail page (/entities/[id]) with tabs
   2E: Sidebar nav update (Products, Entities links)
-  2F: Product linkage in PropertiesPanel (manage product links day-to-day)
+  2F: Product label on all task views (TaskListItem, TodayTaskRow, Kanban cards)
+  2G: Product linkage in PropertiesPanel (manage product links day-to-day)
     ↓
 Phase 3: @MENTION SYSTEM (inline entity linking everywhere)
   3A: Mention autocomplete component

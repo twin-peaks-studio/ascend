@@ -242,7 +242,7 @@ Each MVP is independently deployable and adds real usable value. Each is tested 
 |-----|------|-----------------|--------|
 | **0** | Initiative Documentation | This document + plan alignment | ✅ Complete |
 | **1** | Workspaces + Captures | Workspace isolation, daily journal view, quick capture | ✅ Complete (pending SQL migration) |
-| **2** | Entities + Brain Dump | Entity tagging system, brain dump extraction, entity detail pages | 🔲 Not Started |
+| **2** | Entities + Brain Dump | Entity tagging system, brain dump extraction, entity detail pages, **product label on all task views** | 🔲 Not Started |
 | **3** | Embeddings + Semantic Search | Auto-embedding, vector search, enhanced search dialog | 🔲 Not Started |
 | **4** | AI Chat (RAG + Task Creation) | Chat panel, source citations, model selector, task creation from chat | 🔲 Not Started |
 | **5** | Oracle (Proactive Monitoring) | Rule-based detectors, daily insights, configurable alerts | 🔲 Not Started |
@@ -380,6 +380,7 @@ All Memory Layer features must work on mobile. The approach:
 | Capture editor | Right Sheet panel | Bottom Sheet / full-screen |
 | Quick capture | Sidebar button → popover | Bottom nav button → Drawer |
 | Entity list | Grid/list view | List view |
+| Product label on task rows | Pill/badge next to task title | Truncated pill (max 1, "+N" overflow) |
 | Entity tag picker | Inline combobox | Inline combobox (same) |
 | Brain dump input | Full-page textarea | Full-page textarea (same) |
 | Brain dump review | Two-column layout | Single-column stacked |
