@@ -153,6 +153,7 @@ const sections: WikiSection[] = [
         list: [
           "Kanban Board — Drag-and-drop cards between To Do, In Progress, and Done columns. Great for visual workflow management.",
           "List View — A compact, Todoist-style list with checkboxes for quick status toggling. Shows priority indicators and due dates inline.",
+          "Product Labels — If a task's project is linked to a product (via the entity system), a purple product badge appears on the task row or card. This is visible on all surfaces: global tasks, project tasks, kanban boards, the Today page, and note/capture task lists.",
         ],
         image: {
           src: "/wiki/tasks-board.png",

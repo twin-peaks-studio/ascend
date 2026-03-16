@@ -66,6 +66,20 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: "March 16, 2026",
+    version: "0.22.0",
+    title: "Product Labels on All Task Views",
+    description: "Every task now shows which product it belongs to, visible across all task surfaces — list view, board view, today page, notes, and captures.",
+    features: [
+      {
+        icon: Package,
+        title: "Product Labels on Tasks",
+        description: "Tasks linked to a product (via their project's entity) now display a purple product badge. Visible on the global tasks page, project tasks, kanban boards, the Today page, and note/capture task lists.",
+        tag: "new",
+      },
+    ],
+  },
+  {
+    date: "March 16, 2026",
     version: "0.21.1",
     title: "Fix — Stale Tasks After AI Extraction & Deletion on Notes",
     description: "Fixed cache invalidation bugs where deleting an AI-extracted task from a note left stale data on the note page and project tasks page.",

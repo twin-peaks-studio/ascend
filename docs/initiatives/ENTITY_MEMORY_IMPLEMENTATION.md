@@ -578,8 +578,8 @@ Phase 2: ENTITY CRUD + NAVIGATION + WORKSPACE UX (view what you migrated)
   2C: Entity list page (/entities) — scoped to active workspace
   2D: Entity detail page (/entities/[id]) with tabs
   2E: Sidebar nav update (Products, Entities links)
-  2F: Product label on all task views (TaskListItem, TodayTaskRow, Kanban cards)
-  2G: Product linkage in PropertiesPanel (manage product links day-to-day)
+  2F: Product label on all task views (TaskListItem, TodayTaskRow, Kanban cards) ✅
+  2G: Product linkage in PropertiesPanel (manage product links day-to-day) ✅
     ↓
 Phase 3: @MENTION SYSTEM (inline entity linking everywhere)
   3A: Mention autocomplete component
@@ -651,6 +651,8 @@ Users type `@OnlineOrdering` not `@4f43b086-cdfd...`. Slugs (lowercase, no space
 | `src/components/entity/entity-links-panel.tsx` | 2B | Linked entities panel |
 | `src/app/entities/page.tsx` | 2A | Entity list page |
 | `src/app/entities/[id]/page.tsx` | 2B | Entity detail page |
+| `src/lib/utils/enrich-task-products.ts` | 2F | Shared utility to enrich tasks with product data from entity links |
+| `src/hooks/use-project-products.ts` | 2F | Hook to fetch products for a project's entity_id (used by project pages) |
 | `src/hooks/use-entity-mentions.ts` | 3D | Mention tracking hook |
 | `src/components/shared/mention-autocomplete.tsx` | 3A | Reusable @mention dropdown |
 | `src/components/entity/entity-memory.tsx` | 4B | AI memory display + refresh |
@@ -670,8 +672,15 @@ Users type `@OnlineOrdering` not `@4f43b086-cdfd...`. Slugs (lowercase, no space
 | `src/components/project/properties-panel.tsx` | Add Products section with multi-select pill picker for product linkage |
 | `src/components/layout/sidebar.tsx` | Add Entities nav item |
 | `src/components/layout/mobile-bottom-nav.tsx` | Add Entities to mobile nav |
-| `src/hooks/use-notes.ts` | Call mention sync on save |
-| `src/hooks/use-captures.ts` | Call mention sync on save |
+| `src/types/index.ts` | Add `TaskProduct` interface and `products` field to `TaskWithProject` |
+| `src/hooks/use-tasks.ts` | Enrich tasks with products in `fetchTasksForUser` |
+| `src/hooks/use-notes.ts` | Enrich note-linked tasks with products; call mention sync on save |
+| `src/hooks/use-captures.ts` | Enrich capture-linked tasks with products; call mention sync on save |
+| `src/components/task/task-list-view.tsx` | Render product badge in `TaskListItem` meta row |
+| `src/components/task/task-card.tsx` | Render product badge in `TaskCard` footer (Kanban) |
+| `src/app/today/page.tsx` | Render product badge in `TodayTaskRow` badges row |
+| `src/app/projects/[id]/page.tsx` | Pass `projectProducts` to task useMemo |
+| `src/app/projects/[id]/tasks/page.tsx` | Pass `projectProducts` to task useMemo |
 | `src/lib/rate-limit/limiter.ts` | Add aiEntityMemory bucket |
 | `CLAUDE.md` | Document new patterns, localStorage keys |
 | `docs/TECHNICAL_GUIDE.md` | Document entity architecture |

@@ -6,6 +6,7 @@ import {
   CheckCircle2,
   Calendar,
   MessageSquare,
+  Package,
   Plus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -69,6 +70,9 @@ export function TaskListItem({ task, onTaskClick, onStatusToggle, assignee }: Ta
   // Use type narrowing to safely access attachments (only on TaskWithProject)
   const attachmentCount = ('attachments' in task && task.attachments) ? task.attachments.length : 0;
 
+  // Get products from task (only on TaskWithProject with enriched data)
+  const products = ('products' in task && task.products) ? task.products : [];
+
   // Get assignee - either from the task (TaskWithProject) or from the prop (Task)
   const taskAssignee = ('assignee' in task && task.assignee) ? task.assignee : assignee;
 
@@ -113,9 +117,18 @@ export function TaskListItem({ task, onTaskClick, onStatusToggle, assignee }: Ta
           </p>
         )}
 
-        {/* Meta row: due date, attachments count */}
-        {(task.due_date || attachmentCount > 0) && (
+        {/* Meta row: products, due date, attachments count */}
+        {(products.length > 0 || task.due_date || attachmentCount > 0) && (
           <div className="flex items-center gap-3 mt-1.5">
+            {products.length > 0 && (
+              <span className="inline-flex items-center gap-1 text-xs text-purple-600 dark:text-purple-400">
+                <Package className="h-3 w-3" />
+                {products[0].name}
+                {products.length > 1 && (
+                  <span className="text-muted-foreground">+{products.length - 1}</span>
+                )}
+              </span>
+            )}
             {task.due_date && (
               <span className={cn(
                 "inline-flex items-center gap-1 text-xs",

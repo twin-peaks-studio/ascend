@@ -49,6 +49,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { useProject, useProjectMutations } from "@/hooks/use-projects";
+import { useProjectProducts } from "@/hooks/use-project-products";
 import { useTaskMutations } from "@/hooks/use-tasks";
 import { useProfiles } from "@/hooks/use-profiles";
 import { useAuth } from "@/hooks/use-auth";
@@ -77,6 +78,7 @@ export default function ProjectDetailPage() {
   const workspaceId = searchParams.get("workspace");
 
   const { project, setProject, loading, refetch } = useProject(projectId);
+  const projectProducts = useProjectProducts(project?.entity_id);
   const { documents, refetch: refetchDocuments } = useProjectDocuments(projectId);
   const { profiles } = useProfiles();
   const { user } = useAuth();
@@ -92,12 +94,12 @@ export default function ProjectDetailPage() {
   // Filter to only show active tasks (not done and not archived), sorted by priority (highest first)
   const activeTasks = useMemo(() => {
     if (!project?.tasks) return [];
-    const filtered = project.tasks.filter(
-      (task) => task.status !== "done" && !task.is_archived
-    );
+    const filtered = project.tasks
+      .filter((task) => task.status !== "done" && !task.is_archived)
+      .map((task) => ({ ...task, products: projectProducts }));
     // Default sort by priority (highest first) for the project overview
     return sortTasks(filtered, "priority", "desc");
-  }, [project]);
+  }, [project, projectProducts]);
 
   // Inline editing state - use project values directly as initial values
   // Use projectId as key to reset state when navigating between projects

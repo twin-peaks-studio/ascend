@@ -17,6 +17,7 @@ import { withTimeout, TIMEOUTS } from "@/lib/utils/with-timeout";
 import { logger } from "@/lib/logger/logger";
 import { useAuth } from "@/hooks/use-auth";
 import { taskKeys } from "@/hooks/use-tasks";
+import { enrichTasksWithProducts } from "@/lib/utils/enrich-task-products";
 import type { Note, Task, TaskWithProject, CaptureWithRelations } from "@/types";
 import type { NoteInsert, NoteUpdate } from "@/types/database";
 import {
@@ -155,6 +156,9 @@ async function fetchCaptureById(
   const tasks = joinResults
     .map((nt) => nt.task)
     .filter((task): task is TaskWithProject => task !== null && !task.is_archived);
+
+  // Enrich tasks with product labels from entity links
+  await enrichTasksWithProducts(tasks);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const data = result.data as any;

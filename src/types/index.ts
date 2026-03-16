@@ -80,12 +80,21 @@ export interface ProjectWithRelations extends DBProject {
 }
 
 /**
+ * Lightweight product info attached to tasks via project → entity → entity_links
+ */
+export interface TaskProduct {
+  id: string;
+  name: string;
+}
+
+/**
  * Task with project relation loaded (project is optional)
  */
 export interface TaskWithProject extends DBTask {
   project: DBProject | null;
   assignee?: DBProfile | null;
   attachments?: DBAttachment[];
+  products?: TaskProduct[];
 }
 
 /**

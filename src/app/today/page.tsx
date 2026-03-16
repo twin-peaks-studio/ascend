@@ -8,6 +8,7 @@ import {
   Sparkles,
   Loader2,
   RefreshCw,
+  Package,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -321,6 +322,13 @@ function TodayTaskRow({
 
         {/* Badges row */}
         <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+          {task.products && task.products.length > 0 && (
+            <span className="inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] font-medium bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400">
+              <Package className="h-2.5 w-2.5" />
+              {task.products[0].name}
+              {task.products.length > 1 && ` +${task.products.length - 1}`}
+            </span>
+          )}
           {overdue && (
             <span className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
               Overdue

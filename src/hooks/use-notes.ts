@@ -18,6 +18,7 @@ import { useWorkspaceContext } from "@/contexts/workspace-context";
 import type { Note, NoteWithRelations, Task, TaskWithProject } from "@/types";
 import type { NoteInsert, NoteUpdate, NoteTaskInsert } from "@/types/database";
 import { taskKeys } from "@/hooks/use-tasks";
+import { enrichTasksWithProducts } from "@/lib/utils/enrich-task-products";
 import {
   createNoteSchema,
   updateNoteSchema,
@@ -106,6 +107,9 @@ async function fetchNoteWithRelations(noteId: string): Promise<NoteWithRelations
   const tasks = joinResults
     .map((nt) => nt.task)
     .filter((task): task is TaskWithProject => task !== null && !task.is_archived);
+
+  // Enrich tasks with product labels from entity links
+  await enrichTasksWithProducts(tasks);
 
   return {
     ...noteResult.data,
