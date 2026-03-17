@@ -1,71 +1,43 @@
 "use client";
 
-import { useState } from "react";
-import { Plus } from "lucide-react";
+/**
+ * Captures redirect page.
+ *
+ * Captures are accessed through workspace detail pages, not as a standalone route.
+ * This page redirects to the active workspace (or workspaces list if none is active).
+ */
+
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { AppShell } from "@/components/layout";
-import { Header } from "@/components/layout";
-import { Button } from "@/components/ui/button";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
-import { CaptureList } from "@/components/capture/capture-list";
-import { CaptureEditor } from "@/components/capture/capture-editor";
-import { QuickCapture } from "@/components/capture/quick-capture";
-import { useCaptures } from "@/hooks/use-captures";
 import { useWorkspaceContext } from "@/contexts/workspace-context";
 
-function CapturesContent() {
+function CapturesRedirect() {
+  const router = useRouter();
   const { activeWorkspace } = useWorkspaceContext();
-  const { days, loading } = useCaptures(activeWorkspace?.id ?? null);
-  const [showNew, setShowNew] = useState(false);
+
+  useEffect(() => {
+    if (activeWorkspace) {
+      router.replace(`/workspaces/${activeWorkspace.id}`);
+    } else {
+      router.replace("/workspaces");
+    }
+  }, [activeWorkspace, router]);
 
   return (
-    <>
-      <Header title="Captures" />
-
-      <div className="px-4 lg:px-8 py-4 max-w-3xl mx-auto space-y-4">
-        {/* Quick capture bar */}
-        <div className="rounded-lg border bg-card p-3">
-          <QuickCapture />
-        </div>
-
-        {/* New capture button */}
-        <div className="flex justify-end">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => setShowNew(true)}
-            className="gap-1.5"
-          >
-            <Plus className="h-4 w-4" />
-            New Capture
-          </Button>
-        </div>
-
-        {/* Daily journal */}
-        <CaptureList days={days} loading={loading} />
+    <div className="flex items-center justify-center h-[50vh]">
+      <div className="text-center">
+        <div className="h-8 w-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+        <p className="text-muted-foreground">Redirecting to workspace...</p>
       </div>
-
-      {/* New capture sheet (mobile-friendly) */}
-      <Sheet open={showNew} onOpenChange={setShowNew}>
-        <SheetContent side="bottom" className="rounded-t-xl max-h-[85vh] overflow-y-auto">
-          <SheetHeader className="pb-4">
-            <SheetTitle>New Capture</SheetTitle>
-          </SheetHeader>
-          <CaptureEditor onSaved={() => setShowNew(false)} />
-        </SheetContent>
-      </Sheet>
-    </>
+    </div>
   );
 }
 
 export default function CapturesPage() {
   return (
     <AppShell>
-      <CapturesContent />
+      <CapturesRedirect />
     </AppShell>
   );
 }

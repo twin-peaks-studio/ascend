@@ -2498,7 +2498,48 @@ This means:
 
 **Assignee cache invalidation:** `updateTask()` uses `setQueriesData` for most fields (fast, in-place, no refetch). However, when `assignee_id` changes, the spread only updates the scalar ID — not the full `assignee: Profile` object that `TaskListItem` uses to render the avatar. So after the `setQueriesData` calls, `updateTask()` also calls `invalidateQueries` on `taskKeys.lists()` and `noteKeys.details()`. This marks those caches stale so they refetch with the correct profile object when the user navigates back to the list. The project detail cache (`projectKeys.details()`) already benefits from the same pattern.
 
+**Product labels on tasks:** Tasks display a purple product badge derived from the project's entity linkage chain: `task.project.entity_id` (initiative) → `entity_links` (initiative_product) → product entity name. The `products?: TaskProduct[]` field on `TaskWithProject` is populated via `enrichTasksWithProducts()` (`src/lib/utils/enrich-task-products.ts`), which makes a single query per batch of tasks. This enrichment runs in:
+- `fetchTasksForUser()` — serves `/tasks` and `/today` pages
+- `fetchNoteWithRelations()` — serves note detail pages
+- `fetchCaptureById()` — serves capture detail pages
+- Project pages use `useProjectProducts(project.entity_id)` hook and spread products onto tasks in a `useMemo`
+
+The `TodayTaskRow` (custom, not `TaskListItem`) reads `task.products` directly. `TaskCard` (Kanban) also reads `task.products`. All three components render products identically: first product name + "+N" overflow for multiple products.
+
 ---
+
+### #Entity Mention System
+
+The `#` trigger enables inline entity mentions across all Tiptap editors. Mentions are stored as custom Tiptap nodes in HTML and tracked in the `entity_mentions` table.
+
+#### Data flow
+```
+User types "#On..." in a note/capture editor
+    ↓
+Tiptap suggestion plugin fires → queries workspace entities via ref
+    ↓
+User selects "Online Ordering" from dropdown
+    ↓
+Tiptap inserts: <span data-type="entity-mention" data-entity-id="uuid" ...>#Online Ordering</span>
+    ↓
+On auto-save (1.5s debounce): parseEntityMentions(html) extracts entity IDs
+    ↓
+syncMentions() diffs against entity_mentions table → inserts new, deletes removed
+```
+
+#### Key files
+- `src/lib/tiptap/entity-mention-extension.ts` — Custom Tiptap `entityMention` extension. Stores `id`, `label`, `entityType`, `entitySlug` as node attributes. Renders as `<span class="entity-mention entity-mention--{type}">#Name</span>`. Also exports `parseEntityMentions(html)` for extracting mentions from saved HTML.
+- `src/lib/tiptap/entity-mention-suggestion.ts` — Creates the suggestion config (trigger char `#`, items filter, render lifecycle). Uses a positioned `<div>` (no tippy.js dependency). The `getEntities` callback reads from a ref so the entity list stays fresh without recreating the extension.
+- `src/components/shared/entity-mention-suggestion.tsx` — React dropdown with keyboard nav. Uses `forwardRef` + `useImperativeHandle` for the Tiptap suggestion `onKeyDown` bridge.
+- `src/hooks/use-entity-mentions.ts` — `useMentionSync()` performs differential sync (fetch existing → diff → insert/delete). `useEntityMentionsByEntity(entityId)` fetches all mentions of a given entity.
+- `src/components/shared/rich-text-editor.tsx` — `workspaceId` prop activates the mention extension. Entities fetched via `useEntities(workspaceId)` and stored in `entitiesRef` to keep the suggestion callback stable.
+- `src/app/globals.css` — Pill styles: `.entity-mention--product` (blue), `--initiative` (amber), `--stakeholder` (green) with dark mode variants.
+
+#### Constraints
+- The `workspaceId` prop on `RichTextEditor` must be provided for mentions to work. Without it, the editor is mention-free (backward compatible).
+- Entity mention nodes use `data-type="entity-mention"` (not `data-type="mention"`) to avoid collision if Tiptap's built-in mention extension is used elsewhere.
+- Comments still use the `@user` mention system (textarea-based in `comment-form.tsx`). Entity `#` mentions are NOT in comments.
+- `parseEntityMentions()` uses `DOMParser` and only works client-side (`typeof window !== "undefined"` guard).
 
 ---
 

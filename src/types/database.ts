@@ -32,6 +32,7 @@ export type Database = {
           color: string;
           lead_id: string | null;
           due_date: string | null;
+          entity_id: string | null;
           created_by: string;
           created_at: string;
           updated_at: string;
@@ -46,6 +47,7 @@ export type Database = {
           color?: string;
           lead_id?: string | null;
           due_date?: string | null;
+          entity_id?: string | null;
           created_by: string;
           created_at?: string;
           updated_at?: string;
@@ -60,6 +62,7 @@ export type Database = {
           color?: string;
           lead_id?: string | null;
           due_date?: string | null;
+          entity_id?: string | null;
           created_by?: string;
           created_at?: string;
           updated_at?: string;
@@ -77,6 +80,13 @@ export type Database = {
             columns: ["workspace_id"];
             isOneToOne: false;
             referencedRelation: "workspaces";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "projects_entity_id_fkey";
+            columns: ["entity_id"];
+            isOneToOne: false;
+            referencedRelation: "entities";
             referencedColumns: ["id"];
           }
         ];
@@ -98,6 +108,7 @@ export type Database = {
           section_position: number;
           source_type: "manual" | "ai_extraction" | "feedback_form";
           feedback_submission_id: string | null;
+          initiative_entity_id: string | null;
           created_by: string;
           created_at: string;
           updated_at: string;
@@ -118,6 +129,7 @@ export type Database = {
           section_position?: number;
           source_type?: "manual" | "ai_extraction" | "feedback_form";
           feedback_submission_id?: string | null;
+          initiative_entity_id?: string | null;
           created_by: string;
           created_at?: string;
           updated_at?: string;
@@ -138,6 +150,7 @@ export type Database = {
           section_position?: number;
           source_type?: "manual" | "ai_extraction" | "feedback_form";
           feedback_submission_id?: string | null;
+          initiative_entity_id?: string | null;
           created_by?: string;
           created_at?: string;
           updated_at?: string;
@@ -155,6 +168,13 @@ export type Database = {
             columns: ["created_by"];
             isOneToOne: false;
             referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "tasks_initiative_entity_id_fkey";
+            columns: ["initiative_entity_id"];
+            isOneToOne: false;
+            referencedRelation: "entities";
             referencedColumns: ["id"];
           }
         ];
@@ -849,6 +869,192 @@ export type Database = {
           }
         ];
       };
+      entities: {
+        Row: {
+          id: string;
+          workspace_id: string;
+          entity_type: "product" | "initiative" | "stakeholder";
+          name: string;
+          slug: string;
+          description: string | null;
+          foundational_context: string | null;
+          ai_memory: string | null;
+          memory_refreshed_at: string | null;
+          metadata: Json;
+          created_by: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          workspace_id: string;
+          entity_type: "product" | "initiative" | "stakeholder";
+          name: string;
+          slug: string;
+          description?: string | null;
+          foundational_context?: string | null;
+          ai_memory?: string | null;
+          memory_refreshed_at?: string | null;
+          metadata?: Json;
+          created_by: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          workspace_id?: string;
+          entity_type?: "product" | "initiative" | "stakeholder";
+          name?: string;
+          slug?: string;
+          description?: string | null;
+          foundational_context?: string | null;
+          ai_memory?: string | null;
+          memory_refreshed_at?: string | null;
+          metadata?: Json;
+          created_by?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "entities_workspace_id_fkey";
+            columns: ["workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "workspaces";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "entities_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      entity_links: {
+        Row: {
+          id: string;
+          source_entity_id: string;
+          target_entity_id: string;
+          link_type: "initiative_product" | "stakeholder_product" | "stakeholder_initiative";
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          source_entity_id: string;
+          target_entity_id: string;
+          link_type: "initiative_product" | "stakeholder_product" | "stakeholder_initiative";
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          source_entity_id?: string;
+          target_entity_id?: string;
+          link_type?: "initiative_product" | "stakeholder_product" | "stakeholder_initiative";
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "entity_links_source_entity_id_fkey";
+            columns: ["source_entity_id"];
+            isOneToOne: false;
+            referencedRelation: "entities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "entity_links_target_entity_id_fkey";
+            columns: ["target_entity_id"];
+            isOneToOne: false;
+            referencedRelation: "entities";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      entity_mentions: {
+        Row: {
+          id: string;
+          entity_id: string;
+          workspace_id: string;
+          source_type: "note" | "comment" | "task_description" | "capture";
+          source_id: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          entity_id: string;
+          workspace_id: string;
+          source_type: "note" | "comment" | "task_description" | "capture";
+          source_id: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          entity_id?: string;
+          workspace_id?: string;
+          source_type?: "note" | "comment" | "task_description" | "capture";
+          source_id?: string;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "entity_mentions_entity_id_fkey";
+            columns: ["entity_id"];
+            isOneToOne: false;
+            referencedRelation: "entities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "entity_mentions_workspace_id_fkey";
+            columns: ["workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "workspaces";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      entity_context_entries: {
+        Row: {
+          id: string;
+          entity_id: string;
+          content: string;
+          created_by: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          entity_id: string;
+          content: string;
+          created_by: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          entity_id?: string;
+          content?: string;
+          created_by?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "entity_context_entries_entity_id_fkey";
+            columns: ["entity_id"];
+            isOneToOne: false;
+            referencedRelation: "entities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "entity_context_entries_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
@@ -939,3 +1145,21 @@ export type WorkspaceMemberUpdate = UpdateTables<"workspace_members">;
 
 export type WorkspaceType = "standard" | "intelligence";
 export type CaptureType = "meeting_note" | "document" | "media" | "thought";
+
+export type Entity = Tables<"entities">;
+export type EntityInsert = InsertTables<"entities">;
+export type EntityUpdate = UpdateTables<"entities">;
+
+export type EntityLink = Tables<"entity_links">;
+export type EntityLinkInsert = InsertTables<"entity_links">;
+
+export type EntityMention = Tables<"entity_mentions">;
+export type EntityMentionInsert = InsertTables<"entity_mentions">;
+
+export type EntityContextEntry = Tables<"entity_context_entries">;
+export type EntityContextEntryInsert = InsertTables<"entity_context_entries">;
+export type EntityContextEntryUpdate = UpdateTables<"entity_context_entries">;
+
+export type EntityType = "product" | "initiative" | "stakeholder";
+export type EntityLinkType = "initiative_product" | "stakeholder_product" | "stakeholder_initiative";
+export type MentionSourceType = "note" | "comment" | "task_description" | "capture";

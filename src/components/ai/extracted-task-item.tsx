@@ -27,10 +27,17 @@ import {
 import { cn } from "@/lib/utils";
 import type { ExtractedTask } from "@/lib/ai/types";
 
+interface ProjectOption {
+  id: string;
+  title: string;
+}
+
 interface ExtractedTaskItemProps {
   task: ExtractedTask;
   onUpdate: (updates: Partial<ExtractedTask>) => void;
   onToggleSelection: () => void;
+  /** When provided, show a per-task project selector (used for captures) */
+  projects?: ProjectOption[];
 }
 
 const PRIORITY_LABELS = {
@@ -44,6 +51,7 @@ export function ExtractedTaskItem({
   task,
   onUpdate,
   onToggleSelection,
+  projects,
 }: ExtractedTaskItemProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -120,6 +128,28 @@ export function ExtractedTaskItem({
                 <SelectItem value="urgent">{PRIORITY_LABELS.urgent}</SelectItem>
               </SelectContent>
             </Select>
+
+            {/* Project selector (for captures) */}
+            {projects && projects.length > 0 && (
+              <Select
+                value={task.projectId ?? ""}
+                onValueChange={(value) =>
+                  onUpdate({ projectId: value || undefined })
+                }
+              >
+                <SelectTrigger className={cn(
+                  "h-6 w-auto text-xs px-2 gap-1",
+                  !task.projectId && "border-destructive text-destructive"
+                )}>
+                  <SelectValue placeholder="Select project" />
+                </SelectTrigger>
+                <SelectContent>
+                  {projects.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>{p.title}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
 
             {/* Confidence indicator */}
             <Badge

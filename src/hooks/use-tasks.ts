@@ -23,6 +23,7 @@ import {
 } from "@/lib/notifications/create-notification";
 import { sendInngestEvents } from "@/lib/inngest/send-events";
 import type { Task, TaskWithProject, TaskStatus } from "@/types";
+import { enrichTasksWithProducts } from "@/lib/utils/enrich-task-products";
 import type { TaskInsert, TaskUpdate } from "@/types/database";
 import {
   createTaskSchema,
@@ -119,7 +120,12 @@ async function fetchTasksForUser(userId: string): Promise<TaskWithProject[]> {
     throw tasksResult.error;
   }
 
-  return (tasksResult.data as TaskWithProject[]) || [];
+  const tasks = (tasksResult.data as TaskWithProject[]) || [];
+
+  // Enrich tasks with product labels from entity links
+  await enrichTasksWithProducts(tasks);
+
+  return tasks;
 }
 
 /**
@@ -577,6 +583,15 @@ export function useTaskMutations() {
           (old: any) => {
             if (!old?.tasks) return old;
             return { ...old, tasks: old.tasks.filter((t: Task) => t.id !== taskId) };
+          }
+        );
+
+        // Remove from note detail caches (notes embed linked tasks via note_tasks)
+        queryClient.setQueriesData<{ tasks?: TaskWithProject[] }>(
+          { queryKey: noteKeys.details() },
+          (old) => {
+            if (!old?.tasks) return old;
+            return { ...old, tasks: old.tasks.filter((t) => t.id !== taskId) };
           }
         );
 

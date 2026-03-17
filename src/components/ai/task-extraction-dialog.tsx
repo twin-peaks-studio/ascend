@@ -24,11 +24,18 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ExtractedTaskList } from "./extracted-task-list";
 import type { UseTaskExtractionReturn } from "@/lib/ai/types";
 
+interface ProjectOption {
+  id: string;
+  title: string;
+}
+
 interface TaskExtractionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   extraction: UseTaskExtractionReturn;
   onRetry: () => void;
+  /** When provided, show per-task project selector (used for captures) */
+  projects?: ProjectOption[];
 }
 
 export function TaskExtractionDialog({
@@ -36,6 +43,7 @@ export function TaskExtractionDialog({
   onOpenChange,
   extraction,
   onRetry,
+  projects,
 }: TaskExtractionDialogProps) {
   const {
     status,
@@ -51,6 +59,7 @@ export function TaskExtractionDialog({
   } = extraction;
 
   const selectedCount = extractedTasks.filter((t) => t.selected).length;
+  const hasUnassignedProjects = projects && extractedTasks.some((t) => t.selected && !t.projectId);
 
   const handleClose = () => {
     onOpenChange(false);
@@ -67,10 +76,10 @@ export function TaskExtractionDialog({
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Sparkles className="h-5 w-5 text-primary" />
-                Analyzing Note
+                Analyzing Content
               </DialogTitle>
               <DialogDescription>
-                AI is identifying actionable tasks from your note content...
+                AI is identifying actionable tasks from your content...
               </DialogDescription>
             </DialogHeader>
             <div className="flex items-center justify-center py-8">
@@ -127,6 +136,7 @@ export function TaskExtractionDialog({
                 onToggleSelection={toggleSelection}
                 onSelectAll={selectAll}
                 onDeselectAll={deselectAll}
+                projects={projects}
               />
             </div>
 
@@ -136,7 +146,8 @@ export function TaskExtractionDialog({
               </Button>
               <Button
                 onClick={createSelectedTasks}
-                disabled={selectedCount === 0}
+                disabled={selectedCount === 0 || !!hasUnassignedProjects}
+                title={hasUnassignedProjects ? "All selected tasks must have a project" : undefined}
               >
                 Create {selectedCount} Task{selectedCount !== 1 ? "s" : ""}
               </Button>
@@ -175,7 +186,7 @@ export function TaskExtractionDialog({
               </DialogTitle>
               <DialogDescription>
                 Successfully created {createdCount} task
-                {createdCount !== 1 ? "s" : ""} from your note.
+                {createdCount !== 1 ? "s" : ""}.
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>

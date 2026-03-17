@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { User, Calendar, Flag, X, Users, Clock, ChevronRight } from "lucide-react";
+import { useState, useMemo } from "react";
+import { User, Calendar, Flag, X, Users, Clock, ChevronRight, Package, Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -24,6 +24,15 @@ import type { ProjectWithRelations, TaskPriority, ProjectStatus } from "@/types"
 import type { Profile } from "@/types";
 import { PROJECT_STATUS_CONFIG, PRIORITY_CONFIG, PROJECT_COLORS } from "@/types";
 import { useProjectAssignees } from "@/hooks/use-project-assignees";
+import { useEntityLinks, useEntityLinkMutations } from "@/hooks/use-entity-links";
+import { useEntities } from "@/hooks/use-entities";
+import { useWorkspaceContext } from "@/contexts/workspace-context";
+import {
+  Popover as ProductPopover,
+  PopoverContent as ProductPopoverContent,
+  PopoverTrigger as ProductPopoverTrigger,
+} from "@/components/ui/popover";
+import type { Entity } from "@/types/database";
 
 interface SidebarRowProps {
   label: string;
@@ -53,6 +62,96 @@ interface PropertiesPanelProps {
   onShowMembers: () => void;
   totalProjectTime?: string;
   onShowTimeReport?: () => void;
+}
+
+function ProductLinkageSection({ entityId }: { entityId: string }) {
+  const { activeWorkspace } = useWorkspaceContext();
+  const { links, loading: linksLoading } = useEntityLinks(entityId);
+  const { entities: allProducts } = useEntities(activeWorkspace?.id ?? null, "product");
+  const { createLink, deleteLink, loading: linkMutating } = useEntityLinkMutations();
+  const [showPicker, setShowPicker] = useState(false);
+
+  // Find linked products from links
+  const linkedProducts = useMemo(() => {
+    return links
+      .filter((link) => link.link_type === "initiative_product")
+      .map((link) => {
+        const isSource = link.source_entity_id === entityId;
+        const productEntity = isSource ? link.target_entity : link.source_entity;
+        return { link, product: productEntity };
+      })
+      .filter((l): l is { link: typeof l.link; product: NonNullable<typeof l.product> } => !!l.product);
+  }, [links, entityId]);
+
+  const linkedProductIds = new Set(linkedProducts.map((l) => l.product.id));
+  const availableProducts = allProducts.filter((p) => !linkedProductIds.has(p.id));
+
+  const handleAddProduct = async (product: Entity) => {
+    await createLink(entityId, product.id, "initiative_product");
+    setShowPicker(false);
+  };
+
+  const handleRemoveProduct = async (linkId: string, productId: string) => {
+    await deleteLink(linkId, entityId, productId);
+  };
+
+  return (
+    <SidebarRow label="Products" className="border-b-0">
+      <div className="space-y-1.5">
+        {linksLoading ? (
+          <div className="h-6 w-24 bg-muted animate-pulse rounded-full" />
+        ) : linkedProducts.length === 0 ? (
+          <p className="text-xs text-muted-foreground">No linked products</p>
+        ) : (
+          <div className="flex flex-wrap gap-1.5">
+            {linkedProducts.map(({ link, product }) => (
+              <span
+                key={link.id}
+                className="inline-flex items-center gap-1 pl-2 pr-1 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 text-xs font-medium"
+              >
+                <Package className="h-3 w-3" />
+                {product.name}
+                <button
+                  onClick={() => handleRemoveProduct(link.id, product.id)}
+                  disabled={linkMutating}
+                  className="ml-0.5 p-0.5 rounded-full hover:bg-blue-500/20 transition-colors"
+                  title={`Unlink ${product.name}`}
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+
+        {availableProducts.length > 0 && (
+          <ProductPopover open={showPicker} onOpenChange={setShowPicker}>
+            <ProductPopoverTrigger asChild>
+              <button
+                className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                disabled={linkMutating}
+              >
+                <Plus className="h-3 w-3" />
+                Add product
+              </button>
+            </ProductPopoverTrigger>
+            <ProductPopoverContent className="w-56 p-1" align="start">
+              {availableProducts.map((product) => (
+                <button
+                  key={product.id}
+                  onClick={() => handleAddProduct(product)}
+                  className="flex items-center gap-2 w-full px-2 py-1.5 text-sm rounded hover:bg-accent transition-colors text-left"
+                >
+                  <Package className="h-4 w-4 text-blue-500" />
+                  <span className="truncate">{product.name}</span>
+                </button>
+              ))}
+            </ProductPopoverContent>
+          </ProductPopover>
+        )}
+      </div>
+    </SidebarRow>
+  );
 }
 
 export function PropertiesPanel({
@@ -435,7 +534,7 @@ export function PropertiesPanel({
       </SidebarRow>
 
       {/* Time Report */}
-      <SidebarRow label="Time" className="border-b-0">
+      <SidebarRow label="Time">
         <button
           onClick={onShowTimeReport}
           className="flex items-center gap-2 -mx-2 px-2 py-1 rounded hover:bg-muted/50 w-full text-left"
@@ -447,6 +546,11 @@ export function PropertiesPanel({
           <ChevronRight className="h-4 w-4 text-muted-foreground" />
         </button>
       </SidebarRow>
+
+      {/* Products — only show if project has an entity_id (migrated to entity system) */}
+      {project.entity_id && (
+        <ProductLinkageSection entityId={project.entity_id} />
+      )}
     </div>
   );
 }

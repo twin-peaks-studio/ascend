@@ -30,6 +30,8 @@ import {
   Bell,
   History,
   ClipboardList,
+  Network,
+  Package,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -151,6 +153,7 @@ const sections: WikiSection[] = [
         list: [
           "Kanban Board — Drag-and-drop cards between To Do, In Progress, and Done columns. Great for visual workflow management.",
           "List View — A compact, Todoist-style list with checkboxes for quick status toggling. Shows priority indicators and due dates inline.",
+          "Product Labels — If a task's project is linked to a product (via the entity system), a purple product badge appears on the task row or card. This is visible on all surfaces: global tasks, project tasks, kanban boards, the Today page, and note/capture task lists.",
         ],
         image: {
           src: "/wiki/tasks-board.png",
@@ -746,7 +749,8 @@ const sections: WikiSection[] = [
       {
         heading: "Mobile Navigation",
         paragraphs: [
-          "On mobile and tablet devices (below the lg breakpoint), the sidebar is replaced with a bottom navigation bar featuring a floating action button for quick task creation.",
+          "On mobile and tablet devices (below the lg breakpoint), the sidebar is replaced with a bottom navigation bar. The nav includes Dashboard, Today, Tasks, Spaces (workspaces), and an AI button.",
+          "The 'Spaces' tab takes you to a list of all your workspaces. Tap a workspace to view its projects, captures, and entities. This reflects the natural hierarchy: workspace first, then projects within it.",
         ],
       },
       {
@@ -825,6 +829,81 @@ const sections: WikiSection[] = [
           "Every submitted form automatically creates a task in the linked project with source type 'Feedback Form'. The task description is structured in three sections: the original verbatim submission (never modified), an AI summary of the full report, and any additional context gathered during the follow-up chat. Attachments appear directly on the task alongside other task attachments.",
           "You can view and change the form password at any time from the Feedback Forms section on the project page. Click the eye icon to reveal the current password, or click Edit to set a new one — all active tester sessions are immediately invalidated.",
         ],
+      },
+    ],
+  },
+  {
+    id: "entities-products",
+    icon: Network,
+    title: "Entities & Products",
+    description: "Organize your work around products, initiatives, and stakeholders.",
+    content: [
+      {
+        heading: "What Are Entities?",
+        paragraphs: [
+          "Entities are the things your work revolves around — the products you ship, the initiatives you're driving, and the stakeholders you work with. Each entity has a name, description, and foundational context that teaches the AI what it is.",
+        ],
+      },
+      {
+        heading: "Entity Types",
+        list: [
+          "Products — Things you ship or manage (e.g., Online Ordering, Mobile App, POS)",
+          "Initiatives — Cross-product work efforts. Your existing projects become initiatives after migration.",
+          "Stakeholders — People or groups you work with (e.g., VP of Engineering, Legal Team)",
+        ],
+      },
+      {
+        heading: "Browsing Entities",
+        paragraphs: [
+          "Click on an intelligence workspace in the sidebar to open it. You'll see tabs at the top: Projects, Captures, Products, and Entities. Select the Entities tab to see all entities grouped by type with search and filter pills. Click any entity to view its detail page.",
+          "The Products tab shows only product entities — things you ship like apps, platforms, and services.",
+        ],
+      },
+      {
+        heading: "Entity Detail Page",
+        paragraphs: [
+          "Each entity has a detail page with five tabs: Overview (name, description, foundational context), Journal (timestamped knowledge entries), Links (connected products/initiatives), Memory (AI-synthesized knowledge — coming soon), and Mentions (where this entity is referenced — coming soon).",
+        ],
+      },
+      {
+        heading: "Entity Journal (Brain Dump)",
+        paragraphs: [
+          "The Journal tab is where you record evolving knowledge about an entity. Click 'Add Entry' and write anything — decisions made, preferences, constraints, history. Each entry is timestamped and can be edited or deleted later.",
+          "This is separate from Foundational Context (Overview tab), which is for permanent truths that rarely change. Journal entries capture knowledge that evolves over time. When the AI memory refresh system is built, it will synthesize both sources into a coherent ai_memory blob.",
+        ],
+        tip: "Think of Foundational Context as the entity's Wikipedia intro, and the Journal as a running log of everything you learn about it.",
+      },
+      {
+        heading: "Linking Products to Projects",
+        paragraphs: [
+          "After migrating your projects to the entity system, you can manage product links directly from the project properties sidebar. Look for the Products section — it shows linked products as removable pills, and you can add more from a dropdown.",
+          "Initiatives can span multiple products, and you can change these links at any time without going back to the migration tool.",
+        ],
+      },
+      {
+        heading: "Capture Detail Page",
+        paragraphs: [
+          "Click any capture to open its full detail page. This mirrors the project notes experience: inline title editing, Tiptap rich text editor with auto-save, capture metadata (type, date, optional project link), and a linked tasks section.",
+          "You can create tasks inline from a capture by selecting a target project. Each capture can also use 'Extract Tasks with AI' — the AI analyzes your content and suggests tasks. Since captures aren't tied to a single project, you can assign each extracted task to a different project.",
+        ],
+      },
+      {
+        tip: "Captures use the same rich text editor and AI extraction as project notes — the full editing experience is identical.",
+      },
+      {
+        heading: "#Entity Mentions",
+        paragraphs: [
+          "In any note, capture, or task description, type # to trigger an entity autocomplete dropdown. This works in all Tiptap rich text editors across the app.",
+          "As you type after #, the dropdown filters entities by name. Use the arrow keys to navigate and Enter to insert. The mention appears as a colored inline pill — blue for products, amber for initiatives, green for stakeholders.",
+        ],
+      },
+      {
+        heading: "How Mentions Are Tracked",
+        paragraphs: [
+          "When you save content containing #mentions, Ascend automatically tracks which entities are referenced in which documents. This is visible on the entity detail page under the Mentions tab.",
+          "Mentions power the AI memory refresh: when you click 'Refresh Memory' on an entity page, the AI reads all documents that mention that entity to synthesize knowledge.",
+        ],
+        tip: "Use # to link entities in notes. Use @ in comments to mention team members. These are separate systems — # is for entity linking, @ is for user notifications.",
       },
     ],
   },

@@ -6,6 +6,8 @@
  * Handles fetching and mutating captures (intelligence workspace notes).
  * Captures are notes with capture_type set, scoped to a workspace.
  * Separate from use-notes.ts to avoid coupling standard notes with capture logic.
+ *
+ * Captures support linked tasks via the note_tasks junction table (same as notes).
  */
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -14,8 +16,15 @@ import { getClient } from "@/lib/supabase/client-manager";
 import { withTimeout, TIMEOUTS } from "@/lib/utils/with-timeout";
 import { logger } from "@/lib/logger/logger";
 import { useAuth } from "@/hooks/use-auth";
-import type { Note, CaptureWithRelations } from "@/types";
-import type { NoteInsert, NoteUpdate } from "@/types/database";
+import { taskKeys } from "@/hooks/use-tasks";
+import { enrichTasksWithProducts } from "@/lib/utils/enrich-task-products";
+import type { Note, Task, TaskWithProject, CaptureWithRelations, NoteTaskJoinResult } from "@/types";
+import type { NoteInsert, NoteUpdate, Project } from "@/types/database";
+
+/** Shape returned by Supabase when selecting `*, project:projects(*)` from notes. */
+interface NoteWithProjectRow extends Note {
+  project: Project | null;
+}
 import {
   createCaptureSchema,
   updateCaptureSchema,
@@ -23,6 +32,7 @@ import {
   type UpdateCaptureInput,
 } from "@/lib/validation";
 import { toast } from "sonner";
+
 
 // Query keys for cache management
 export const captureKeys = {
@@ -63,7 +73,8 @@ function formatDayLabel(date: Date): string {
 }
 
 /**
- * Fetch captures for a workspace, ordered by occurred_at/created_at desc
+ * Fetch captures for a workspace, ordered by occurred_at/created_at desc.
+ * List view does NOT fetch linked tasks (kept lightweight).
  */
 async function fetchCaptures(
   workspaceId: string
@@ -89,21 +100,22 @@ async function fetchCaptures(
 
   if (result.error) throw result.error;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return ((result.data || []) as any[]).map((row) => ({
+  return ((result.data || []) as unknown as NoteWithProjectRow[]).map((row) => ({
     ...row,
     project: row.project ?? null,
+    tasks: [], // List view doesn't load tasks
   })) as CaptureWithRelations[];
 }
 
 /**
- * Fetch a single capture by ID with project relation
+ * Fetch a single capture by ID with project relation AND linked tasks
  */
 async function fetchCaptureById(
   captureId: string
 ): Promise<CaptureWithRelations> {
   const supabase = getClient();
 
+  // Fetch capture with project
   const result = await withTimeout(
     supabase
       .from("notes")
@@ -121,11 +133,35 @@ async function fetchCaptureById(
 
   if (result.error) throw result.error;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const data = result.data as any;
+  // Fetch linked tasks via note_tasks junction table
+  const noteTasksResult = await withTimeout(
+    supabase
+      .from("note_tasks")
+      .select(`
+        task_id,
+        task:tasks(*, assignee:profiles(*), project:projects(*))
+      `)
+      .eq("note_id", captureId),
+    TIMEOUTS.DATA_QUERY,
+    "Fetching capture tasks timed out"
+  );
+
+  if (noteTasksResult.error) throw noteTasksResult.error;
+
+  // Extract tasks, filtering out archived
+  const joinResults = (noteTasksResult.data || []) as unknown as NoteTaskJoinResult[];
+  const tasks = joinResults
+    .map((nt) => nt.task)
+    .filter((task): task is TaskWithProject => task !== null && !task.is_archived);
+
+  // Enrich tasks with product labels from entity links
+  await enrichTasksWithProducts(tasks);
+
+  const data = result.data as unknown as NoteWithProjectRow;
   return {
     ...data,
     project: data.project ?? null,
+    tasks,
   } as CaptureWithRelations;
 }
 
@@ -204,7 +240,7 @@ export function useCaptures(workspaceId: string | null) {
 }
 
 /**
- * Hook to fetch a single capture
+ * Hook to fetch a single capture with linked tasks
  */
 export function useCapture(captureId: string | null) {
   const queryClient = useQueryClient();
@@ -244,7 +280,7 @@ export function useCapture(captureId: string | null) {
 }
 
 /**
- * Hook for capture mutations (create, update, delete)
+ * Hook for capture mutations (create, update, delete, task linking)
  */
 export function useCaptureMutations() {
   const [loading, setLoading] = useState(false);
@@ -400,10 +436,120 @@ export function useCaptureMutations() {
     [queryClient]
   );
 
+  /**
+   * Create a task and link it to a capture via note_tasks.
+   * The task is assigned to a specific project.
+   */
+  const createTaskFromCapture = useCallback(
+    async (
+      captureId: string,
+      projectId: string,
+      taskData: { title: string; description?: string }
+    ): Promise<Task | null> => {
+      if (!user) {
+        toast.error("You must be logged in");
+        return null;
+      }
+
+      try {
+        setLoading(true);
+        const supabase = getClient();
+
+        // Create the task
+        const { data: taskResult, error: taskError } = await supabase
+          .from("tasks")
+          .insert({
+            project_id: projectId,
+            title: taskData.title.trim(),
+            description: taskData.description ?? null,
+            status: "todo",
+            priority: "medium",
+            position: 0,
+            created_by: user.id,
+            assignee_id: user.id,
+            source_type: "manual",
+          })
+          .select()
+          .single();
+
+        if (taskError) throw taskError;
+
+        const createdTask = taskResult as Task;
+
+        // Link task to capture via note_tasks junction table
+        const { error: linkError } = await supabase
+          .from("note_tasks")
+          .insert({
+            note_id: captureId,
+            task_id: createdTask.id,
+          });
+
+        if (linkError) {
+          logger.error("Failed to link task to capture", {
+            captureId,
+            taskId: createdTask.id,
+            error: linkError,
+          });
+        }
+
+        // Invalidate caches
+        queryClient.invalidateQueries({ queryKey: captureKeys.detail(captureId) });
+        queryClient.invalidateQueries({ queryKey: taskKeys.lists() });
+
+        return createdTask;
+      } catch (err) {
+        logger.error("Error creating task from capture", {
+          captureId,
+          projectId,
+          error: err,
+        });
+        toast.error("Failed to create task");
+        return null;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [user, queryClient]
+  );
+
+  /**
+   * Link an existing task to a capture
+   */
+  const linkTaskToCapture = useCallback(
+    async (captureId: string, taskId: string): Promise<boolean> => {
+      try {
+        const supabase = getClient();
+
+        const { error } = await supabase
+          .from("note_tasks")
+          .insert({
+            note_id: captureId,
+            task_id: taskId,
+          });
+
+        if (error) throw error;
+
+        queryClient.invalidateQueries({ queryKey: captureKeys.detail(captureId) });
+        return true;
+      } catch (err) {
+        logger.error("Error linking task to capture", {
+          captureId,
+          taskId,
+          error: err,
+        });
+        toast.error("Failed to link task");
+        return false;
+      }
+    },
+    [queryClient]
+  );
+
   return {
     createCapture,
     updateCapture,
     deleteCapture,
+    createTaskFromCapture,
+    linkTaskToCapture,
     loading,
   };
 }

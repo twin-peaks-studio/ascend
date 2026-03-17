@@ -16,8 +16,11 @@ import {
   useCallback,
   useMemo,
 } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useRef } from "react";
 import { useWorkspaces } from "@/hooks/use-workspaces";
+import { useAuth } from "@/hooks/use-auth";
+import { getClient } from "@/lib/supabase/client-manager";
+import { logger } from "@/lib/logger/logger";
 import type { Workspace } from "@/types";
 
 const STORAGE_KEY = "active-workspace-id";
@@ -54,8 +57,9 @@ interface WorkspaceProviderProps {
 }
 
 export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
-  const { workspaces, loading } = useWorkspaces();
-  const queryClient = useQueryClient();
+  const { workspaces, loading, refetch } = useWorkspaces();
+  const { user } = useAuth();
+  const lazyCreating = useRef(false);
 
   // Initialize from localStorage
   const [activeId, setActiveId] = useState<string | null>(() => {
@@ -67,13 +71,53 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
   useEffect(() => {
     if (!loading && workspaces.length > 0 && !activeId) {
       const firstId = workspaces[0].id;
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setActiveId(firstId);
       localStorage.setItem(STORAGE_KEY, firstId);
     }
-    if (!loading && workspaces.length === 0) {
-      console.warn("[workspace-context] No workspaces available — activeWorkspace will be null");
-    }
   }, [loading, workspaces, activeId]);
+
+  // Lazy-create a default workspace for existing users with zero workspaces
+  useEffect(() => {
+    if (loading || !user || workspaces.length > 0 || lazyCreating.current) return;
+    lazyCreating.current = true;
+
+    (async () => {
+      try {
+        const supabase = getClient();
+        const { data: workspace, error: wsError } = await supabase
+          .from("workspaces")
+          .insert({ name: "My Workspace", type: "standard", created_by: user.id })
+          .select("id")
+          .single();
+
+        if (wsError) {
+          logger.error("Error lazy-creating workspace", { userId: user.id, error: wsError });
+          return;
+        }
+
+        const wsId = (workspace as { id: string }).id;
+        const { error: memberError } = await supabase
+          .from("workspace_members")
+          .insert({
+            workspace_id: wsId,
+            user_id: user.id,
+            role: "owner",
+            invited_by: user.id,
+          });
+
+        if (memberError) {
+          logger.error("Error adding user to lazy-created workspace", { error: memberError });
+          return;
+        }
+
+        // Refetch workspaces so the new one appears
+        refetch();
+      } catch (err) {
+        logger.error("Unexpected error in lazy workspace creation", { error: err });
+      }
+    })();
+  }, [loading, user, workspaces.length, refetch]);
 
   // If the stored workspace ID doesn't match any workspace, reset
   useEffect(() => {
@@ -84,6 +128,7 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
       !workspaces.find((w) => w.id === activeId)
     ) {
       const firstId = workspaces[0].id;
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setActiveId(firstId);
       localStorage.setItem(STORAGE_KEY, firstId);
     }
@@ -93,12 +138,8 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
     (workspaceId: string) => {
       setActiveId(workspaceId);
       localStorage.setItem(STORAGE_KEY, workspaceId);
-
-      // Clear all query caches when switching workspaces
-      // so data is refetched for the new workspace context
-      queryClient.clear();
     },
-    [queryClient]
+    []
   );
 
   const activeWorkspace = useMemo(
@@ -106,7 +147,8 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
     [workspaces, activeId]
   );
 
-  const isIntelligence = activeWorkspace?.type === "intelligence";
+  // Show intelligence features if any workspace is intelligence type
+  const isIntelligence = workspaces.some((w) => w.type === "intelligence");
 
   const value = useMemo(
     () => ({

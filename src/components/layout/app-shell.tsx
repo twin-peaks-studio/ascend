@@ -9,6 +9,7 @@ import { SearchDialog } from "../search";
 import { AuthDialog } from "../auth";
 import { FeedbackDialog } from "../feedback-dialog";
 import { ConversationalTaskModal } from "../ai";
+
 import { TimerProvider, useTimerContext } from "@/contexts/timer-context";
 import { useSidebar } from "@/hooks/use-sidebar";
 import { useAuth } from "@/hooks/use-auth";
@@ -278,6 +279,7 @@ export function AppShell({
             both the desktop sidebar button and the mobile bottom nav Sparkles button.
             Uses usePathname() internally to detect project context. */}
         <ConversationalTaskModal open={showAiCreate} onOpenChange={setShowAiCreate} />
+
 
         {/* Task dialog for timer indicator clicks */}
         <TimerTaskNavigation />

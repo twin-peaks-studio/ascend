@@ -33,7 +33,9 @@ export function DatePicker({
 
   // Sync pending when value changes externally (while popover is closed)
   const prevValueRef = React.useRef(value);
+  // eslint-disable-next-line react-hooks/refs
   if (prevValueRef.current !== value) {
+    // eslint-disable-next-line react-hooks/refs
     prevValueRef.current = value;
     if (!open) setPendingDate(value);
   }

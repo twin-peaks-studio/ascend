@@ -80,12 +80,30 @@ export interface ProjectWithRelations extends DBProject {
 }
 
 /**
+ * Lightweight product info attached to tasks via project → entity → entity_links
+ */
+export interface TaskProduct {
+  id: string;
+  name: string;
+}
+
+/**
  * Task with project relation loaded (project is optional)
  */
 export interface TaskWithProject extends DBTask {
   project: DBProject | null;
   assignee?: DBProfile | null;
   attachments?: DBAttachment[];
+  products?: TaskProduct[];
+}
+
+/**
+ * Shape returned by Supabase when selecting `task:tasks(...)` from `note_tasks`.
+ * Used by both use-notes.ts and use-captures.ts.
+ */
+export interface NoteTaskJoinResult {
+  task_id: string;
+  task: TaskWithProject | null;
 }
 
 /**
@@ -305,6 +323,7 @@ export interface WorkspaceMemberWithProfile extends DBWorkspaceMember {
  */
 export interface CaptureWithRelations extends DBNote {
   project: DBProject | null;
+  tasks: TaskWithProject[];
 }
 
 // ─── Feedback Forms ───────────────────────────────────────────────────────────

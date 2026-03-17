@@ -63,7 +63,7 @@ You just signed up or decided to try Intelligence Mode. Here's what happens:
 
 Now your workspace has context. Here's a typical day:
 
-1. **Morning standup capture** — Before your 9am standup, click the quick capture button in the sidebar. Type "Standup — discussed API timeout, Sarah to follow up with partners." Hit enter. A capture is created under "Today" with the current time.
+1. **Morning standup capture** — Before your 9am standup, navigate to the Captures tab in your workspace. Click "New Capture" and type "Standup — discussed API timeout, Sarah to follow up with partners." Hit enter. A capture is created under "Today" with the current time.
 
 2. **Meeting notes with details** — After a longer meeting, go to `/captures` and create a new capture. Select type "Meeting Note", set the date/time to when the meeting happened, write detailed notes, and tag it with entities: "Platform API", "Sarah", "Partner Team."
 
@@ -241,8 +241,8 @@ Each MVP is independently deployable and adds real usable value. Each is tested 
 | MVP | Name | What It Delivers | Status |
 |-----|------|-----------------|--------|
 | **0** | Initiative Documentation | This document + plan alignment | ✅ Complete |
-| **1** | Workspaces + Captures | Workspace isolation, daily journal view, quick capture | ✅ Complete (pending SQL migration) |
-| **2** | Entities + Brain Dump | Entity tagging system, brain dump extraction, entity detail pages | 🔲 Not Started |
+| **1** | Workspaces + Captures | Workspace isolation, daily journal view, capture creation via workspace tabs | ✅ Complete (pending SQL migration) |
+| **2** | Entities + Brain Dump | Entity tagging system, brain dump extraction, entity detail pages, **product label on all task views** | 🔲 Not Started |
 | **3** | Embeddings + Semantic Search | Auto-embedding, vector search, enhanced search dialog | 🔲 Not Started |
 | **4** | AI Chat (RAG + Task Creation) | Chat panel, source citations, model selector, task creation from chat | 🔲 Not Started |
 | **5** | Oracle (Proactive Monitoring) | Rule-based detectors, daily insights, configurable alerts | 🔲 Not Started |
@@ -275,7 +275,7 @@ Existing patterns and components that are being reused, saving development time 
 | Notes system (hook, editor, junction tables) | `src/hooks/use-notes.ts`, `src/types/database.ts` | Captures evolve the existing `notes` table (add columns, don't create a new table). The `note_tasks` junction table continues to work. Standard workspace notes are completely unchanged. |
 | Rate limiting (Upstash Redis, middleware, bucket configs) | `src/lib/rate-limit/limiter.ts` | Add new bucket configs (`aiBrainDump`, `aiChat`, `aiEmbed`). Zero code changes to the middleware — just add config entries. |
 | Sheet/Drawer/Dialog UI primitives | `src/components/ui/sheet.tsx`, `drawer.tsx`, `dialog.tsx` | All new UIs use these for responsive mobile/desktop behavior. Chat panel = right Sheet (desktop) / bottom Drawer (mobile). Brain dump review = Dialog. Capture editor = Sheet. |
-| Sidebar navigation structure | `src/components/layout/sidebar.tsx` | Add conditional nav items for intelligence workspaces (Captures, Entities, Chat, Brain Dump). Items only appear when `workspace.type === 'intelligence'`. |
+| Sidebar navigation structure | `src/components/layout/sidebar.tsx` | Add conditional nav items for intelligence workspaces (Captures, Chat, Brain Dump). Items only appear when `workspace.type === 'intelligence'`. Entities/Products are accessed via workspace tabs, not sidebar links. |
 | AppShell layout with providers | `src/components/layout/app-shell.tsx` | Wrap children in new `WorkspaceProvider`. Render `ChatPanel` for intelligence workspaces. No structural changes to existing layout. |
 | Search dialog | `src/components/search/search-dialog.tsx`, `src/hooks/use-search.ts` | Add semantic search tab for intelligence workspaces. Existing fuzzy search remains for standard workspaces. |
 | Inngest background jobs (events, step functions, cron) | `src/inngest/functions/task-due-reminder.ts`, `src/inngest/events.ts` | Embedding pipeline and Oracle both use Inngest. Same pattern: define events → create functions that listen → use service client for DB access. |
@@ -378,8 +378,8 @@ All Memory Layer features must work on mobile. The approach:
 | Workspace switcher | Sidebar dropdown | Sidebar dropdown (same) |
 | Captures / Daily journal | Full-width list | Full-width list (same layout) |
 | Capture editor | Right Sheet panel | Bottom Sheet / full-screen |
-| Quick capture | Sidebar button → popover | Bottom nav button → Drawer |
-| Entity list | Grid/list view | List view |
+| Entity list (workspace tab) | Grid/list view | List view |
+| Product label on task rows | Pill/badge next to task title | Truncated pill (max 1, "+N" overflow) |
 | Entity tag picker | Inline combobox | Inline combobox (same) |
 | Brain dump input | Full-page textarea | Full-page textarea (same) |
 | Brain dump review | Two-column layout | Single-column stacked |

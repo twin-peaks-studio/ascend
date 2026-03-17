@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { format } from "date-fns";
 import {
   Circle,
@@ -8,6 +8,7 @@ import {
   Sparkles,
   Loader2,
   RefreshCw,
+  Package,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -24,6 +25,8 @@ import { isOverdue } from "@/lib/date-utils";
 import { useProjects } from "@/hooks/use-projects";
 import { useProfiles } from "@/hooks/use-profiles";
 import { useAuth } from "@/hooks/use-auth";
+import { useWorkspaceContext } from "@/contexts/workspace-context";
+import { WorkspaceFilter } from "@/components/filters";
 import type { TaskWithProject } from "@/types";
 import type { CreateTaskInput } from "@/lib/validation";
 
@@ -34,7 +37,12 @@ export default function TodayPage() {
   const { projects } = useProjects();
   const { profiles } = useProfiles();
   const { user } = useAuth();
+  const { workspaces } = useWorkspaceContext();
   const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const [selectedWorkspaceIds, setSelectedWorkspaceIds] = useState<string[]>([]);
+  const handleWorkspacesChange = useCallback((ids: string[]) => {
+    setSelectedWorkspaceIds(ids);
+  }, []);
   const {
     estimateAll,
     estimateOne,
@@ -46,7 +54,32 @@ export default function TodayPage() {
     error: estimateError,
   } = useTaskEstimation();
 
-  const allTasks = groups.flatMap((g) => g.tasks);
+  // Filter groups by workspace if filter is active
+  const workspaceProjectIds = useMemo(() => {
+    if (selectedWorkspaceIds.length === 0) return null;
+    const ids = new Set<string>();
+    for (const project of projects) {
+      if (project.workspace_id && selectedWorkspaceIds.includes(project.workspace_id)) {
+        ids.add(project.id);
+      }
+    }
+    return ids;
+  }, [selectedWorkspaceIds, projects]);
+
+  const filteredGroups = useMemo(() => {
+    if (!workspaceProjectIds) return groups;
+    return groups
+      .filter((g) => g.projectId && workspaceProjectIds.has(g.projectId))
+      .map((g) => ({
+        ...g,
+        tasks: g.tasks.filter((t) => t.project_id && workspaceProjectIds.has(t.project_id)),
+      }))
+      .filter((g) => g.tasks.length > 0);
+  }, [groups, workspaceProjectIds]);
+
+  const allTasks = filteredGroups.flatMap((g) => g.tasks);
+  const filteredTotalCount = allTasks.length;
+  const filteredOverdueCount = allTasks.filter((t) => t.status !== "done" && t.due_date && isOverdue(t.due_date)).length;
 
   const handleStatusToggle = useCallback(
     async (task: TaskWithProject) => {
@@ -93,36 +126,46 @@ export default function TodayPage() {
               <div className="flex items-center gap-2">
                 <h1 className="text-xl font-semibold">Today</h1>
                 <span className="text-sm text-muted-foreground">{todayLabel}</span>
-                {totalCount > 0 && (
+                {filteredTotalCount > 0 && (
                   <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs font-medium">
-                    {totalCount}
+                    {filteredTotalCount}
                   </span>
                 )}
-                {overdueCount > 0 && (
+                {filteredOverdueCount > 0 && (
                   <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-900/30 dark:text-red-400">
-                    {overdueCount} overdue
+                    {filteredOverdueCount} overdue
                   </span>
                 )}
               </div>
             </div>
 
-            {/* Estimate My Day button */}
-            {totalCount > 0 && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => estimateAll(allTasks)}
-                disabled={estimating}
-                className="gap-2"
-              >
-                {estimating ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Sparkles className="h-4 w-4" />
-                )}
-                {hasEstimates ? "Re-estimate" : "Estimate My Day"}
-              </Button>
-            )}
+            <div className="flex items-center gap-2">
+              {workspaces.length > 1 && (
+                <WorkspaceFilter
+                  workspaces={workspaces}
+                  selectedWorkspaceIds={selectedWorkspaceIds}
+                  onWorkspacesChange={handleWorkspacesChange}
+                />
+              )}
+
+              {/* Estimate My Day button */}
+              {filteredTotalCount > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => estimateAll(allTasks)}
+                  disabled={estimating}
+                  className="gap-2"
+                >
+                  {estimating ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Sparkles className="h-4 w-4" />
+                  )}
+                  {hasEstimates ? "Re-estimate" : "Estimate My Day"}
+                </Button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -147,7 +190,7 @@ export default function TodayPage() {
           )}
 
           {/* Empty state */}
-          {!loading && totalCount === 0 && (
+          {!loading && filteredTotalCount === 0 && (
             <div className="flex flex-col items-center justify-center py-24 text-center">
               <CheckCircle2 className="h-12 w-12 text-green-500 mb-4" />
               <h2 className="text-lg font-medium mb-1">You&apos;re all caught up!</h2>
@@ -159,7 +202,7 @@ export default function TodayPage() {
 
           {/* Task groups */}
           {!loading &&
-            groups.map((group) => (
+            filteredGroups.map((group) => (
               <div key={group.projectId ?? "__no_project__"} className="mb-6">
                 {/* Group header */}
                 <div className="flex items-center gap-2 mb-2 px-1">
@@ -279,6 +322,13 @@ function TodayTaskRow({
 
         {/* Badges row */}
         <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+          {task.products && task.products.length > 0 && (
+            <span className="inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] font-medium bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400">
+              <Package className="h-2.5 w-2.5" />
+              {task.products[0].name}
+              {task.products.length > 1 && ` +${task.products.length - 1}`}
+            </span>
+          )}
           {overdue && (
             <span className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
               Overdue

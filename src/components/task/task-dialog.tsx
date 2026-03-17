@@ -22,6 +22,8 @@ interface TaskDialogProps {
   defaultSectionId?: string | null;
   onSubmit: (data: CreateTaskInput | UpdateTaskInput) => Promise<void>;
   loading?: boolean;
+  /** When provided, enables #entity mentions in the description editor */
+  workspaceId?: string | null;
 }
 
 export function TaskDialog({
@@ -36,6 +38,7 @@ export function TaskDialog({
   defaultSectionId,
   onSubmit,
   loading = false,
+  workspaceId,
 }: TaskDialogProps) {
   const isEditing = !!task;
 
@@ -61,6 +64,7 @@ export function TaskDialog({
           onCancel={() => onOpenChange(false)}
           isEditing={isEditing}
           loading={loading}
+          workspaceId={workspaceId}
         />
       </DialogContent>
     </Dialog>

@@ -39,6 +39,11 @@ import {
   Paperclip,
   KeyRound,
   PanelRight,
+  Package,
+  CheckSquare,
+  Network,
+  Keyboard,
+  Hash,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -61,6 +66,124 @@ interface ChangelogEntry {
 }
 
 const changelog: ChangelogEntry[] = [
+  {
+    date: "March 17, 2026",
+    version: "0.23.0",
+    title: "#Entity Mentions in Notes & Captures",
+    description: "Type # in any note or capture to link entities (products, initiatives, stakeholders) inline. Mentions render as colored pills and are tracked in the entity_mentions table for AI memory.",
+    features: [
+      {
+        icon: Hash,
+        title: "#Mention Autocomplete",
+        description: "Type # in any Tiptap editor (notes, captures, task descriptions) to see a filterable dropdown of all entities in the current workspace. Select an entity to insert an inline pill badge.",
+        tag: "new",
+      },
+      {
+        icon: Network,
+        title: "Mention Tracking & Persistence",
+        description: "Entity mentions are automatically synced to the entity_mentions table when content is saved. This powers the Mentions tab on entity detail pages and feeds into AI memory refresh.",
+        tag: "new",
+      },
+    ],
+  },
+  {
+    date: "March 16, 2026",
+    version: "0.22.0",
+    title: "Product Labels + Task Rollup on Entity Pages",
+    description: "Every task now shows which product it belongs to. Entity detail pages show task progress across linked initiatives and projects.",
+    features: [
+      {
+        icon: Package,
+        title: "Product Labels on Tasks",
+        description: "Tasks linked to a product (via their project's entity) now display a purple product badge. Visible on the global tasks page, project tasks, kanban boards, the Today page, and note/capture task lists.",
+        tag: "new",
+      },
+      {
+        icon: CheckSquare,
+        title: "Task Rollup on Entity Pages",
+        description: "Product entity pages now show task progress for each linked initiative — with a progress bar and status breakdown. Initiative entity pages show their project's active tasks directly.",
+        tag: "new",
+      },
+    ],
+  },
+  {
+    date: "March 16, 2026",
+    version: "0.21.1",
+    title: "Fix — Stale Tasks After AI Extraction & Deletion on Notes",
+    description: "Fixed cache invalidation bugs where deleting an AI-extracted task from a note left stale data on the note page and project tasks page.",
+    features: [
+      {
+        icon: Trash2,
+        title: "Task Deletion Syncs Note Cache",
+        description: "Deleting a task that was linked to a note now correctly removes it from the note's task list. Previously, navigating back to the note would still show the deleted task until a hard refresh.",
+        tag: "fix",
+      },
+      {
+        icon: RefreshCw,
+        title: "AI-Extracted Tasks Appear Immediately",
+        description: "After AI task extraction creates tasks on a note, the project page's active task counter and task list now update immediately. Previously, newly created tasks wouldn't appear on the project page until a hard refresh or ~30 second cache expiry.",
+        tag: "fix",
+      },
+    ],
+  },
+  {
+    date: "March 16, 2026",
+    version: "0.21.0",
+    title: "Mobile Navigation — Workspaces First",
+    description: "The mobile bottom nav now shows Workspaces instead of Projects, reflecting the natural flow of navigating to a workspace first, then viewing its projects.",
+    features: [
+      {
+        icon: Smartphone,
+        title: "Workspaces in Mobile Nav",
+        description: "The mobile bottom navigation bar now links to Workspaces instead of Projects. Tap 'Spaces' to see all your workspaces, then select one to view its projects.",
+        tag: "improved",
+      },
+      {
+        icon: Layers,
+        title: "Workspaces List Page",
+        description: "A new /workspaces page shows all your workspaces in a simple grid. Tap any workspace to navigate to its detail page with projects, captures, and entities.",
+        tag: "new",
+      },
+    ],
+  },
+  {
+    date: "March 14, 2026",
+    version: "0.20.0",
+    title: "New — Entity System: Workspace Tabs for Products, Entities & Captures",
+    description: "Captures now have the full note experience: rich text editor, linked tasks, and AI task extraction. Entity detail pages include a Journal tab. Navigation between workspaces, projects, and entities works correctly in both directions.",
+    features: [
+      {
+        icon: Network,
+        title: "Entity & Product Tabs in Workspace",
+        description: "Intelligence workspaces now show Captures, Products, and Entities tabs when you click a workspace in the sidebar. Browse all entities grouped by type with search and filter, or view only products. Click any entity to see its detail page.",
+        tag: "new",
+      },
+      {
+        icon: BookOpen,
+        title: "Entity Journal (Brain Dump)",
+        description: "Each entity detail page now has a Journal tab for recording evolving knowledge. Add timestamped context entries about any product, initiative, or stakeholder. Journal entries will be synthesized into AI memory alongside foundational context during memory refresh.",
+        tag: "new",
+      },
+      {
+        icon: ArrowLeft,
+        title: "Workspace-Aware Navigation",
+        description: "Clicking a project or entity from a workspace now preserves the back-navigation link. The 'Back' button correctly returns you to the workspace you came from, not to a global page.",
+        tag: "improved",
+      },
+      {
+        icon: Layers,
+        title: "Product Linkage in Project Properties",
+        description: "Projects that have been migrated to the entity system now show a Products section in the properties sidebar. Add or remove product links with multi-select pills — no need to go back to the migration tool.",
+        tag: "new",
+      },
+      {
+        icon: FileText,
+        title: "Captures: Full Note Experience",
+        description: "Captures now have the same rich editing experience as project notes: Tiptap rich text editor with auto-save, linked tasks section, inline task creation, and AI task extraction. Each extracted task can be assigned to a different project.",
+        tag: "improved",
+      },
+    ],
+  },
   {
     date: "March 8, 2026",
     version: "0.19.1",

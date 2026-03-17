@@ -31,6 +31,8 @@ interface TaskFormProps {
   onCancel: () => void;
   isEditing?: boolean;
   loading?: boolean;
+  /** When provided, enables #entity mentions in the description editor */
+  workspaceId?: string | null;
 }
 
 export function TaskForm({
@@ -44,6 +46,7 @@ export function TaskForm({
   onCancel,
   isEditing = false,
   loading = false,
+  workspaceId,
 }: TaskFormProps) {
   const [title, setTitle] = useState(initialData?.title || "");
   const [description, setDescription] = useState(initialData?.description || "");
@@ -125,8 +128,9 @@ export function TaskForm({
         <RichTextEditor
           value={description}
           onChange={setDescription}
-          placeholder="Add a description..."
+          placeholder="Add a description... Use # to mention entities"
           minHeight={80}
+          workspaceId={workspaceId}
         />
       </div>
 

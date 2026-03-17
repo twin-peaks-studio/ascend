@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { useWorkspaceContext } from "@/contexts/workspace-context";
 import type { Project, ProjectStatus } from "@/types";
 import { PROJECT_COLORS } from "@/types";
 import type { CreateProjectInput, UpdateProjectInput } from "@/lib/validation";
@@ -23,6 +24,8 @@ interface ProjectFormProps {
   onCancel: () => void;
   isEditing?: boolean;
   loading?: boolean;
+  /** Pre-select a workspace (e.g., when creating from a workspace page) */
+  workspaceId?: string;
 }
 
 export function ProjectForm({
@@ -31,29 +34,67 @@ export function ProjectForm({
   onCancel,
   isEditing = false,
   loading = false,
+  workspaceId: preselectedWorkspaceId,
 }: ProjectFormProps) {
+  const { workspaces } = useWorkspaceContext();
   const [title, setTitle] = useState(initialData?.title || "");
   const [description, setDescription] = useState(initialData?.description || "");
   const [status, setStatus] = useState<ProjectStatus>(
     initialData?.status || "active"
   );
   const [color, setColor] = useState(initialData?.color || PROJECT_COLORS[0]);
+  const [selectedWorkspaceId, setSelectedWorkspaceId] = useState(
+    preselectedWorkspaceId || workspaces[0]?.id || ""
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!title.trim()) return;
 
-    await onSubmit({
-      title: title.trim(),
-      description: description.trim() || null,
-      status,
-      color,
-    });
+    if (!isEditing) {
+      if (!selectedWorkspaceId) return;
+      await onSubmit({
+        workspace_id: selectedWorkspaceId,
+        title: title.trim(),
+        description: description.trim() || null,
+        status,
+        color,
+      });
+    } else {
+      await onSubmit({
+        title: title.trim(),
+        description: description.trim() || null,
+        status,
+        color,
+      });
+    }
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {/* Workspace selector (only when creating) */}
+      {!isEditing && workspaces.length > 1 && (
+        <div className="space-y-2">
+          <Label htmlFor="workspace">Workspace</Label>
+          <Select
+            value={selectedWorkspaceId}
+            onValueChange={setSelectedWorkspaceId}
+          >
+            <SelectTrigger id="workspace">
+              <SelectValue placeholder="Select workspace" />
+            </SelectTrigger>
+            <SelectContent>
+              {workspaces.map((ws) => (
+                <SelectItem key={ws.id} value={ws.id}>
+                  {ws.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
       {/* Title */}
       <div className="space-y-2">
         <Label htmlFor="title">Project Name *</Label>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useMemo } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -48,7 +48,9 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { useWorkspaceContext } from "@/contexts/workspace-context";
 import { useProject, useProjectMutations } from "@/hooks/use-projects";
+import { useProjectProducts } from "@/hooks/use-project-products";
 import { useTaskMutations } from "@/hooks/use-tasks";
 import { useProfiles } from "@/hooks/use-profiles";
 import { useAuth } from "@/hooks/use-auth";
@@ -72,9 +74,13 @@ import { STATUS_CONFIG, PRIORITY_CONFIG } from "@/types";
 export default function ProjectDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const projectId = params.id as string;
+  const workspaceId = searchParams.get("workspace");
 
+  const { activeWorkspace } = useWorkspaceContext();
   const { project, setProject, loading, refetch } = useProject(projectId);
+  const projectProducts = useProjectProducts(project?.entity_id);
   const { documents, refetch: refetchDocuments } = useProjectDocuments(projectId);
   const { profiles } = useProfiles();
   const { user } = useAuth();
@@ -90,12 +96,12 @@ export default function ProjectDetailPage() {
   // Filter to only show active tasks (not done and not archived), sorted by priority (highest first)
   const activeTasks = useMemo(() => {
     if (!project?.tasks) return [];
-    const filtered = project.tasks.filter(
-      (task) => task.status !== "done" && !task.is_archived
-    );
+    const filtered = project.tasks
+      .filter((task) => task.status !== "done" && !task.is_archived)
+      .map((task) => ({ ...task, products: projectProducts }));
     // Default sort by priority (highest first) for the project overview
     return sortTasks(filtered, "priority", "desc");
-  }, [project]);
+  }, [project, projectProducts]);
 
   // Inline editing state - use project values directly as initial values
   // Use projectId as key to reset state when navigating between projects
@@ -362,9 +368,9 @@ export default function ProjectDetailPage() {
         <div className="border-b px-4 py-2 flex items-center justify-between bg-background">
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" asChild>
-              <Link href="/projects">
+              <Link href={workspaceId ? `/workspaces/${workspaceId}` : "/projects"}>
                 <ArrowLeft className="h-4 w-4 mr-1" />
-                Projects
+                {workspaceId ? "Workspace" : "Projects"}
               </Link>
             </Button>
             <span className="text-muted-foreground">/</span>
@@ -832,6 +838,7 @@ export default function ProjectDetailPage() {
         defaultProjectId={projectId}
         onSubmit={handleCreateTask}
         loading={taskMutationLoading}
+        workspaceId={activeWorkspace?.id}
       />
 
       {/* Document create dialog */}

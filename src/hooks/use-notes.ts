@@ -15,9 +15,10 @@ import { withTimeout, TIMEOUTS } from "@/lib/utils/with-timeout";
 import { logger } from "@/lib/logger/logger";
 import { useAuth } from "@/hooks/use-auth";
 import { useWorkspaceContext } from "@/contexts/workspace-context";
-import type { Note, NoteWithRelations, Task, TaskWithProject } from "@/types";
+import type { Note, NoteWithRelations, Task, TaskWithProject, NoteTaskJoinResult } from "@/types";
 import type { NoteInsert, NoteUpdate, NoteTaskInsert } from "@/types/database";
 import { taskKeys } from "@/hooks/use-tasks";
+import { enrichTasksWithProducts } from "@/lib/utils/enrich-task-products";
 import {
   createNoteSchema,
   updateNoteSchema,
@@ -26,14 +27,6 @@ import {
 } from "@/lib/validation";
 import { toast } from "sonner";
 
-/**
- * Type for the junction table query result when fetching tasks linked to a note.
- * Supabase returns this shape when we select `task:tasks(*, assignee:profiles(*), project:projects(*))` from note_tasks.
- */
-interface NoteTaskJoinResult {
-  task_id: string;
-  task: TaskWithProject | null;
-}
 
 // Query keys for cache management
 export const noteKeys = {
@@ -106,6 +99,9 @@ async function fetchNoteWithRelations(noteId: string): Promise<NoteWithRelations
   const tasks = joinResults
     .map((nt) => nt.task)
     .filter((task): task is TaskWithProject => task !== null && !task.is_archived);
+
+  // Enrich tasks with product labels from entity links
+  await enrichTasksWithProducts(tasks);
 
   return {
     ...noteResult.data,
@@ -191,13 +187,14 @@ export function useNoteMutations() {
   const queryClient = useQueryClient();
 
   const createNote = useCallback(
-    async (input: CreateNoteInput): Promise<Note | null> => {
+    async (input: CreateNoteInput, workspaceId?: string): Promise<Note | null> => {
+      const wsId = workspaceId ?? activeWorkspace?.id;
       if (!user) {
         toast.error("You must be logged in to create a note");
         return null;
       }
 
-      if (!activeWorkspace) {
+      if (!wsId) {
         toast.error("No workspace selected");
         return null;
       }
@@ -209,7 +206,7 @@ export function useNoteMutations() {
         const validated = createNoteSchema.parse(input);
 
         const insertData: NoteInsert = {
-          workspace_id: activeWorkspace.id,
+          workspace_id: wsId,
           project_id: validated.project_id,
           title: validated.title,
           content: validated.content ?? null,

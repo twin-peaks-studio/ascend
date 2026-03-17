@@ -34,9 +34,10 @@ function formatTime(dateStr: string): string {
 
 interface CaptureRowProps {
   capture: CaptureWithRelations;
+  workspaceId?: string;
 }
 
-function CaptureRow({ capture }: CaptureRowProps) {
+function CaptureRow({ capture, workspaceId }: CaptureRowProps) {
   const captureType = capture.capture_type as CaptureType;
   const config = CAPTURE_TYPE_CONFIG[captureType] ?? CAPTURE_TYPE_CONFIG.thought;
   const Icon = config.icon;
@@ -44,7 +45,7 @@ function CaptureRow({ capture }: CaptureRowProps) {
 
   return (
     <Link
-      href={`/captures/${capture.id}`}
+      href={`/captures/${capture.id}${workspaceId ? `?workspace=${workspaceId}` : ""}`}
       className="flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors hover:bg-accent group"
     >
       <Icon className="h-4 w-4 shrink-0 text-muted-foreground group-hover:text-foreground" />
@@ -69,9 +70,10 @@ function CaptureRow({ capture }: CaptureRowProps) {
 interface CaptureListProps {
   days: CaptureDay[];
   loading: boolean;
+  workspaceId?: string;
 }
 
-export function CaptureList({ days, loading }: CaptureListProps) {
+export function CaptureList({ days, loading, workspaceId }: CaptureListProps) {
   if (loading) {
     return (
       <div className="space-y-6">
@@ -113,7 +115,7 @@ export function CaptureList({ days, loading }: CaptureListProps) {
           </h3>
           <div className="space-y-0.5">
             {day.captures.map((capture) => (
-              <CaptureRow key={capture.id} capture={capture} />
+              <CaptureRow key={capture.id} capture={capture} workspaceId={workspaceId} />
             ))}
           </div>
         </div>

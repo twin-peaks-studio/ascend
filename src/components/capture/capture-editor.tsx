@@ -13,7 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { RichTextEditor } from "@/components/shared";
 import {
   Select,
   SelectContent,
@@ -33,6 +33,8 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useCaptureMutations } from "@/hooks/use-captures";
+import { useMentionSync } from "@/hooks/use-entity-mentions";
+import { parseEntityMentions } from "@/lib/tiptap/entity-mention-extension";
 import { useWorkspaceContext } from "@/contexts/workspace-context";
 import { useProjects } from "@/hooks/use-projects";
 import type { CaptureWithRelations } from "@/types";
@@ -48,14 +50,18 @@ const CAPTURE_TYPES: { value: CaptureType; label: string; icon: React.ElementTyp
 interface CaptureEditorProps {
   capture?: CaptureWithRelations | null;
   onSaved?: () => void;
+  /** Explicit workspace ID — preferred over activeWorkspace from context */
+  workspaceId?: string;
 }
 
-export function CaptureEditor({ capture, onSaved }: CaptureEditorProps) {
+export function CaptureEditor({ capture, onSaved, workspaceId: workspaceIdProp }: CaptureEditorProps) {
   const router = useRouter();
   const { activeWorkspace } = useWorkspaceContext();
+  const effectiveWorkspaceId = workspaceIdProp ?? activeWorkspace?.id;
   const { projects } = useProjects();
   const { createCapture, updateCapture, deleteCapture, loading } =
     useCaptureMutations();
+  const { syncMentions } = useMentionSync();
 
   const [title, setTitle] = useState(capture?.title ?? "");
   const [content, setContent] = useState(capture?.content ?? "");
@@ -77,6 +83,7 @@ export function CaptureEditor({ capture, onSaved }: CaptureEditorProps) {
   // Sync when capture changes (e.g. navigating between captures)
   useEffect(() => {
     if (capture) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setTitle(capture.title);
       setContent(capture.content ?? "");
       setCaptureType((capture.capture_type as CaptureType) ?? "thought");
@@ -88,7 +95,7 @@ export function CaptureEditor({ capture, onSaved }: CaptureEditorProps) {
   }, [capture?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSave = async () => {
-    if (!title.trim() || !activeWorkspace) return;
+    if (!title.trim() || !effectiveWorkspaceId) return;
 
     const occurredAtISO = occurredAt
       ? new Date(occurredAt).toISOString()
@@ -104,24 +111,36 @@ export function CaptureEditor({ capture, onSaved }: CaptureEditorProps) {
           project_id: projectId,
           occurred_at: occurredAtISO,
         },
-        activeWorkspace.id
+        effectiveWorkspaceId
       );
+      // Sync entity mentions
+      if (content && effectiveWorkspaceId) {
+        const mentions = parseEntityMentions(content);
+        await syncMentions("capture", capture.id, effectiveWorkspaceId, mentions.map((m) => m.entityId));
+      }
     } else {
-      await createCapture({
-        workspace_id: activeWorkspace.id,
+      const created = await createCapture({
+        workspace_id: effectiveWorkspaceId,
         title: title.trim(),
         content: content || null,
         capture_type: captureType,
         project_id: projectId,
         occurred_at: occurredAtISO,
       });
+      // Sync entity mentions for newly created capture
+      if (created && content && effectiveWorkspaceId) {
+        const mentions = parseEntityMentions(content);
+        if (mentions.length > 0) {
+          await syncMentions("capture", created.id, effectiveWorkspaceId, mentions.map((m) => m.entityId));
+        }
+      }
     }
     onSaved?.();
   };
 
   const handleDelete = async () => {
-    if (!capture || !activeWorkspace) return;
-    const deleted = await deleteCapture(capture.id, activeWorkspace.id);
+    if (!capture || !effectiveWorkspaceId) return;
+    const deleted = await deleteCapture(capture.id, effectiveWorkspaceId);
     if (deleted) {
       router.push("/captures");
     }
@@ -218,11 +237,12 @@ export function CaptureEditor({ capture, onSaved }: CaptureEditorProps) {
       </div>
 
       {/* Content */}
-      <Textarea
-        placeholder="Write your capture..."
+      <RichTextEditor
         value={content}
-        onChange={(e) => setContent(e.target.value)}
-        className="min-h-[200px] resize-y"
+        onChange={(val) => setContent(val)}
+        placeholder="Write your capture..."
+        minHeight={200}
+        workspaceId={effectiveWorkspaceId}
       />
 
       {/* Actions */}
