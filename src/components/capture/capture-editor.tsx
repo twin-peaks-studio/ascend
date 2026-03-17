@@ -224,6 +224,7 @@ export function CaptureEditor({ capture, onSaved }: CaptureEditorProps) {
         onChange={(val) => setContent(val)}
         placeholder="Write your capture..."
         minHeight={200}
+        workspaceId={activeWorkspace?.id}
       />
 
       {/* Actions */}
