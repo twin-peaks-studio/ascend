@@ -37,7 +37,7 @@ export default function NoteDetailPage() {
   const { project, loading: projectLoading } = useProject(projectId);
   const { note, setNote, loading: noteLoading } = useNote(noteId);
   // Use the project's workspace_id (most reliable), then note's, then context
-  const effectiveWorkspaceId = project?.workspace_id ?? note?.workspace_id ?? activeWorkspace?.id ?? null;
+  const effectiveWorkspaceId = project?.workspace_id ?? note?.workspace_id ?? activeWorkspace?.id;
   const {
     updateNote,
     deleteNote,

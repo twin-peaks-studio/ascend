@@ -74,7 +74,7 @@ function CaptureDetailContent({ captureId }: { captureId: string }) {
   const { capture, setCapture, loading: captureLoading } = useCapture(captureId);
 
   // Prefer the capture's own workspace_id, then URL param, then context
-  const effectiveWorkspaceId = capture?.workspace_id ?? urlWorkspaceId ?? activeWorkspace?.id ?? null;
+  const effectiveWorkspaceId = capture?.workspace_id ?? urlWorkspaceId ?? activeWorkspace?.id;
 
   // Back URL: return to workspace if we came from one
   const backWorkspaceId = urlWorkspaceId ?? activeWorkspace?.id;

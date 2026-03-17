@@ -55,7 +55,7 @@ interface CaptureEditorProps {
 export function CaptureEditor({ capture, onSaved, workspaceId: workspaceIdProp }: CaptureEditorProps) {
   const router = useRouter();
   const { activeWorkspace } = useWorkspaceContext();
-  const effectiveWorkspaceId = workspaceIdProp ?? activeWorkspace?.id ?? null;
+  const effectiveWorkspaceId = workspaceIdProp ?? activeWorkspace?.id;
   const { projects } = useProjects();
   const { createCapture, updateCapture, deleteCapture, loading } =
     useCaptureMutations();
