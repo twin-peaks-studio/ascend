@@ -501,7 +501,7 @@ function EntityDetailContent() {
                   No journal entries yet.
                 </p>
                 <p className="text-xs text-muted-foreground mb-3">
-                  Brain dump everything you know about this {config.label.toLowerCase()} — decisions made, quirks, constraints, history.
+                  Record everything you know about this {config.label.toLowerCase()} — decisions made, quirks, constraints, history.
                 </p>
                 <Button variant="outline" size="sm" onClick={() => setShowNewEntry(true)}>
                   <Plus className="h-4 w-4 mr-1" />

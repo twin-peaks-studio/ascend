@@ -180,7 +180,7 @@ const changelog: ChangelogEntry[] = [
       },
       {
         icon: BookOpen,
-        title: "Entity Journal (Brain Dump)",
+        title: "Entity Journal",
         description: "Each entity detail page now has a Journal tab for recording evolving knowledge. Add timestamped context entries about any product, initiative, or stakeholder. Journal entries will be synthesized into AI memory alongside foundational context during memory refresh.",
         tag: "new",
       },

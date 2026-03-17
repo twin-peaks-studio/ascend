@@ -866,7 +866,7 @@ const sections: WikiSection[] = [
         ],
       },
       {
-        heading: "Entity Journal (Brain Dump)",
+        heading: "Entity Journal",
         paragraphs: [
           "The Journal tab is where you record evolving knowledge about an entity. Click 'Add Entry' and write anything — decisions made, preferences, constraints, history. Each entry is timestamped and can be edited or deleted later.",
           "This is separate from Foundational Context (Overview tab), which is for permanent truths that rarely change. Journal entries capture knowledge that evolves over time. The AI memory refresh synthesizes both sources (plus #mentions) into a structured memory document on the Memory tab.",

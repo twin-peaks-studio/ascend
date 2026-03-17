@@ -2,7 +2,7 @@
 
 > **Status:** Planning
 > **Created:** March 12, 2026
-> **Context:** Evolves MVP 2 (Entities + Brain Dump) from MEMORY_LAYER.md with new Product → Initiative hierarchy and @mention-driven memory system.
+> **Context:** Evolves MVP 2 (Entities) from MEMORY_LAYER.md with new Product → Initiative hierarchy and @mention-driven memory system.
 
 ---
 
@@ -10,7 +10,7 @@
 
 This plan replaces the original MVP 2 spec with a richer model based on product management workflows. The key evolution:
 
-**Original MVP 2:** Generic entities + brain dump extraction
+**Original MVP 2:** Generic entities
 **New MVP 2:** Products, Initiatives, Stakeholders as entity types + @mention-driven memory + AI-synthesized entity memory with manual refresh
 
 ### Core Concepts
@@ -288,7 +288,7 @@ Workspace (your whole work context)
 - **Memory**: AI-synthesized memory + "Refresh Memory" button + last refreshed timestamp (empty until Phase 4)
 - **Mentions**: All content that references this entity (empty until Phase 3)
 - **Links**: Connected products/initiatives/stakeholders with task rollup
-- **Journal**: Timestamped knowledge entries (brain dumps, decisions, context)
+- **Journal**: Timestamped knowledge entries (decisions, context, evolving knowledge)
 - **For Products**: The Links tab shows linked initiatives with a progress bar and task count breakdown (todo/in-progress/done)
 - **For Initiatives**: The Links tab shows linked products, plus a Tasks section listing all active tasks from the initiative's project(s) with status icons and a progress bar
 
@@ -632,13 +632,8 @@ Users type `@OnlineOrdering` not `@4f43b086-cdfd...`. Slugs (lowercase, no space
 | Original MVP | New Status |
 |-------------|-----------|
 | MVP 1 (Workspaces + Captures) | ✅ Complete (pending SQL migration) — unchanged |
-| MVP 2 (Entities + Brain Dump) | **Replaced by this plan** (Phases 1-4). Brain dump deferred to after @mention system is working. |
+| MVP 2 (Entities) | **Replaced by this plan** (Phases 1-4). |
 | MVP 3 (Embeddings + Search) | Unchanged — builds on entity_mentions for richer embedding |
 | MVP 4 (Chat + Task Creation) | Unchanged — entity memory becomes additional RAG context |
 | MVP 5 (Oracle) | Unchanged — can detect entity knowledge gaps |
 
-### Brain Dump: Deferred, Not Removed
-
-The brain dump feature from original MVP 2 is deferred to after Phase 3 (AI Memory) is working. Rationale: the @mention + manual refresh flow is the primary way to build entity memory. Brain dump is a power-user shortcut for bootstrapping — it's more valuable once the entity system is live and can receive the extracted data.
-
-When implemented, brain dump will use the same `entities` table and `foundational_context` field. The extraction pipeline writes to the same structures.
