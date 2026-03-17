@@ -18,6 +18,9 @@ import { DeleteConfirmationDialog } from "@/components/ui/delete-confirmation-di
 import { useProject } from "@/hooks/use-projects";
 import { useNote, useNoteMutations } from "@/hooks/use-notes";
 import { useTaskMutations } from "@/hooks/use-tasks";
+import { useMentionSync } from "@/hooks/use-entity-mentions";
+import { parseEntityMentions } from "@/lib/tiptap/entity-mention-extension";
+import { useWorkspaceContext } from "@/contexts/workspace-context";
 import { QuickAddNoteTask } from "@/components/note";
 import { TaskListItem } from "@/components/task";
 import { TaskExtractionDialog } from "@/components/ai";
@@ -30,6 +33,7 @@ export default function NoteDetailPage() {
   const projectId = params.id as string;
   const noteId = params.noteId as string;
 
+  const { activeWorkspace } = useWorkspaceContext();
   const { project, loading: projectLoading } = useProject(projectId);
   const { note, setNote, loading: noteLoading } = useNote(noteId);
   const {
@@ -39,6 +43,7 @@ export default function NoteDetailPage() {
     loading: noteMutationLoading,
   } = useNoteMutations();
   const { updateTask } = useTaskMutations();
+  const { syncMentions } = useMentionSync();
 
   // Task extraction hook
   const taskExtraction = useTaskExtraction();
@@ -87,10 +92,21 @@ export default function NoteDetailPage() {
       saveTimeoutRef.current = setTimeout(async () => {
         if (note && newContent !== note.content) {
           await updateNote(noteId, { content: newContent }, projectId);
+
+          // Sync #entity mentions after save
+          if (activeWorkspace?.id) {
+            const mentions = parseEntityMentions(newContent);
+            await syncMentions(
+              "note",
+              noteId,
+              activeWorkspace.id,
+              mentions.map((m) => m.entityId)
+            );
+          }
         }
       }, 1500); // 1.5 second debounce
     },
-    [note, noteId, updateNote]
+    [note, noteId, updateNote, activeWorkspace?.id, syncMentions]
   );
 
   // Cleanup timeout on unmount
@@ -285,7 +301,8 @@ export default function NoteDetailPage() {
           <RichTextEditor
             value={content}
             onChange={handleContentChange}
-            placeholder="Start typing your notes..."
+            placeholder="Start typing your notes... Use # to mention entities"
+            workspaceId={activeWorkspace?.id}
           />
           <p className="text-xs text-muted-foreground mt-2">
             Changes are saved automatically

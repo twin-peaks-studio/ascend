@@ -48,6 +48,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { useWorkspaceContext } from "@/contexts/workspace-context";
 import { useProject, useProjectMutations } from "@/hooks/use-projects";
 import { useProjectProducts } from "@/hooks/use-project-products";
 import { useTaskMutations } from "@/hooks/use-tasks";
@@ -77,6 +78,7 @@ export default function ProjectDetailPage() {
   const projectId = params.id as string;
   const workspaceId = searchParams.get("workspace");
 
+  const { activeWorkspace } = useWorkspaceContext();
   const { project, setProject, loading, refetch } = useProject(projectId);
   const projectProducts = useProjectProducts(project?.entity_id);
   const { documents, refetch: refetchDocuments } = useProjectDocuments(projectId);
@@ -836,6 +838,7 @@ export default function ProjectDetailPage() {
         defaultProjectId={projectId}
         onSubmit={handleCreateTask}
         loading={taskMutationLoading}
+        workspaceId={activeWorkspace?.id}
       />
 
       {/* Document create dialog */}

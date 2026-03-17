@@ -50,6 +50,8 @@ import { useTaskMutations } from "@/hooks/use-tasks";
 import { useProjects } from "@/hooks/use-projects";
 import { useWorkspaceContext } from "@/contexts/workspace-context";
 import { useTaskExtraction } from "@/hooks/use-task-extraction";
+import { useMentionSync } from "@/hooks/use-entity-mentions";
+import { parseEntityMentions } from "@/lib/tiptap/entity-mention-extension";
 import type { Task, TaskStatus, TaskWithProject, CaptureWithRelations } from "@/types";
 import type { CaptureType } from "@/types/database";
 
@@ -83,6 +85,7 @@ function CaptureDetailContent({ captureId }: { captureId: string }) {
   const { updateTask } = useTaskMutations();
   const { projects } = useProjects();
   const taskExtraction = useTaskExtraction();
+  const { syncMentions } = useMentionSync();
 
   // Local editing state
   const [title, setTitle] = useState("");
@@ -134,10 +137,21 @@ function CaptureDetailContent({ captureId }: { captureId: string }) {
             { content: newContent },
             activeWorkspace?.id
           );
+
+          // Sync #entity mentions after save
+          if (activeWorkspace?.id) {
+            const mentions = parseEntityMentions(newContent);
+            await syncMentions(
+              "capture",
+              captureId,
+              activeWorkspace.id,
+              mentions.map((m) => m.entityId)
+            );
+          }
         }
       }, 1500);
     },
-    [capture, captureId, updateCapture, activeWorkspace?.id]
+    [capture, captureId, updateCapture, activeWorkspace?.id, syncMentions]
   );
 
   // Cleanup timeout on unmount
@@ -441,7 +455,8 @@ function CaptureDetailContent({ captureId }: { captureId: string }) {
           <RichTextEditor
             value={content}
             onChange={handleContentChange}
-            placeholder="Start typing your capture..."
+            placeholder="Start typing your capture... Use # to mention entities"
+            workspaceId={activeWorkspace?.id}
           />
           <p className="text-xs text-muted-foreground mt-2">
             Changes are saved automatically

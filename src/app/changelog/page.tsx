@@ -43,6 +43,7 @@ import {
   CheckSquare,
   Network,
   Keyboard,
+  Hash,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -65,6 +66,26 @@ interface ChangelogEntry {
 }
 
 const changelog: ChangelogEntry[] = [
+  {
+    date: "March 17, 2026",
+    version: "0.23.0",
+    title: "#Entity Mentions in Notes & Captures",
+    description: "Type # in any note or capture to link entities (products, initiatives, stakeholders) inline. Mentions render as colored pills and are tracked in the entity_mentions table for AI memory.",
+    features: [
+      {
+        icon: Hash,
+        title: "#Mention Autocomplete",
+        description: "Type # in any Tiptap editor (notes, captures, task descriptions) to see a filterable dropdown of all entities in the current workspace. Select an entity to insert an inline pill badge.",
+        tag: "new",
+      },
+      {
+        icon: Network,
+        title: "Mention Tracking & Persistence",
+        description: "Entity mentions are automatically synced to the entity_mentions table when content is saved. This powers the Mentions tab on entity detail pages and feeds into AI memory refresh.",
+        tag: "new",
+      },
+    ],
+  },
   {
     date: "March 16, 2026",
     version: "0.22.0",

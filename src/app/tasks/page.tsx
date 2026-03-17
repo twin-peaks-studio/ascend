@@ -29,7 +29,7 @@ export default function TasksPage() {
   const { profiles } = useProfiles();
   const isMobile = useIsMobile();
   const { user } = useAuth();
-  const { workspaces } = useWorkspaceContext();
+  const { workspaces, activeWorkspace } = useWorkspaceContext();
   const {
     createTask,
     updateTask,
@@ -511,6 +511,7 @@ export default function TasksPage() {
         defaultAssigneeId={user?.id ?? null}
         onSubmit={editingTask ? handleUpdateTask : handleCreateTask}
         loading={mutationLoading}
+        workspaceId={activeWorkspace?.id}
       />
 
       {/* Quick add task drawer (mobile) */}

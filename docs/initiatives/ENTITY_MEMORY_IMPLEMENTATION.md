@@ -526,12 +526,12 @@ Phase 2: ENTITY CRUD + WORKSPACE UX (view what you migrated)
   2C: Product label on all task views (TaskListItem, TodayTaskRow, Kanban cards) ✅
   2D: Product linkage in PropertiesPanel (manage product links day-to-day) ✅
     ↓
-Phase 3: @MENTION SYSTEM (inline entity linking everywhere)
-  3A: Mention autocomplete component
-  3B: Tiptap mention extension (notes, task descriptions)
-  3C: Textarea mention support (comments, captures)
-  3D: Mention parsing & persistence (useMentionSync)
-  3E: Mention rendering in markdown-renderer
+Phase 3: #MENTION SYSTEM (inline entity linking in Tiptap editors) ✅ (MVP — Tiptap only)
+  3A: Mention autocomplete component ✅
+  3B: Tiptap mention extension (notes, captures, task descriptions) ✅
+  3C: Textarea mention support (comments) — DEFERRED (comments keep @user mentions only for now)
+  3D: Mention parsing & persistence (useMentionSync) ✅
+  3E: Mention rendering in read-only views — ✅ (CSS styles in globals.css, rendered via dangerouslySetInnerHTML)
     ↓
 Phase 4: AI MEMORY REFRESH (entity intelligence)
   4A: AI memory refresh API route
