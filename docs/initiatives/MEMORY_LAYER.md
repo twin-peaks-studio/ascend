@@ -201,7 +201,7 @@ Each MVP is independently deployable and adds real usable value. Each is tested 
 |-----|------|-----------------|--------|
 | **0** | Initiative Documentation | This document + plan alignment | ✅ Complete |
 | **1** | Workspaces + Captures | Workspace isolation, daily journal view, capture creation via workspace tabs | ✅ Complete (pending SQL migration) |
-| **2** | Entities | Entity tagging system, entity detail pages, journal entries, #mentions, AI memory refresh, **product label on all task views** | 🔲 Not Started |
+| **2** | Entities | Entity tagging system, entity detail pages, journal entries, #mentions, AI memory refresh, **product label on all task views** | ✅ Complete (v0.20.0–v0.24.0) |
 | **3** | Embeddings + Semantic Search | Auto-embedding, vector search, enhanced search dialog | 🔲 Not Started |
 | **4** | AI Chat (RAG + Task Creation) | Chat panel, source citations, model selector, task creation from chat | 🔲 Not Started |
 | **5** | Oracle (Proactive Monitoring) | Rule-based detectors, daily insights, configurable alerts | 🔲 Not Started |

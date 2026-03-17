@@ -1,6 +1,6 @@
 # Entity Memory Implementation Plan
 
-> **Status:** Planning
+> **Status:** Complete (v0.20.0–v0.24.0)
 > **Created:** March 12, 2026
 > **Context:** Evolves MVP 2 (Entities) from MEMORY_LAYER.md with new Product → Initiative hierarchy and @mention-driven memory system.
 
@@ -533,9 +533,9 @@ Phase 3: #MENTION SYSTEM (inline entity linking in Tiptap editors) ✅ (MVP — 
   3D: Mention parsing & persistence (useMentionSync) ✅
   3E: Mention rendering in read-only views — ✅ (CSS styles in globals.css, rendered via dangerouslySetInnerHTML)
     ↓
-Phase 4: AI MEMORY REFRESH (entity intelligence)
-  4A: AI memory refresh API route
-  4B: Entity page Memory tab with refresh button
+Phase 4: AI MEMORY REFRESH (entity intelligence) ✅
+  4A: AI memory refresh API route ✅
+  4B: Entity page Memory tab with refresh button ✅
     ↓
 Phase 5: PORTFOLIO VIEW (future — data model supports it from Phase 1)
     ↓
