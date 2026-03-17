@@ -537,6 +537,18 @@ Phase 4: AI MEMORY REFRESH (entity intelligence) ✅
   4A: AI memory refresh API route ✅
   4B: Entity page Memory tab with refresh button ✅
     ↓
+Phase 4.5: MEMORY REFINEMENTS (efficiency + user steering)
+  4.5A: Memory Guidance — persistent user corrections/overrides
+    - New `memory_guidance` text column on `entities` table
+    - Free-text field on Memory tab (accumulates entries over time)
+    - Injected into system prompt as high-priority overrides
+    - Persists across refreshes so corrections don't need repeating
+  4.5B: Source change detection — skip refresh when nothing changed
+    - Hash combined sources (foundational + journal + mentions)
+    - Store hash on entity (`memory_source_hash`)
+    - Compare before calling Claude API — skip if unchanged
+    - Still allow force-refresh (user may have added guidance)
+    ↓
 Phase 5: PORTFOLIO VIEW (future — data model supports it from Phase 1)
     ↓
 Phase 6: TEAMS & SHARING VERIFICATION (validate before production)

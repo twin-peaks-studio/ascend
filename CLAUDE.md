@@ -178,6 +178,8 @@ The Memory tab on entity detail pages synthesizes knowledge from three sources i
 
 **Output format:** The `ai_memory` field contains plain text with markdown-style headings (`## Key Facts`, `## Recent Decisions`, etc.) and bullet points (`- `). The Memory tab UI renders these with simple string splitting — no full markdown parser.
 
+**Planned (Phase 4.5):** Memory Guidance (`memory_guidance` text field on `entities`) — persistent user corrections injected as high-priority overrides in the system prompt. Source change detection (`memory_source_hash`) to skip redundant API calls when nothing changed. See `docs/initiatives/ENTITY_MEMORY_IMPLEMENTATION.md` Phase 4.5.
+
 Key files:
 - `src/app/api/ai/memory-refresh/route.ts` — API route (auth, data gathering, Claude call, DB update)
 - `src/hooks/use-memory-refresh.ts` — Client hook (`refresh`, `refreshing`, `error`)
