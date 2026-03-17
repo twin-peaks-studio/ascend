@@ -187,13 +187,14 @@ export function useNoteMutations() {
   const queryClient = useQueryClient();
 
   const createNote = useCallback(
-    async (input: CreateNoteInput): Promise<Note | null> => {
+    async (input: CreateNoteInput, workspaceId?: string): Promise<Note | null> => {
+      const wsId = workspaceId ?? activeWorkspace?.id;
       if (!user) {
         toast.error("You must be logged in to create a note");
         return null;
       }
 
-      if (!activeWorkspace) {
+      if (!wsId) {
         toast.error("No workspace selected");
         return null;
       }
@@ -205,7 +206,7 @@ export function useNoteMutations() {
         const validated = createNoteSchema.parse(input);
 
         const insertData: NoteInsert = {
-          workspace_id: activeWorkspace.id,
+          workspace_id: wsId,
           project_id: validated.project_id,
           title: validated.title,
           content: validated.content ?? null,

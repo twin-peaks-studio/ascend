@@ -36,6 +36,8 @@ export default function NoteDetailPage() {
   const { activeWorkspace } = useWorkspaceContext();
   const { project, loading: projectLoading } = useProject(projectId);
   const { note, setNote, loading: noteLoading } = useNote(noteId);
+  // Use the project's workspace_id (most reliable), then note's, then context
+  const effectiveWorkspaceId = project?.workspace_id ?? note?.workspace_id ?? activeWorkspace?.id ?? null;
   const {
     updateNote,
     deleteNote,
@@ -95,19 +97,19 @@ export default function NoteDetailPage() {
           await updateNote(noteId, { content: newContent }, projectId);
 
           // Sync #entity mentions after save
-          if (activeWorkspace?.id) {
+          if (effectiveWorkspaceId) {
             const mentions = parseEntityMentions(newContent);
             await syncMentions(
               "note",
               noteId,
-              activeWorkspace.id,
+              effectiveWorkspaceId,
               mentions.map((m) => m.entityId)
             );
           }
         }
       }, 1500); // 1.5 second debounce
     },
-    [note, noteId, projectId, updateNote, activeWorkspace?.id, syncMentions]
+    [note, noteId, projectId, updateNote, effectiveWorkspaceId, syncMentions]
   );
 
   // Cleanup timeout on unmount
@@ -303,7 +305,7 @@ export default function NoteDetailPage() {
             value={content}
             onChange={handleContentChange}
             placeholder="Start typing your notes... Use # to mention entities"
-            workspaceId={activeWorkspace?.id}
+            workspaceId={effectiveWorkspaceId}
           />
           <p className="text-xs text-muted-foreground mt-2">
             Changes are saved automatically

@@ -32,7 +32,7 @@ export default function CreateNotePage() {
       project_id: projectId,
       title: title.trim(),
       content: content.trim() || null,
-    });
+    }, project?.workspace_id);
 
     if (note) {
       // Navigate to the newly created note

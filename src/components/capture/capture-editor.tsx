@@ -48,11 +48,14 @@ const CAPTURE_TYPES: { value: CaptureType; label: string; icon: React.ElementTyp
 interface CaptureEditorProps {
   capture?: CaptureWithRelations | null;
   onSaved?: () => void;
+  /** Explicit workspace ID — preferred over activeWorkspace from context */
+  workspaceId?: string;
 }
 
-export function CaptureEditor({ capture, onSaved }: CaptureEditorProps) {
+export function CaptureEditor({ capture, onSaved, workspaceId: workspaceIdProp }: CaptureEditorProps) {
   const router = useRouter();
   const { activeWorkspace } = useWorkspaceContext();
+  const effectiveWorkspaceId = workspaceIdProp ?? activeWorkspace?.id ?? null;
   const { projects } = useProjects();
   const { createCapture, updateCapture, deleteCapture, loading } =
     useCaptureMutations();
@@ -89,7 +92,7 @@ export function CaptureEditor({ capture, onSaved }: CaptureEditorProps) {
   }, [capture?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSave = async () => {
-    if (!title.trim() || !activeWorkspace) return;
+    if (!title.trim() || !effectiveWorkspaceId) return;
 
     const occurredAtISO = occurredAt
       ? new Date(occurredAt).toISOString()
@@ -105,11 +108,11 @@ export function CaptureEditor({ capture, onSaved }: CaptureEditorProps) {
           project_id: projectId,
           occurred_at: occurredAtISO,
         },
-        activeWorkspace.id
+        effectiveWorkspaceId
       );
     } else {
       await createCapture({
-        workspace_id: activeWorkspace.id,
+        workspace_id: effectiveWorkspaceId,
         title: title.trim(),
         content: content || null,
         capture_type: captureType,
@@ -121,8 +124,8 @@ export function CaptureEditor({ capture, onSaved }: CaptureEditorProps) {
   };
 
   const handleDelete = async () => {
-    if (!capture || !activeWorkspace) return;
-    const deleted = await deleteCapture(capture.id, activeWorkspace.id);
+    if (!capture || !effectiveWorkspaceId) return;
+    const deleted = await deleteCapture(capture.id, effectiveWorkspaceId);
     if (deleted) {
       router.push("/captures");
     }
@@ -224,7 +227,7 @@ export function CaptureEditor({ capture, onSaved }: CaptureEditorProps) {
         onChange={(val) => setContent(val)}
         placeholder="Write your capture..."
         minHeight={200}
-        workspaceId={activeWorkspace?.id}
+        workspaceId={effectiveWorkspaceId}
       />
 
       {/* Actions */}

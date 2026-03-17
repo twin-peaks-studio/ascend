@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Plus, Briefcase, Brain, Trash2, FolderKanban, BookOpen, Package, Network } from "lucide-react";
 import { AppShell, Header } from "@/components/layout";
@@ -25,8 +25,16 @@ function WorkspaceContent() {
   const params = useParams();
   const router = useRouter();
   const workspaceId = params.id as string;
-  const { workspaces } = useWorkspaceContext();
+  const { workspaces, setActiveWorkspaceId, activeWorkspace } = useWorkspaceContext();
   const workspace = workspaces.find((w) => w.id === workspaceId);
+
+  // Sync workspace context to match the URL — ensures CaptureEditor and other
+  // context-dependent components use the correct workspace
+  useEffect(() => {
+    if (workspaceId && activeWorkspace?.id !== workspaceId) {
+      setActiveWorkspaceId(workspaceId);
+    }
+  }, [workspaceId, activeWorkspace?.id, setActiveWorkspaceId]);
 
   const { projects, loading, refetch } = useProjects(workspaceId);
   const { createProject, deleteProject, loading: mutationLoading } = useProjectMutations();

@@ -69,13 +69,16 @@ interface CaptureDetailPageProps {
 function CaptureDetailContent({ captureId }: { captureId: string }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const workspaceId = searchParams.get("workspace");
+  const urlWorkspaceId = searchParams.get("workspace");
   const { activeWorkspace } = useWorkspaceContext();
-
-  // Back URL: return to workspace if we came from one, otherwise fall back to active workspace
-  const backWorkspaceId = workspaceId ?? activeWorkspace?.id;
-  const backUrl = backWorkspaceId ? `/workspaces/${backWorkspaceId}` : "/workspaces";
   const { capture, setCapture, loading: captureLoading } = useCapture(captureId);
+
+  // Prefer the capture's own workspace_id, then URL param, then context
+  const effectiveWorkspaceId = capture?.workspace_id ?? urlWorkspaceId ?? activeWorkspace?.id ?? null;
+
+  // Back URL: return to workspace if we came from one
+  const backWorkspaceId = urlWorkspaceId ?? activeWorkspace?.id;
+  const backUrl = backWorkspaceId ? `/workspaces/${backWorkspaceId}` : "/workspaces";
   const {
     updateCapture,
     deleteCapture,
@@ -136,23 +139,23 @@ function CaptureDetailContent({ captureId }: { captureId: string }) {
           await updateCapture(
             captureId,
             { content: newContent },
-            activeWorkspace?.id
+            effectiveWorkspaceId
           );
 
           // Sync #entity mentions after save
-          if (activeWorkspace?.id) {
+          if (effectiveWorkspaceId) {
             const mentions = parseEntityMentions(newContent);
             await syncMentions(
               "capture",
               captureId,
-              activeWorkspace.id,
+              effectiveWorkspaceId,
               mentions.map((m) => m.entityId)
             );
           }
         }
       }, 1500);
     },
-    [capture, captureId, updateCapture, activeWorkspace?.id, syncMentions]
+    [capture, captureId, updateCapture, effectiveWorkspaceId, syncMentions]
   );
 
   // Cleanup timeout on unmount
@@ -171,7 +174,7 @@ function CaptureDetailContent({ captureId }: { captureId: string }) {
       const updated = await updateCapture(
         captureId,
         { title: trimmedTitle },
-        activeWorkspace?.id
+        effectiveWorkspaceId
       );
       if (updated) {
         setCapture((prev: CaptureWithRelations | null) =>
@@ -182,7 +185,7 @@ function CaptureDetailContent({ captureId }: { captureId: string }) {
       setTitle(capture.title);
     }
     setIsEditingTitle(false);
-  }, [title, capture, captureId, updateCapture, setCapture, activeWorkspace?.id]);
+  }, [title, capture, captureId, updateCapture, setCapture, effectiveWorkspaceId]);
 
   // Handle metadata changes (type, date, project)
   const handleMetadataChange = useCallback(
@@ -198,9 +201,9 @@ function CaptureDetailContent({ captureId }: { captureId: string }) {
           : null;
       }
 
-      await updateCapture(captureId, updateData, activeWorkspace?.id);
+      await updateCapture(captureId, updateData, effectiveWorkspaceId);
     },
-    [capture, captureId, updateCapture, activeWorkspace?.id]
+    [capture, captureId, updateCapture, effectiveWorkspaceId]
   );
 
   // Handle task status toggle
@@ -263,14 +266,14 @@ function CaptureDetailContent({ captureId }: { captureId: string }) {
   // Handle delete capture
   const handleDelete = useCallback(async () => {
     setIsDeleting(true);
-    const success = await deleteCapture(captureId, activeWorkspace?.id);
+    const success = await deleteCapture(captureId, effectiveWorkspaceId);
     if (success) {
       router.push(backUrl);
     } else {
       setIsDeleting(false);
     }
     setDeleteConfirm(false);
-  }, [captureId, deleteCapture, router, backUrl, activeWorkspace?.id]);
+  }, [captureId, deleteCapture, router, backUrl, effectiveWorkspaceId]);
 
   // Handle AI task extraction
   const handleExtractTasks = useCallback(() => {
@@ -457,7 +460,7 @@ function CaptureDetailContent({ captureId }: { captureId: string }) {
             value={content}
             onChange={handleContentChange}
             placeholder="Start typing your capture... Use # to mention entities"
-            workspaceId={activeWorkspace?.id}
+            workspaceId={effectiveWorkspaceId}
           />
           <p className="text-xs text-muted-foreground mt-2">
             Changes are saved automatically
