@@ -31,7 +31,8 @@ export interface EntitySuggestionItem {
 
 interface MentionSuggestionListProps {
   items: EntitySuggestionItem[];
-  command: (item: EntitySuggestionItem) => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  command: (attrs: Record<string, any>) => void;
 }
 
 export interface MentionSuggestionListRef {
@@ -43,6 +44,16 @@ export const MentionSuggestionList = forwardRef<
   MentionSuggestionListProps
 >(({ items, command }, ref) => {
   const [selectedIndex, setSelectedIndex] = useState(0);
+
+  // Map EntitySuggestionItem fields to the extension's attribute names
+  const selectItem = (item: EntitySuggestionItem) => {
+    command({
+      id: item.id,
+      label: item.name,
+      entityType: item.entity_type,
+      entitySlug: item.slug,
+    });
+  };
 
   // Reset selection when items change
   useEffect(() => {
@@ -64,7 +75,7 @@ export const MentionSuggestionList = forwardRef<
 
       if (event.key === "Enter" || event.key === "Tab") {
         if (items[selectedIndex]) {
-          command(items[selectedIndex]);
+          selectItem(items[selectedIndex]);
         }
         return true;
       }
@@ -100,7 +111,7 @@ export const MentionSuggestionList = forwardRef<
               "hover:bg-accent hover:text-accent-foreground",
               index === selectedIndex && "bg-accent text-accent-foreground"
             )}
-            onClick={() => command(item)}
+            onClick={() => selectItem(item)}
             onMouseEnter={() => setSelectedIndex(index)}
           >
             <Icon className={cn("h-3.5 w-3.5 shrink-0", config.color)} />
