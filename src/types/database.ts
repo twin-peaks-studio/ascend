@@ -880,6 +880,8 @@ export type Database = {
           foundational_context: string | null;
           ai_memory: string | null;
           memory_refreshed_at: string | null;
+          memory_guidance: string | null;
+          memory_source_hash: string | null;
           metadata: Json;
           created_by: string;
           created_at: string;
@@ -895,6 +897,8 @@ export type Database = {
           foundational_context?: string | null;
           ai_memory?: string | null;
           memory_refreshed_at?: string | null;
+          memory_guidance?: string | null;
+          memory_source_hash?: string | null;
           metadata?: Json;
           created_by: string;
           created_at?: string;
@@ -910,6 +914,8 @@ export type Database = {
           foundational_context?: string | null;
           ai_memory?: string | null;
           memory_refreshed_at?: string | null;
+          memory_guidance?: string | null;
+          memory_source_hash?: string | null;
           metadata?: Json;
           created_by?: string;
           created_at?: string;

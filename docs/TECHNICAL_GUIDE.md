@@ -2694,4 +2694,34 @@ Testers have no Supabase session, so this route uses `createServiceClient()` (se
 
 The tracker uses a custom lean `TrackerCard` / `TrackerListRow` (not the full `TaskListItem` / `KanbanBoard`). This was intentional — `TrackerTask` does not conform to the full `Task` DB shape those components require, and a lean read-only card is simpler and more appropriate here.
 
+### Phase 4.5: Memory Guidance & Source Change Detection
+
+#### Memory Guidance (4.5A)
+
+The `memory_guidance` column on `entities` stores user-provided corrections and instructions that override conflicting information from other sources. It is injected into the Claude system prompt as a high-priority section (`=== USER CORRECTIONS & GUIDANCE (HIGH PRIORITY) ===`).
+
+The guidance is editable from the Memory tab on the entity detail page. The UI uses a collapsible edit pattern: if no guidance exists, a subtle "+ Add guidance" link appears. When guidance exists, it renders in a card with an Edit button. Saving calls `updateEntity(entity.id, { memory_guidance: value })`.
+
+Validation: `memory_guidance` is added to `updateEntitySchema` in `src/lib/validation.ts` with a 10,000 character limit via `safeOptionalString(10000)`.
+
+#### Source Change Detection (4.5B)
+
+`memory_source_hash` on `entities` stores a SHA-256 hex digest computed from the concatenation of:
+1. `foundational_context ?? ""`
+2. Journal entries sorted by `created_at` ascending (each: content + created_at + null byte separator)
+3. Mentioned content sorted by title (each: content + null byte separator)
+4. `memory_guidance ?? ""`
+
+The hash is computed in `computeSourceHash()` in the API route using Node's built-in `crypto.createHash('sha256')`.
+
+**Skip logic:** After computing the hash and before calling Claude, the API compares against `entity.memory_source_hash`. If they match, `entity.ai_memory` exists, and `force` is not true, it returns the existing memory with `skipped: true`. The client hook shows an info toast.
+
+**Force param:** The `useMemoryRefresh` hook accepts `refresh({ force: true })` to bypass the hash check. This is rarely needed since any source change (including guidance edits) changes the hash.
+
+Key files:
+- `src/app/api/ai/memory-refresh/route.ts` — `computeSourceHash()`, hash comparison, `force` param handling
+- `src/hooks/use-memory-refresh.ts` — `refresh(options?)`, `skipped` handling
+- `src/app/entities/[id]/page.tsx` — Guidance UI (edit mode, display mode, add link)
+- `supabase/migrations/20260317_entity_memory_refinements.sql` — adds `memory_guidance` and `memory_source_hash` columns
+
 *Last updated: March 2026*

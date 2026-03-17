@@ -9,6 +9,7 @@
  * The result is stored directly on the entity record (ai_memory + memory_refreshed_at).
  */
 
+import { createHash } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { withTimeoutAndAbort, isTimeoutError } from "@/lib/utils/with-timeout";
@@ -24,12 +25,14 @@ const AI_TIMEOUT = 120000; // 120 seconds — synthesis can be lengthy
 
 interface MemoryRefreshRequest {
   entityId: string;
+  force?: boolean;
 }
 
 interface MemoryRefreshSuccessResponse {
   success: true;
   aiMemory: string;
   refreshedAt: string;
+  skipped: boolean;
   sources: {
     foundationalContext: boolean;
     journalEntries: number;
@@ -44,8 +47,8 @@ interface MemoryRefreshErrorResponse {
 
 type MemoryRefreshResponse = MemoryRefreshSuccessResponse | MemoryRefreshErrorResponse;
 
-function buildSystemPrompt(entityType: string, entityName: string): string {
-  return `You are a product management intelligence system. Your job is to synthesize information about a specific ${entityType} called "${entityName}" into a clear, structured memory document.
+function buildSystemPrompt(entityType: string, entityName: string, memoryGuidance: string | null): string {
+  let prompt = `You are a product management intelligence system. Your job is to synthesize information about a specific ${entityType} called "${entityName}" into a clear, structured memory document.
 
 You will receive three types of input:
 1. **Foundational Context** — Permanent truths that the user has written about this ${entityType}. These are always correct and should be preserved verbatim or near-verbatim.
@@ -79,6 +82,17 @@ Rules:
 - Do NOT invent information. Only synthesize what's in the provided sources.
 - Do NOT include meta-commentary about your process. Just output the memory document.
 - Write in third person (e.g., "The team decided..." not "You decided...").`;
+
+  if (memoryGuidance?.trim()) {
+    prompt += `
+
+=== USER CORRECTIONS & GUIDANCE (HIGH PRIORITY) ===
+The user has provided the following corrections and guidance. These override any conflicting information from other sources. Always respect these instructions:
+
+${memoryGuidance.trim()}`;
+  }
+
+  return prompt;
 }
 
 function buildUserPrompt(
@@ -121,6 +135,36 @@ function buildUserPrompt(
   }
 
   return parts.join("\n\n\n");
+}
+
+/**
+ * Compute a deterministic SHA-256 hash of all source material.
+ * Used to detect when sources haven't changed since last refresh.
+ */
+function computeSourceHash(
+  foundationalContext: string | null,
+  journalEntries: Array<{ content: string; created_at: string }>,
+  mentionedContent: Array<{ title: string; content: string; source_type: string }>,
+  memoryGuidance: string | null
+): string {
+  const hash = createHash("sha256");
+  hash.update(foundationalContext ?? "");
+  hash.update("\x00");
+  // Sort entries by created_at for determinism
+  const sortedEntries = [...journalEntries].sort((a, b) => a.created_at.localeCompare(b.created_at));
+  for (const e of sortedEntries) {
+    hash.update(e.content);
+    hash.update(e.created_at);
+    hash.update("\x00");
+  }
+  // Sort mentions by title for determinism
+  const sortedMentions = [...mentionedContent].sort((a, b) => a.title.localeCompare(b.title));
+  for (const m of sortedMentions) {
+    hash.update(m.content);
+    hash.update("\x00");
+  }
+  hash.update(memoryGuidance ?? "");
+  return hash.digest("hex");
 }
 
 /**
@@ -168,7 +212,7 @@ export async function POST(
 
     // 3. Parse request
     const body = await request.json();
-    const { entityId } = body as MemoryRefreshRequest;
+    const { entityId, force } = body as MemoryRefreshRequest;
 
     if (!entityId || typeof entityId !== "string") {
       return NextResponse.json(
@@ -180,7 +224,7 @@ export async function POST(
     // 4. Fetch entity
     const { data: entity, error: entityError } = await supabase
       .from("entities")
-      .select("id, workspace_id, entity_type, name, foundational_context")
+      .select("id, workspace_id, entity_type, name, foundational_context, memory_guidance, ai_memory, memory_refreshed_at, memory_source_hash")
       .eq("id", entityId)
       .single();
 
@@ -252,7 +296,29 @@ export async function POST(
       );
     }
 
-    // 8. Check for API key
+    // 8. Compute source hash and check for changes
+    const sourceHash = computeSourceHash(
+      entity.foundational_context,
+      journalEntries ?? [],
+      mentionedContent,
+      entity.memory_guidance
+    );
+
+    if (!force && entity.memory_source_hash === sourceHash && entity.ai_memory) {
+      return NextResponse.json({
+        success: true,
+        aiMemory: entity.ai_memory,
+        refreshedAt: entity.memory_refreshed_at ?? new Date().toISOString(),
+        skipped: true,
+        sources: {
+          foundationalContext: hasFoundational,
+          journalEntries: journalCount,
+          mentions: mentionCount,
+        },
+      });
+    }
+
+    // 9. Check for API key
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) {
       logger.error("ANTHROPIC_API_KEY not configured", {
@@ -265,8 +331,8 @@ export async function POST(
       );
     }
 
-    // 9. Call Claude API
-    const systemPrompt = buildSystemPrompt(entity.entity_type, entity.name);
+    // 10. Call Claude API
+    const systemPrompt = buildSystemPrompt(entity.entity_type, entity.name, entity.memory_guidance);
     const userPrompt = buildUserPrompt(
       entity.foundational_context,
       journalEntries ?? [],
@@ -325,7 +391,7 @@ export async function POST(
       );
     }
 
-    // 10. Extract text from response
+    // 11. Extract text from response
     const contentBlock = aiResponse.content?.[0];
     if (!contentBlock || contentBlock.type !== "text") {
       return NextResponse.json(
@@ -337,12 +403,13 @@ export async function POST(
     const aiMemory = contentBlock.text.trim();
     const refreshedAt = new Date().toISOString();
 
-    // 11. Store the synthesized memory on the entity
+    // 12. Store the synthesized memory on the entity
     const { error: updateError } = await supabase
       .from("entities")
       .update({
         ai_memory: aiMemory,
         memory_refreshed_at: refreshedAt,
+        memory_source_hash: sourceHash,
         updated_at: refreshedAt,
       })
       .eq("id", entityId);
@@ -370,6 +437,7 @@ export async function POST(
       success: true,
       aiMemory,
       refreshedAt,
+      skipped: false,
       sources: {
         foundationalContext: hasFoundational,
         journalEntries: journalCount,

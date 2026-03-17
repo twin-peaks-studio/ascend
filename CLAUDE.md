@@ -178,12 +178,14 @@ The Memory tab on entity detail pages synthesizes knowledge from three sources i
 
 **Output format:** The `ai_memory` field contains plain text with markdown-style headings (`## Key Facts`, `## Recent Decisions`, etc.) and bullet points (`- `). The Memory tab UI renders these with simple string splitting — no full markdown parser.
 
-**Planned (Phase 4.5):** Memory Guidance (`memory_guidance` text field on `entities`) — persistent user corrections injected as high-priority overrides in the system prompt. Source change detection (`memory_source_hash`) to skip redundant API calls when nothing changed. See `docs/initiatives/ENTITY_MEMORY_IMPLEMENTATION.md` Phase 4.5.
+**Memory Guidance (Phase 4.5A):** `memory_guidance` text field on `entities` — persistent user corrections injected as high-priority overrides in the system prompt. Editable from the Memory tab UI. Guidance changes are included in the source hash, so updating guidance ensures the next refresh runs.
+
+**Source Change Detection (Phase 4.5B):** `memory_source_hash` (SHA-256) on `entities` — computed from all source material (foundational context + journal entries sorted by `created_at` + mentioned content sorted by title + memory guidance). Stored after each successful refresh. On next refresh, if the hash matches and `entity.ai_memory` exists, the API returns `skipped: true` without calling Claude. The hook shows an info toast. Pass `{ force: true }` to bypass the hash check.
 
 Key files:
-- `src/app/api/ai/memory-refresh/route.ts` — API route (auth, data gathering, Claude call, DB update)
-- `src/hooks/use-memory-refresh.ts` — Client hook (`refresh`, `refreshing`, `error`)
-- `src/app/entities/[id]/page.tsx` — Memory tab UI with generate/refresh button and formatted display
+- `src/app/api/ai/memory-refresh/route.ts` — API route (auth, data gathering, hash check, guidance injection, Claude call, DB update)
+- `src/hooks/use-memory-refresh.ts` — Client hook (`refresh({ force? })`, `refreshing`, `error`; handles `skipped` response)
+- `src/app/entities/[id]/page.tsx` — Memory tab UI with guidance editor, generate/refresh button, and formatted display
 
 ### Project Status & Sidebar Filtering
 

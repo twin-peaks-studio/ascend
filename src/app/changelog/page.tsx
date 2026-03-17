@@ -68,6 +68,26 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: "March 17, 2026",
+    version: "0.25.0",
+    title: "Memory Guidance & Source Detection",
+    description: "Steer AI memory synthesis with persistent corrections and skip unnecessary refreshes when sources haven't changed.",
+    features: [
+      {
+        icon: Brain,
+        title: "Memory Guidance",
+        description: "Add persistent corrections and instructions that override AI memory synthesis. Your guidance survives across refreshes so you never need to repeat corrections.",
+        tag: "new",
+      },
+      {
+        icon: RefreshCw,
+        title: "Smart Refresh Detection",
+        description: "Memory refresh now detects when source material hasn't changed since the last refresh and lets you know — saving time and API costs.",
+        tag: "improved",
+      },
+    ],
+  },
+  {
+    date: "March 17, 2026",
     version: "0.24.0",
     title: "AI Memory Refresh for Entities",
     description: "Entities can now synthesize knowledge from all their sources — foundational context, journal entries, and #mentions — into a structured AI memory document.",

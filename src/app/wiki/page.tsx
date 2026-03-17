@@ -914,9 +914,19 @@ const sections: WikiSection[] = [
         ],
       },
       {
+        heading: "Memory Guidance",
+        paragraphs: [
+          "On the Memory tab, you can add persistent Guidance — corrections and instructions that the AI must follow on every refresh. Use this when the AI gets something wrong, or when you want to steer the output in a specific direction.",
+          "Guidance overrides conflicting information from other sources. For example, you could write: \"The launch date was moved to Q3 2026\" or \"Ignore mentions of the old pricing model — it was replaced.\"",
+          "Guidance persists across refreshes. You write it once, and every future memory generation respects it. Edit or remove guidance at any time from the Memory tab.",
+        ],
+        tip: "Editing your guidance counts as a source change, so the next refresh will always run after you update guidance.",
+      },
+      {
         heading: "When to Refresh Memory",
         paragraphs: [
           "Memory is not auto-refreshed — you decide when to generate or update it. Good times to refresh: after adding new journal entries, after a meeting where the entity was discussed in captures, or before a planning session when you want a quick summary of everything known about an entity.",
+          "If you click Refresh and nothing has changed since your last refresh (no new journal entries, no updated mentions, no guidance edits), the system will let you know that no update was needed — saving time and API costs.",
         ],
         tip: "Memory refresh reads all #mentions across your workspace. The more you use #mentions in notes and captures, the richer the synthesized memory becomes.",
       },

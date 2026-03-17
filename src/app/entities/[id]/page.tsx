@@ -225,6 +225,8 @@ function EntityDetailContent() {
   const [showDelete, setShowDelete] = useState(false);
   const [newEntry, setNewEntry] = useState("");
   const [showNewEntry, setShowNewEntry] = useState(false);
+  const [editingGuidance, setEditingGuidance] = useState(false);
+  const [guidanceText, setGuidanceText] = useState("");
 
   // Build the back link — navigate to workspace if we came from one
   const backHref = workspaceId ? `/workspaces/${workspaceId}` : "/";
@@ -630,8 +632,8 @@ function EntityDetailContent() {
               <Button
                 size="sm"
                 variant={entity.ai_memory ? "outline" : "default"}
-                onClick={refreshMemory}
-                disabled={memoryRefreshing}
+                onClick={() => refreshMemory()}
+                disabled={memoryRefreshing || editingGuidance}
                 className="gap-1.5 shrink-0"
               >
                 {memoryRefreshing ? (
@@ -650,6 +652,78 @@ function EntityDetailContent() {
                   </>
                 )}
               </Button>
+            </div>
+
+            {/* Memory Guidance section */}
+            <div className="space-y-2">
+              {editingGuidance ? (
+                <div className="rounded-lg border bg-card p-4 space-y-3">
+                  <div>
+                    <h4 className="text-sm font-medium mb-1">Guidance</h4>
+                    <p className="text-xs text-muted-foreground">
+                      Persistent corrections and instructions for the AI. These override conflicting information from other sources and persist across refreshes.
+                    </p>
+                  </div>
+                  <Textarea
+                    value={guidanceText}
+                    onChange={(e) => setGuidanceText(e.target.value)}
+                    placeholder="e.g., &quot;The launch date was moved to Q3 2026&quot; or &quot;Ignore mentions of the old pricing model&quot;"
+                    rows={4}
+                    className="text-sm"
+                  />
+                  <div className="flex gap-2 justify-end">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setEditingGuidance(false)}
+                    >
+                      <X className="h-3.5 w-3.5 mr-1" />
+                      Cancel
+                    </Button>
+                    <Button
+                      size="sm"
+                      disabled={mutating}
+                      onClick={async () => {
+                        const value = guidanceText.trim() || null;
+                        await updateEntity(entity.id, { memory_guidance: value });
+                        setEditingGuidance(false);
+                      }}
+                    >
+                      <Save className="h-3.5 w-3.5 mr-1" />
+                      Save
+                    </Button>
+                  </div>
+                </div>
+              ) : entity.memory_guidance ? (
+                <div className="rounded-lg border bg-card p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-sm font-medium">Guidance</h4>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 px-2 text-xs"
+                      onClick={() => {
+                        setGuidanceText(entity.memory_guidance ?? "");
+                        setEditingGuidance(true);
+                      }}
+                    >
+                      <Pencil className="h-3 w-3 mr-1" />
+                      Edit
+                    </Button>
+                  </div>
+                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">{entity.memory_guidance}</p>
+                </div>
+              ) : (
+                <button
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  onClick={() => {
+                    setGuidanceText("");
+                    setEditingGuidance(true);
+                  }}
+                >
+                  + Add guidance to steer AI memory synthesis
+                </button>
+              )}
             </div>
 
             {/* Loading state */}
