@@ -71,6 +71,7 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
   useEffect(() => {
     if (!loading && workspaces.length > 0 && !activeId) {
       const firstId = workspaces[0].id;
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setActiveId(firstId);
       localStorage.setItem(STORAGE_KEY, firstId);
     }
@@ -127,6 +128,7 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
       !workspaces.find((w) => w.id === activeId)
     ) {
       const firstId = workspaces[0].id;
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setActiveId(firstId);
       localStorage.setItem(STORAGE_KEY, firstId);
     }
