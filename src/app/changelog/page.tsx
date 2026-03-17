@@ -68,6 +68,26 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: "March 17, 2026",
+    version: "0.24.0",
+    title: "AI Memory Refresh for Entities",
+    description: "Entities can now synthesize knowledge from all their sources — foundational context, journal entries, and #mentions — into a structured AI memory document.",
+    features: [
+      {
+        icon: Brain,
+        title: "AI Memory Refresh",
+        description: "Click 'Generate Memory' on any entity's Memory tab. The AI reads your foundational context, journal entries, and every note/capture that mentions the entity, then synthesizes a structured summary: key facts, decisions, open questions, stakeholder notes, and action items.",
+        tag: "new",
+      },
+      {
+        icon: Sparkles,
+        title: "Structured Memory Output",
+        description: "AI memory is organized into clear sections — Key Facts, Recent Decisions, Open Questions, Stakeholder Notes, Status & Progress, and Action Items. Each section is rendered with clean formatting on the Memory tab.",
+        tag: "new",
+      },
+    ],
+  },
+  {
+    date: "March 17, 2026",
     version: "0.23.0",
     title: "#Entity Mentions in Notes & Captures",
     description: "Type # in any note or capture to link entities (products, initiatives, stakeholders) inline. Mentions render as colored pills and are tracked in the entity_mentions table for AI memory.",

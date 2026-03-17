@@ -862,14 +862,14 @@ const sections: WikiSection[] = [
       {
         heading: "Entity Detail Page",
         paragraphs: [
-          "Each entity has a detail page with five tabs: Overview (name, description, foundational context), Journal (timestamped knowledge entries), Links (connected products/initiatives), Memory (AI-synthesized knowledge — coming soon), and Mentions (where this entity is referenced — coming soon).",
+          "Each entity has a detail page with five tabs: Overview (name, description, foundational context), Journal (timestamped knowledge entries), Links (connected products/initiatives), Memory (AI-synthesized knowledge — click 'Generate Memory' to create), and Mentions (where this entity is referenced via #mentions).",
         ],
       },
       {
         heading: "Entity Journal (Brain Dump)",
         paragraphs: [
           "The Journal tab is where you record evolving knowledge about an entity. Click 'Add Entry' and write anything — decisions made, preferences, constraints, history. Each entry is timestamped and can be edited or deleted later.",
-          "This is separate from Foundational Context (Overview tab), which is for permanent truths that rarely change. Journal entries capture knowledge that evolves over time. When the AI memory refresh system is built, it will synthesize both sources into a coherent ai_memory blob.",
+          "This is separate from Foundational Context (Overview tab), which is for permanent truths that rarely change. Journal entries capture knowledge that evolves over time. The AI memory refresh synthesizes both sources (plus #mentions) into a structured memory document on the Memory tab.",
         ],
         tip: "Think of Foundational Context as the entity's Wikipedia intro, and the Journal as a running log of everything you learn about it.",
       },
@@ -904,6 +904,21 @@ const sections: WikiSection[] = [
           "Mentions power the AI memory refresh: when you click 'Refresh Memory' on an entity page, the AI reads all documents that mention that entity to synthesize knowledge.",
         ],
         tip: "Use # to link entities in notes. Use @ in comments to mention team members. These are separate systems — # is for entity linking, @ is for user notifications.",
+      },
+      {
+        heading: "AI Memory Refresh",
+        paragraphs: [
+          "The Memory tab on each entity detail page lets you generate a synthesized knowledge document using AI. Click 'Generate Memory' (or 'Refresh' if memory already exists) to start the process.",
+          "The AI reads three sources: (1) Foundational Context — permanent truths you wrote on the Overview tab, (2) Journal Entries — timestamped knowledge from the Journal tab, and (3) Mentions — content from every note and capture that references this entity via #mention.",
+          "The output is a structured document with sections: Key Facts, Recent Decisions, Open Questions, Stakeholder Notes, Status & Progress, and Action Items. Only sections with relevant content appear.",
+        ],
+      },
+      {
+        heading: "When to Refresh Memory",
+        paragraphs: [
+          "Memory is not auto-refreshed — you decide when to generate or update it. Good times to refresh: after adding new journal entries, after a meeting where the entity was discussed in captures, or before a planning session when you want a quick summary of everything known about an entity.",
+        ],
+        tip: "Memory refresh reads all #mentions across your workspace. The more you use #mentions in notes and captures, the richer the synthesized memory becomes.",
       },
     ],
   },

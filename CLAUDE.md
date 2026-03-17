@@ -166,6 +166,23 @@ Key files:
 - `src/hooks/use-entity-mentions.ts` — `useMentionSync()`, `useEntityMentionsByEntity()`
 - `src/components/shared/rich-text-editor.tsx` — `workspaceId` prop integration
 
+### AI Memory Refresh (Phase 4)
+
+The Memory tab on entity detail pages synthesizes knowledge from three sources into a structured AI memory document. Users click "Generate Memory" (or "Refresh") to trigger on-demand synthesis.
+
+**Data sources:** `entity.foundational_context` + `entity_context_entries` (journal) + `entity_mentions` → resolved `notes.content` (HTML → plain text).
+
+**Architecture:** `POST /api/ai/memory-refresh` (server-side, authenticated, rate-limited via `aiExtraction` bucket). Calls Claude Sonnet with structured system prompt. Stores result in `entities.ai_memory` + `entities.memory_refreshed_at`. Client hook (`useMemoryRefresh`) updates React Query cache optimistically.
+
+**Memory is user-triggered, not automatic.** No background jobs or auto-refresh. The user decides when to synthesize.
+
+**Output format:** The `ai_memory` field contains plain text with markdown-style headings (`## Key Facts`, `## Recent Decisions`, etc.) and bullet points (`- `). The Memory tab UI renders these with simple string splitting — no full markdown parser.
+
+Key files:
+- `src/app/api/ai/memory-refresh/route.ts` — API route (auth, data gathering, Claude call, DB update)
+- `src/hooks/use-memory-refresh.ts` — Client hook (`refresh`, `refreshing`, `error`)
+- `src/app/entities/[id]/page.tsx` — Memory tab UI with generate/refresh button and formatted display
+
 ### Project Status & Sidebar Filtering
 
 Projects have a `status` field (`"active" | "completed" | "archived"`). The sidebar (`src/components/layout/sidebar.tsx`) filters out archived projects before rendering — if you add new status values, update this filter accordingly.

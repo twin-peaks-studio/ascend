@@ -22,6 +22,9 @@ import {
   Circle,
   CheckCircle2,
   FileText,
+  RefreshCw,
+  Loader2,
+  Sparkles,
 } from "lucide-react";
 import { AppShell } from "@/components/layout";
 import { Header } from "@/components/layout";
@@ -49,6 +52,7 @@ import { useEntityLinks } from "@/hooks/use-entity-links";
 import { useEntityContextEntries, useEntityContextEntryMutations } from "@/hooks/use-entity-context-entries";
 import { useEntityMentionsByEntity } from "@/hooks/use-entity-mentions";
 import { useInitiativeTaskRollup, useProductTaskRollup, type TaskRollupSummary } from "@/hooks/use-entity-task-rollup";
+import { useMemoryRefresh } from "@/hooks/use-memory-refresh";
 import { cn } from "@/lib/utils";
 import type { EntityType, EntityContextEntry } from "@/types/database";
 
@@ -191,6 +195,7 @@ function EntityDetailContent() {
   const { updateEntity, deleteEntity, loading: mutating } = useEntityMutations();
   const { createEntry, updateEntry, deleteEntry, loading: entryMutating } = useEntityContextEntryMutations();
   const { mentions } = useEntityMentionsByEntity(entityId);
+  const { refresh: refreshMemory, refreshing: memoryRefreshing } = useMemoryRefresh(entityId);
 
   // Derive linked initiative IDs for product task rollup
   const linkedInitiativeIds = useMemo(() => {
@@ -617,28 +622,107 @@ function EntityDetailContent() {
 
         {activeTab === "memory" && (
           <div className="space-y-4">
+            {/* Header with refresh button */}
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">
+                Synthesized from foundational context, journal entries, and #mentions.
+              </p>
+              <Button
+                size="sm"
+                variant={entity.ai_memory ? "outline" : "default"}
+                onClick={refreshMemory}
+                disabled={memoryRefreshing}
+                className="gap-1.5 shrink-0"
+              >
+                {memoryRefreshing ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Synthesizing...
+                  </>
+                ) : (
+                  <>
+                    {entity.ai_memory ? (
+                      <RefreshCw className="h-4 w-4" />
+                    ) : (
+                      <Sparkles className="h-4 w-4" />
+                    )}
+                    {entity.ai_memory ? "Refresh" : "Generate Memory"}
+                  </>
+                )}
+              </Button>
+            </div>
+
+            {/* Loading state */}
+            {memoryRefreshing && !entity.ai_memory && (
+              <div className="rounded-lg border border-dashed p-8 text-center space-y-3">
+                <Loader2 className="h-8 w-8 text-muted-foreground mx-auto animate-spin" />
+                <div>
+                  <p className="text-sm font-medium">Synthesizing memory...</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Reading foundational context, journal entries, and mentions to build a comprehensive memory.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Memory content */}
             {entity.ai_memory ? (
               <>
-                <div className="rounded-lg border bg-card p-4 whitespace-pre-wrap text-sm">
-                  {entity.ai_memory}
+                {memoryRefreshing && (
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 rounded-md px-3 py-2">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    Refreshing memory...
+                  </div>
+                )}
+                <div className="rounded-lg border bg-card p-5 prose prose-sm dark:prose-invert max-w-none">
+                  {entity.ai_memory.split("\n").map((line, i) => {
+                    if (line.startsWith("## ")) {
+                      return (
+                        <h3 key={i} className="text-sm font-semibold mt-4 mb-2 first:mt-0">
+                          {line.replace("## ", "")}
+                        </h3>
+                      );
+                    }
+                    if (line.startsWith("- ")) {
+                      return (
+                        <p key={i} className="text-sm pl-3 py-0.5 border-l-2 border-muted-foreground/20 mb-1">
+                          {line.replace("- ", "")}
+                        </p>
+                      );
+                    }
+                    if (line.trim() === "") {
+                      return <div key={i} className="h-2" />;
+                    }
+                    return (
+                      <p key={i} className="text-sm mb-1">
+                        {line}
+                      </p>
+                    );
+                  })}
                 </div>
                 {entity.memory_refreshed_at && (
                   <p className="text-xs text-muted-foreground">
-                    Last refreshed: {new Date(entity.memory_refreshed_at).toLocaleDateString()}
+                    Last refreshed: {new Date(entity.memory_refreshed_at).toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                      hour: "numeric",
+                      minute: "2-digit",
+                    })}
                   </p>
                 )}
               </>
-            ) : (
-              <div className="rounded-lg border border-dashed p-6 text-center">
-                <Brain className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                <p className="text-sm text-muted-foreground mb-1">
-                  No AI memory yet.
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Memory is synthesized from foundational context + journal entries + @mentions. The refresh system will be built in Phase 4.
-                </p>
+            ) : !memoryRefreshing ? (
+              <div className="rounded-lg border border-dashed p-8 text-center space-y-3">
+                <Brain className="h-8 w-8 text-muted-foreground mx-auto" />
+                <div>
+                  <p className="text-sm font-medium">No AI memory yet</p>
+                  <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
+                    Click &quot;Generate Memory&quot; to synthesize knowledge from foundational context, journal entries, and #mentions into a structured memory document.
+                  </p>
+                </div>
               </div>
-            )}
+            ) : null}
           </div>
         )}
 

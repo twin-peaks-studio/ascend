@@ -2543,6 +2543,53 @@ syncMentions() diffs against entity_mentions table → inserts new, deletes remo
 
 ---
 
+### AI Memory Refresh Architecture
+
+The Memory tab on entity detail pages allows users to synthesize an AI memory document from three data sources. This is the core of the "PM brain" — turning scattered knowledge into structured, queryable understanding.
+
+#### Database columns
+- `entities.ai_memory` (text, nullable) — The synthesized memory document (markdown-formatted)
+- `entities.memory_refreshed_at` (timestamptz, nullable) — When memory was last refreshed
+
+#### Data flow
+```
+User clicks "Generate Memory" / "Refresh" on entity Memory tab
+    ↓
+POST /api/ai/memory-refresh { entityId }
+    ↓
+Server-side (authenticated + rate-limited):
+  1. Fetch entity.foundational_context
+  2. Fetch entity_context_entries (journal) ordered by created_at DESC
+  3. Fetch entity_mentions → resolve source_id to notes.content (HTML → plain text)
+  4. Build system prompt (entity type + name specific) + user prompt (all 3 sources)
+  5. Call Claude Sonnet (max_tokens: 4096, timeout: 120s)
+  6. Store result in entities.ai_memory + entities.memory_refreshed_at
+    ↓
+Client receives { aiMemory, refreshedAt, sources }
+    ↓
+useMemoryRefresh hook updates React Query cache (entityKeys.detail) optimistically
+    ↓
+Memory tab renders structured markdown (## headings, - bullets)
+```
+
+#### Key files
+- `src/app/api/ai/memory-refresh/route.ts` — Server route: auth, data gathering, Claude API call, DB update. Uses shared `aiExtraction` rate limit bucket (5 req/min). HTML→plain text conversion via `htmlToPlainText()`.
+- `src/hooks/use-memory-refresh.ts` — Client hook: `useMemoryRefresh(entityId)` returns `{ refresh, refreshing, error }`. Updates entity cache optimistically on success.
+- `src/app/entities/[id]/page.tsx` — Memory tab UI: Generate/Refresh button, loading states, markdown-like rendering of sections.
+
+#### Prompt structure
+- **System prompt** is entity-type and name-specific. Instructs Claude to produce structured sections: Key Facts, Recent Decisions, Open Questions, Stakeholder Notes, Status & Progress, Action Items. Sections with no content are skipped.
+- **User prompt** concatenates three labeled sections: `=== FOUNDATIONAL CONTEXT ===`, `=== JOURNAL ENTRIES (N) ===` (with dates), `=== MENTIONED IN N DOCUMENT(S) ===` (with source type + title).
+
+#### Constraints
+- Memory is user-triggered (not automatic). No background refresh jobs.
+- Shares the `aiExtraction` rate limit bucket — 5 requests per minute per user.
+- Journal entries and mentions are sent newest-first. Large entities with many mentions may approach token limits; the 4096 max_tokens output cap keeps responses focused.
+- HTML from notes/captures is converted to plain text server-side to reduce token usage and avoid confusing the AI with markup.
+- The `ai_memory` field is plain text with markdown-style formatting (## headings, - bullets). The client renders this with simple string splitting, not a full markdown parser.
+
+---
+
 ### Feedback Forms Architecture
 
 Feedback Forms allow developers to create structured feedback forms via AI chat, share password-protected URLs with testers, and have each submission auto-create an Ascend task. This is a fully unauthenticated user-facing flow layered on top of the existing Supabase + Next.js stack.
