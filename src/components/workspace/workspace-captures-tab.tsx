@@ -47,7 +47,7 @@ export function WorkspaceCapturesTab({ workspaceId }: WorkspaceCapturesTabProps)
           <SheetHeader className="pb-4">
             <SheetTitle>New Capture</SheetTitle>
           </SheetHeader>
-          <CaptureEditor onSaved={() => setShowNew(false)} />
+          <CaptureEditor workspaceId={workspaceId} onSaved={() => setShowNew(false)} />
         </SheetContent>
       </Sheet>
     </>
