@@ -27,8 +27,11 @@ export const entityMentionKeys = {
 };
 
 /**
- * Fetch all mentions for a specific entity (used on entity detail Mentions tab)
+ * Fetch all mentions for a specific entity (used on entity detail Mentions tab).
+ * Returns mention records enriched with the source title from the notes table.
  */
+export type MentionWithSource = EntityMention & { source_title?: string };
+
 export function useEntityMentionsByEntity(entityId: string | null) {
   const {
     data: mentions = [],
@@ -37,8 +40,10 @@ export function useEntityMentionsByEntity(entityId: string | null) {
     refetch,
   } = useQuery({
     queryKey: entityMentionKeys.byEntity(entityId ?? ""),
-    queryFn: async (): Promise<EntityMention[]> => {
+    queryFn: async (): Promise<MentionWithSource[]> => {
       const supabase = getClient();
+
+      // Fetch mentions
       const { data, error } = await withTimeout(
         supabase
           .from("entity_mentions")
@@ -52,7 +57,26 @@ export function useEntityMentionsByEntity(entityId: string | null) {
         logger.error("Error fetching entity mentions", { entityId, error });
         return [];
       }
-      return (data as EntityMention[]) || [];
+      const mentionRows = (data as EntityMention[]) || [];
+      if (mentionRows.length === 0) return [];
+
+      // Fetch source titles from notes table (notes & captures share the same table)
+      const sourceIds = [...new Set(mentionRows.map((m) => m.source_id))];
+      const { data: sources } = await withTimeout(
+        supabase
+          .from("notes")
+          .select("id, title")
+          .in("id", sourceIds),
+        TIMEOUTS.DATA_QUERY
+      );
+      const titleMap = new Map(
+        (sources as Array<{ id: string; title: string }> || []).map((s) => [s.id, s.title])
+      );
+
+      return mentionRows.map((m) => ({
+        ...m,
+        source_title: titleMap.get(m.source_id),
+      }));
     },
     enabled: !!entityId,
     staleTime: 60 * 1000,

@@ -21,6 +21,7 @@ import {
   CheckSquare,
   Circle,
   CheckCircle2,
+  FileText,
 } from "lucide-react";
 import { AppShell } from "@/components/layout";
 import { Header } from "@/components/layout";
@@ -46,6 +47,7 @@ import {
 import { useEntity, useEntityMutations } from "@/hooks/use-entities";
 import { useEntityLinks } from "@/hooks/use-entity-links";
 import { useEntityContextEntries, useEntityContextEntryMutations } from "@/hooks/use-entity-context-entries";
+import { useEntityMentionsByEntity } from "@/hooks/use-entity-mentions";
 import { useInitiativeTaskRollup, useProductTaskRollup, type TaskRollupSummary } from "@/hooks/use-entity-task-rollup";
 import { cn } from "@/lib/utils";
 import type { EntityType, EntityContextEntry } from "@/types/database";
@@ -188,6 +190,7 @@ function EntityDetailContent() {
   const { entries, loading: entriesLoading } = useEntityContextEntries(entityId);
   const { updateEntity, deleteEntity, loading: mutating } = useEntityMutations();
   const { createEntry, updateEntry, deleteEntry, loading: entryMutating } = useEntityContextEntryMutations();
+  const { mentions } = useEntityMentionsByEntity(entityId);
 
   // Derive linked initiative IDs for product task rollup
   const linkedInitiativeIds = useMemo(() => {
@@ -301,7 +304,7 @@ function EntityDetailContent() {
     { key: "journal", label: `Journal (${entries.length})`, icon: BookOpen },
     { key: "links", label: `Links (${links.length})`, icon: Link2 },
     { key: "memory", label: "Memory", icon: Brain },
-    { key: "mentions", label: "Mentions", icon: AtSign },
+    { key: "mentions", label: `Mentions (${mentions.length})`, icon: AtSign },
   ];
 
   return (
@@ -640,15 +643,51 @@ function EntityDetailContent() {
         )}
 
         {activeTab === "mentions" && (
-          <div className="rounded-lg border border-dashed p-6 text-center">
-            <AtSign className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-            <p className="text-sm text-muted-foreground mb-1">
-              No mentions yet.
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Mentions will appear here once @mention support is built (Phase 3).
-            </p>
-          </div>
+          mentions.length === 0 ? (
+            <div className="rounded-lg border border-dashed p-6 text-center">
+              <AtSign className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+              <p className="text-sm text-muted-foreground mb-1">
+                No mentions yet.
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Use # in notes or captures to mention this entity.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {mentions.map((mention) => {
+                const isCapture = mention.source_type === "capture";
+                const MentionIcon = isCapture ? Lightbulb : FileText;
+                const typeLabel = mention.source_type === "capture" ? "Capture"
+                  : mention.source_type === "note" ? "Note"
+                  : mention.source_type === "task_description" ? "Task"
+                  : "Comment";
+                const href = isCapture
+                  ? `/captures/${mention.source_id}${workspaceId ? `?workspace=${workspaceId}` : ""}`
+                  : undefined; // Notes need project context — link only captures for now
+
+                const content = (
+                  <div className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors">
+                    <MentionIcon className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium truncate">
+                        {mention.source_title ?? "Untitled"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {typeLabel} &middot; {new Date(mention.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                );
+
+                return href ? (
+                  <Link key={mention.id} href={href}>{content}</Link>
+                ) : (
+                  <div key={mention.id}>{content}</div>
+                );
+              })}
+            </div>
+          )
         )}
       </div>
 

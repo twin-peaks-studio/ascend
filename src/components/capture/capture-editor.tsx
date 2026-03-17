@@ -33,6 +33,8 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useCaptureMutations } from "@/hooks/use-captures";
+import { useMentionSync } from "@/hooks/use-entity-mentions";
+import { parseEntityMentions } from "@/lib/tiptap/entity-mention-extension";
 import { useWorkspaceContext } from "@/contexts/workspace-context";
 import { useProjects } from "@/hooks/use-projects";
 import type { CaptureWithRelations } from "@/types";
@@ -59,6 +61,7 @@ export function CaptureEditor({ capture, onSaved, workspaceId: workspaceIdProp }
   const { projects } = useProjects();
   const { createCapture, updateCapture, deleteCapture, loading } =
     useCaptureMutations();
+  const { syncMentions } = useMentionSync();
 
   const [title, setTitle] = useState(capture?.title ?? "");
   const [content, setContent] = useState(capture?.content ?? "");
@@ -110,8 +113,13 @@ export function CaptureEditor({ capture, onSaved, workspaceId: workspaceIdProp }
         },
         effectiveWorkspaceId
       );
+      // Sync entity mentions
+      if (content && effectiveWorkspaceId) {
+        const mentions = parseEntityMentions(content);
+        await syncMentions("capture", capture.id, effectiveWorkspaceId, mentions.map((m) => m.entityId));
+      }
     } else {
-      await createCapture({
+      const created = await createCapture({
         workspace_id: effectiveWorkspaceId,
         title: title.trim(),
         content: content || null,
@@ -119,6 +127,13 @@ export function CaptureEditor({ capture, onSaved, workspaceId: workspaceIdProp }
         project_id: projectId,
         occurred_at: occurredAtISO,
       });
+      // Sync entity mentions for newly created capture
+      if (created && content && effectiveWorkspaceId) {
+        const mentions = parseEntityMentions(content);
+        if (mentions.length > 0) {
+          await syncMentions("capture", created.id, effectiveWorkspaceId, mentions.map((m) => m.entityId));
+        }
+      }
     }
     onSaved?.();
   };
