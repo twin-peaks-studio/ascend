@@ -11,6 +11,8 @@ import { Label } from "@/components/ui/label";
 import { RichTextEditor } from "@/components/shared";
 import { useProject } from "@/hooks/use-projects";
 import { useNoteMutations } from "@/hooks/use-notes";
+import { useMentionSync } from "@/hooks/use-entity-mentions";
+import { parseEntityMentions } from "@/lib/tiptap/entity-mention-extension";
 
 export default function CreateNotePage() {
   const params = useParams();
@@ -19,6 +21,7 @@ export default function CreateNotePage() {
 
   const { project, loading: projectLoading } = useProject(projectId);
   const { createNote, loading: noteMutationLoading } = useNoteMutations();
+  const { syncMentions } = useMentionSync();
 
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -35,6 +38,13 @@ export default function CreateNotePage() {
     }, project?.workspace_id);
 
     if (note) {
+      // Sync entity mentions if content has any
+      if (content && project?.workspace_id) {
+        const mentions = parseEntityMentions(content);
+        if (mentions.length > 0) {
+          await syncMentions("note", note.id, project.workspace_id, mentions.map((m) => m.entityId));
+        }
+      }
       // Navigate to the newly created note
       router.push(`/projects/${projectId}/notes/${note.id}`);
     }
@@ -119,7 +129,8 @@ export default function CreateNotePage() {
             <RichTextEditor
               value={content}
               onChange={setContent}
-              placeholder="Start typing your notes..."
+              placeholder="Start typing your notes... Use # to mention entities"
+              workspaceId={project?.workspace_id}
             />
           </div>
 
