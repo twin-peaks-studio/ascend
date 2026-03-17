@@ -54,7 +54,7 @@ async function fetchWorkspacesForUser(userId: string): Promise<Workspace[]> {
       userId,
       error: memberResult.error,
     });
-    logger.warn("[workspaces] workspace_members query failed", { message: memberResult.error.message, code: memberResult.error.code });
+    console.warn("[workspaces] workspace_members query failed:", memberResult.error.message, memberResult.error.code);
     // Return empty array instead of throwing — workspace tables may not
     // have proper RLS policies yet. Other features should still work.
     return [];
@@ -65,7 +65,7 @@ async function fetchWorkspacesForUser(userId: string): Promise<Workspace[]> {
     [];
 
   if (workspaceIds.length === 0) {
-    logger.warn("[workspaces] No workspace memberships found for user", { userId });
+    console.warn("[workspaces] No workspace memberships found for user", userId);
     return [];
   }
 
@@ -84,7 +84,7 @@ async function fetchWorkspacesForUser(userId: string): Promise<Workspace[]> {
       userId,
       error: workspacesResult.error,
     });
-    logger.warn("[workspaces] workspaces query failed", { message: workspacesResult.error.message, code: workspacesResult.error.code });
+    console.warn("[workspaces] workspaces query failed:", workspacesResult.error.message, workspacesResult.error.code);
     return [];
   }
 

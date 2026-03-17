@@ -63,7 +63,7 @@ export function FormFieldPreview({ fields, className }: FormFieldPreviewProps) {
             {/* Placeholder */}
             {field.placeholder && (
               <p className="text-xs text-muted-foreground/70 italic mt-0.5 truncate">
-                &quot;{field.placeholder}&quot;
+                "{field.placeholder}"
               </p>
             )}
           </div>

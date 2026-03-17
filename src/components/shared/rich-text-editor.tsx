@@ -4,7 +4,7 @@ import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
 import Placeholder from "@tiptap/extension-placeholder";
-import { useEffect, useCallback, useMemo, useRef } from "react";
+import { useEffect, useCallback } from "react";
 import {
   Bold,
   Italic,
@@ -17,10 +17,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { markdownToHtml, isHtmlContent } from "@/lib/description-utils";
-import { EntityMention } from "@/lib/tiptap/entity-mention-extension";
-import { createEntityMentionSuggestion } from "@/lib/tiptap/entity-mention-suggestion";
-import { useEntities } from "@/hooks/use-entities";
-import type { Entity } from "@/types/database";
 
 interface RichTextEditorProps {
   value: string;
@@ -33,8 +29,6 @@ interface RichTextEditorProps {
   minHeight?: number;
   /** Called on keydown events inside the editor (e.g. for Escape handling) */
   onKeyDown?: (e: React.KeyboardEvent) => void;
-  /** When provided, enables #entity mentions with autocomplete from this workspace */
-  workspaceId?: string | null;
 }
 
 export function RichTextEditor({
@@ -46,32 +40,12 @@ export function RichTextEditor({
   autoFocus = false,
   minHeight = 80,
   onKeyDown,
-  workspaceId,
 }: RichTextEditorProps) {
   // Convert markdown content to HTML for initial load
   const initialContent = value ? (isHtmlContent(value) ? value : markdownToHtml(value)) : "";
 
-  // Fetch entities for #mention autocomplete (only when workspaceId is provided)
-  const { entities } = useEntities(workspaceId ?? null);
-
-  // Use a ref so the suggestion callback always reads the latest entities
-  // without recreating the extension (which would remount the editor)
-  const entitiesRef = useRef<Entity[]>([]);
-  entitiesRef.current = entities;
-
-  // Build the mention extension once — the suggestion's items() reads from ref
-  const mentionExtension = useMemo(() => {
-    if (!workspaceId) return null;
-    return EntityMention.configure({
-      suggestion: createEntityMentionSuggestion(() => entitiesRef.current),
-    });
-  // Only recreate if workspaceId presence changes (null↔string)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [!!workspaceId]);
-
-  const extensions = useMemo(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const base: any[] = [
+  const editor = useEditor({
+    extensions: [
       StarterKit.configure({
         bulletList: {
           HTMLAttributes: { class: "list-disc pl-4 space-y-1" },
@@ -90,21 +64,13 @@ export function RichTextEditor({
       Placeholder.configure({
         placeholder,
       }),
-    ];
-    if (mentionExtension) {
-      base.push(mentionExtension);
-    }
-    return base;
-  }, [placeholder, mentionExtension]);
-
-  const editor = useEditor({
-    extensions,
+    ],
     content: initialContent,
     editable: !disabled,
     autofocus: autoFocus,
     immediatelyRender: false, // Prevent SSR hydration mismatch
-    onUpdate: ({ editor: updatedEditor }: { editor: { getHTML: () => string } }) => {
-      onChange(updatedEditor.getHTML());
+    onUpdate: ({ editor: e }) => {
+      onChange(e.getHTML());
     },
   });
 

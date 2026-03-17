@@ -135,37 +135,6 @@ Key files:
 - `src/app/captures/[id]/page.tsx` — capture detail page (mirrors note detail: rich text, tasks, AI extraction)
 - `src/components/capture/` — capture-list, capture-editor
 
-### #Entity Mentions (Phase 3)
-
-The `#` character triggers entity mention autocomplete in all Tiptap rich text editors (notes, captures, task descriptions). This is separate from the `@` user mention system in comments.
-
-**Trigger:** `#` character (not `@` — reserved for user mentions in comments)
-
-**Architecture:**
-- `src/lib/tiptap/entity-mention-extension.ts` — Custom Tiptap extension (`entityMention`) that stores entity metadata as HTML attributes on a `<span data-type="entity-mention">` node
-- `src/lib/tiptap/entity-mention-suggestion.ts` — Bridges Tiptap suggestion plugin with our React dropdown. Uses `getEntities()` callback + ref pattern to avoid recreating the extension when entity list changes
-- `src/components/shared/entity-mention-suggestion.tsx` — React dropdown component with keyboard nav (arrow keys, Enter, Esc)
-- `src/hooks/use-entity-mentions.ts` — `useMentionSync()` hook that diffs parsed mentions against `entity_mentions` table and performs minimal inserts/deletes
-- `src/app/globals.css` — `.entity-mention--product` (blue), `.entity-mention--initiative` (amber), `.entity-mention--stakeholder` (green) pill styles
-
-**RichTextEditor integration:** The `workspaceId` prop on `RichTextEditor` enables entity mentions. When absent, the editor works exactly as before. The entity list is fetched via `useEntities(workspaceId)` and stored in a ref so the suggestion callback reads the latest data without recreating the extension.
-
-**Mention persistence:** On content save (auto-save debounce in notes/captures), `parseEntityMentions(html)` scans the HTML for mention nodes and `syncMentions()` diffs against existing `entity_mentions` records. This is currently wired into:
-- Note detail page (`/projects/[id]/notes/[noteId]`) — syncs after auto-save
-- Capture detail page (`/captures/[id]`) — syncs after auto-save
-- Task form — autocomplete enabled but mention sync deferred (task descriptions are short, sync can be added later)
-
-**Comments are separate:** The comment system uses `@` for user mentions via a textarea-based approach. Entity `#` mentions are NOT enabled in comments yet. This may be revisited later.
-
-**HTML format:** `<span data-type="entity-mention" data-entity-id="uuid" data-entity-type="product" data-entity-slug="online-ordering" class="entity-mention entity-mention--product">#Online Ordering</span>`
-
-Key files:
-- `src/lib/tiptap/entity-mention-extension.ts` — extension + `parseEntityMentions()` utility
-- `src/lib/tiptap/entity-mention-suggestion.ts` — suggestion config factory
-- `src/components/shared/entity-mention-suggestion.tsx` — dropdown UI
-- `src/hooks/use-entity-mentions.ts` — `useMentionSync()`, `useEntityMentionsByEntity()`
-- `src/components/shared/rich-text-editor.tsx` — `workspaceId` prop integration
-
 ### Project Status & Sidebar Filtering
 
 Projects have a `status` field (`"active" | "completed" | "archived"`). The sidebar (`src/components/layout/sidebar.tsx`) filters out archived projects before rendering — if you add new status values, update this filter accordingly.

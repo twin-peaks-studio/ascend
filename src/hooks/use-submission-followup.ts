@@ -57,34 +57,6 @@ export function useSubmissionFollowup({
   const hasFiredInitial = useRef(false);
 
   /**
-   * PATCH the submission + task with final content, then transition to "done".
-   */
-  const finalizeSubmission = useCallback(
-    async (transcript: ConversationMessage[], complete: FollowupCompleteData) => {
-      setStatus("complete");
-
-      try {
-        await fetch(`/api/forms/${slug}/submissions/${submissionId}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            taskTitle: complete.taskTitle,
-            aiSummary: complete.aiSummary,
-            additionalContext: complete.additionalContext,
-            followupTranscript: transcript,
-          }),
-        });
-      } catch (err) {
-        // Log but proceed — the submission is saved; only the task update failed
-        logger.error("Failed to finalize submission", { error: err, submissionId });
-      }
-
-      setStatus("done");
-    },
-    [slug, submissionId]
-  );
-
-  /**
    * Call the AI API. Used both for the initial auto-trigger and for user replies.
    * @param updatedMessages - Full conversation history including the latest user message (if any).
    * @param currentQuestionCount - How many questions the AI has asked so far.
@@ -137,7 +109,35 @@ export function useSubmissionFollowup({
         setStatus("error");
       }
     },
-    [slug, submissionId, finalizeSubmission]
+    [slug, submissionId]
+  );
+
+  /**
+   * PATCH the submission + task with final content, then transition to "done".
+   */
+  const finalizeSubmission = useCallback(
+    async (transcript: ConversationMessage[], complete: FollowupCompleteData) => {
+      setStatus("complete");
+
+      try {
+        await fetch(`/api/forms/${slug}/submissions/${submissionId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            taskTitle: complete.taskTitle,
+            aiSummary: complete.aiSummary,
+            additionalContext: complete.additionalContext,
+            followupTranscript: transcript,
+          }),
+        });
+      } catch (err) {
+        // Log but proceed — the submission is saved; only the task update failed
+        logger.error("Failed to finalize submission", { error: err, submissionId });
+      }
+
+      setStatus("done");
+    },
+    [slug, submissionId]
   );
 
   /**
@@ -164,7 +164,6 @@ export function useSubmissionFollowup({
   useEffect(() => {
     if (hasFiredInitial.current) return;
     hasFiredInitial.current = true;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setStatus("reviewing");
     callAI([], 0);
   }, [callAI]);

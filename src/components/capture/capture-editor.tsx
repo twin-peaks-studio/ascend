@@ -77,7 +77,6 @@ export function CaptureEditor({ capture, onSaved }: CaptureEditorProps) {
   // Sync when capture changes (e.g. navigating between captures)
   useEffect(() => {
     if (capture) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setTitle(capture.title);
       setContent(capture.content ?? "");
       setCaptureType((capture.capture_type as CaptureType) ?? "thought");
@@ -224,7 +223,6 @@ export function CaptureEditor({ capture, onSaved }: CaptureEditorProps) {
         onChange={(val) => setContent(val)}
         placeholder="Write your capture..."
         minHeight={200}
-        workspaceId={activeWorkspace?.id}
       />
 
       {/* Actions */}

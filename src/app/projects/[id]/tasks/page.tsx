@@ -21,7 +21,6 @@ import { useRealtimeSections } from "@/hooks/use-realtime-sections";
 import { useProjectMembers } from "@/hooks/use-project-members";
 import { useIsMobile } from "@/hooks/use-media-query";
 import { useAuth } from "@/hooks/use-auth";
-import { useWorkspaceContext } from "@/contexts/workspace-context";
 import type { TaskWithProject, TaskStatus, Project, Task, Profile } from "@/types";
 import type { CreateTaskInput, UpdateTaskInput } from "@/lib/validation";
 import { DeleteConfirmationDialog } from "@/components/ui/delete-confirmation-dialog";
@@ -31,7 +30,6 @@ export default function ProjectTasksPage() {
   const router = useRouter();
   const projectId = params.id as string;
 
-  const { activeWorkspace } = useWorkspaceContext();
   const { project, setProject, loading, refetch } = useProject(projectId);
   const projectProducts = useProjectProducts(project?.entity_id);
   const { members: projectMembers } = useProjectMembers(projectId);
@@ -648,7 +646,6 @@ export default function ProjectTasksPage() {
         defaultSectionId={defaultSectionId}
         onSubmit={editingTask ? handleUpdateTask : handleCreateTask}
         loading={mutationLoading}
-        workspaceId={activeWorkspace?.id}
       />
 
       {/* Quick add task drawer (mobile) */}

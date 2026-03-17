@@ -890,21 +890,6 @@ const sections: WikiSection[] = [
       {
         tip: "Captures use the same rich text editor and AI extraction as project notes — the full editing experience is identical.",
       },
-      {
-        heading: "#Entity Mentions",
-        paragraphs: [
-          "In any note, capture, or task description, type # to trigger an entity autocomplete dropdown. This works in all Tiptap rich text editors across the app.",
-          "As you type after #, the dropdown filters entities by name. Use the arrow keys to navigate and Enter to insert. The mention appears as a colored inline pill — blue for products, amber for initiatives, green for stakeholders.",
-        ],
-      },
-      {
-        heading: "How Mentions Are Tracked",
-        paragraphs: [
-          "When you save content containing #mentions, Ascend automatically tracks which entities are referenced in which documents. This is visible on the entity detail page under the Mentions tab.",
-          "Mentions power the AI memory refresh: when you click 'Refresh Memory' on an entity page, the AI reads all documents that mention that entity to synthesize knowledge.",
-        ],
-        tip: "Use # to link entities in notes. Use @ in comments to mention team members. These are separate systems — # is for entity linking, @ is for user notifications.",
-      },
     ],
   },
   {
