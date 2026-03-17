@@ -70,7 +70,8 @@ export function RichTextEditor({
   }, [!!workspaceId]);
 
   const extensions = useMemo(() => {
-    const base = [
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const base: any[] = [
       StarterKit.configure({
         bulletList: {
           HTMLAttributes: { class: "list-disc pl-4 space-y-1" },

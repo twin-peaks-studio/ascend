@@ -80,6 +80,7 @@ export default function NoteDetailPage() {
 
   // Auto-save content changes with debounce
   const handleContentChange = useCallback(
+    // eslint-disable-next-line react-hooks/preserve-manual-memoization
     (newContent: string) => {
       setContent(newContent);
 
@@ -106,7 +107,7 @@ export default function NoteDetailPage() {
         }
       }, 1500); // 1.5 second debounce
     },
-    [note, noteId, updateNote, activeWorkspace?.id, syncMentions]
+    [note, noteId, projectId, updateNote, activeWorkspace?.id, syncMentions]
   );
 
   // Cleanup timeout on unmount
@@ -130,7 +131,7 @@ export default function NoteDetailPage() {
       setTitle(note.title);
     }
     setIsEditingTitle(false);
-  }, [title, note, noteId, updateNote, setNote]);
+  }, [title, note, noteId, projectId, updateNote, setNote]);
 
   // Handle task status toggle
   const handleTaskStatusToggle = useCallback(

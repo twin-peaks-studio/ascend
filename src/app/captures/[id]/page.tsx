@@ -123,6 +123,7 @@ function CaptureDetailContent({ captureId }: { captureId: string }) {
 
   // Auto-save content changes with debounce
   const handleContentChange = useCallback(
+    // eslint-disable-next-line react-hooks/preserve-manual-memoization
     (newContent: string) => {
       setContent(newContent);
 
@@ -269,7 +270,7 @@ function CaptureDetailContent({ captureId }: { captureId: string }) {
       setIsDeleting(false);
     }
     setDeleteConfirm(false);
-  }, [captureId, deleteCapture, router, activeWorkspace?.id]);
+  }, [captureId, deleteCapture, router, backUrl, activeWorkspace?.id]);
 
   // Handle AI task extraction
   const handleExtractTasks = useCallback(() => {
