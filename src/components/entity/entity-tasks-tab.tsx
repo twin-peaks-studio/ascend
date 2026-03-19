@@ -53,11 +53,7 @@ export function EntityTasksTab({ entityId }: EntityTasksTabProps) {
 
   const handleTaskClick = useCallback(
     (task: TaskWithProject | Task) => {
-      if ("project" in task && task.project) {
-        router.push(`/projects/${task.project.id}/tasks?task=${task.id}`);
-      } else if (task.project_id) {
-        router.push(`/projects/${task.project_id}/tasks?task=${task.id}`);
-      }
+      router.push(`/tasks/${task.id}?from=entities`);
     },
     [router]
   );
