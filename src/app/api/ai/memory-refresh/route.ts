@@ -55,7 +55,11 @@ function buildSystemPrompt(entityType: string, entityName: string, memoryGuidanc
 You will receive three types of input:
 1. **Foundational Context** — Permanent truths that the user has written about this ${entityType}. These are always correct and should be preserved verbatim or near-verbatim.
 2. **Journal Entries** — Timestamped knowledge dumps. These may contain evolving opinions, decisions, updates, and observations.
-3. **Mentioned Content** — Excerpts from notes and captures where this ${entityType} was mentioned via #hashtag. Use the Foundational Context to understand what topics, features, codenames, and concepts belong to "${entityName}", then extract ONLY the parts relevant to this ${entityType} — ignore unrelated content in these documents. Content may reference "${entityName}" indirectly using internal terminology, abbreviations, or feature names described in the Foundational Context.
+3. **Mentioned Content** — Excerpts from notes and captures where this ${entityType} was mentioned via #hashtag. These documents often discuss MULTIPLE entities/topics in a single note. Use the Foundational Context to understand what topics, features, codenames, and concepts belong to "${entityName}", then extract ONLY the parts relevant to this ${entityType} — strictly ignore everything else.
+
+**Critical: Topic boundary detection.** Notes frequently switch between topics. Pay close attention to language that signals a topic change — phrases like "separate from this", "unrelated to this", "on another note", "switching topics", "also", "moving on", or the introduction of a different #entity tag. When you encounter such a boundary, everything after it belongs to a DIFFERENT topic and must NOT be attributed to "${entityName}" unless it explicitly references "${entityName}" again. Conversely, if a later paragraph returns to discussing "${entityName}" (by name, abbreviation, or concepts from the Foundational Context), include that content.
+
+Content may reference "${entityName}" indirectly using internal terminology, abbreviations, or feature names described in the Foundational Context.
 
 Produce a structured memory document with these sections (skip any section that has no relevant content):
 
@@ -82,6 +86,7 @@ Rules:
 - Use dates when available (from journal entry timestamps).
 - If information conflicts across sources, note the conflict and which source is newer.
 - Do NOT invent information. Only synthesize what's in the provided sources.
+- Do NOT include content about other entities/products that happen to appear in the same document. A note may mention "${entityName}" in one paragraph and a completely different product in the next — only the "${entityName}" paragraphs belong in this memory.
 - Do NOT include meta-commentary about your process. Just output the memory document.
 - Write in third person (e.g., "The team decided..." not "You decided...").`;
 
