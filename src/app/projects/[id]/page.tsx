@@ -50,7 +50,6 @@ import {
 } from "@/components/ui/sheet";
 import { useWorkspaceContext } from "@/contexts/workspace-context";
 import { useProject, useProjectMutations } from "@/hooks/use-projects";
-import { useProjectProducts } from "@/hooks/use-project-products";
 import { useTaskMutations } from "@/hooks/use-tasks";
 import { useProfiles } from "@/hooks/use-profiles";
 import { useAuth } from "@/hooks/use-auth";
@@ -80,7 +79,6 @@ export default function ProjectDetailPage() {
 
   const { activeWorkspace } = useWorkspaceContext();
   const { project, setProject, loading, refetch } = useProject(projectId);
-  const projectProducts = useProjectProducts(project?.entity_id);
   const { documents, refetch: refetchDocuments } = useProjectDocuments(projectId);
   const { profiles } = useProfiles();
   const { user } = useAuth();
@@ -98,10 +96,9 @@ export default function ProjectDetailPage() {
     if (!project?.tasks) return [];
     const filtered = project.tasks
       .filter((task) => task.status !== "done" && !task.is_archived)
-      .map((task) => ({ ...task, products: projectProducts }));
     // Default sort by priority (highest first) for the project overview
     return sortTasks(filtered, "priority", "desc");
-  }, [project, projectProducts]);
+  }, [project]);
 
   // Inline editing state - use project values directly as initial values
   // Use projectId as key to reset state when navigating between projects

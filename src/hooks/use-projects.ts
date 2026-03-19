@@ -23,6 +23,7 @@ import {
   type UpdateProjectInput,
 } from "@/lib/validation";
 import { sendInngestEvents } from "@/lib/inngest/send-events";
+import { enrichTasksWithEntities } from "@/lib/utils/enrich-task-entities";
 import { toast } from "sonner";
 
 // Query keys for cache management
@@ -130,9 +131,14 @@ async function fetchProjectById(projectId: string): Promise<ProjectWithRelations
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const data = projectResult.data as any;
+  const tasks = Array.isArray(data.tasks) ? data.tasks : [];
+
+  // Enrich tasks with entity labels from task_entities
+  await enrichTasksWithEntities(tasks);
+
   return {
     ...data,
-    tasks: Array.isArray(data.tasks) ? data.tasks : [],
+    tasks,
     documents: data.documents || [],
   };
 }

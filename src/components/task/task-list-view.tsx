@@ -7,8 +7,11 @@ import {
   Calendar,
   MessageSquare,
   Package,
+  Rocket,
+  User,
   Plus,
 } from "lucide-react";
+import { ENTITY_TYPE_COLORS } from "@/lib/utils/entity-colors";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { stripFormatting } from "@/lib/description-utils";
@@ -70,8 +73,8 @@ export function TaskListItem({ task, onTaskClick, onStatusToggle, assignee }: Ta
   // Use type narrowing to safely access attachments (only on TaskWithProject)
   const attachmentCount = ('attachments' in task && task.attachments) ? task.attachments.length : 0;
 
-  // Get products from task (only on TaskWithProject with enriched data)
-  const products = ('products' in task && task.products) ? task.products : [];
+  // Get entities from task (only on TaskWithProject with enriched data)
+  const entities = ('entities' in task && task.entities) ? task.entities : [];
 
   // Get assignee - either from the task (TaskWithProject) or from the prop (Task)
   const taskAssignee = ('assignee' in task && task.assignee) ? task.assignee : assignee;
@@ -117,18 +120,19 @@ export function TaskListItem({ task, onTaskClick, onStatusToggle, assignee }: Ta
           </p>
         )}
 
-        {/* Meta row: products, due date, attachments count */}
-        {(products.length > 0 || task.due_date || attachmentCount > 0) && (
-          <div className="flex items-center gap-3 mt-1.5">
-            {products.length > 0 && (
-              <span className="inline-flex items-center gap-1 text-xs text-purple-600 dark:text-purple-400">
-                <Package className="h-3 w-3" />
-                {products[0].name}
-                {products.length > 1 && (
-                  <span className="text-muted-foreground">+{products.length - 1}</span>
-                )}
-              </span>
-            )}
+        {/* Meta row: entities, due date, attachments count */}
+        {(entities.length > 0 || task.due_date || attachmentCount > 0) && (
+          <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+            {entities.map((entity) => {
+              const colors = ENTITY_TYPE_COLORS[entity.entity_type] || ENTITY_TYPE_COLORS.product;
+              const Icon = entity.entity_type === "initiative" ? Rocket : entity.entity_type === "stakeholder" ? User : Package;
+              return (
+                <span key={entity.id} className={cn("inline-flex items-center gap-1 text-xs", colors.text)}>
+                  <Icon className="h-3 w-3" />
+                  {entity.name}
+                </span>
+              );
+            })}
             {task.due_date && (
               <span className={cn(
                 "inline-flex items-center gap-1 text-xs",
