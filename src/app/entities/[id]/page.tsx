@@ -53,6 +53,7 @@ import { useEntityContextEntries, useEntityContextEntryMutations } from "@/hooks
 import { useEntityMentionsByEntity } from "@/hooks/use-entity-mentions";
 import { useInitiativeTaskRollup, useProductTaskRollup, type TaskRollupSummary } from "@/hooks/use-entity-task-rollup";
 import { useMemoryRefresh } from "@/hooks/use-memory-refresh";
+import { EntityTasksTab } from "@/components/entity/entity-tasks-tab";
 import { cn } from "@/lib/utils";
 import type { EntityType, EntityContextEntry } from "@/types/database";
 
@@ -65,7 +66,7 @@ const ENTITY_TYPE_CONFIG: Record<
   stakeholder: { label: "Stakeholder", icon: Users, color: "text-green-500" },
 };
 
-type Tab = "overview" | "journal" | "links" | "memory" | "mentions";
+type Tab = "overview" | "tasks" | "journal" | "links" | "memory" | "mentions";
 
 function JournalEntryCard({
   entry,
@@ -308,6 +309,7 @@ function EntityDetailContent() {
 
   const tabs: { key: Tab; label: string; icon: React.ElementType }[] = [
     { key: "overview", label: "Overview", icon: Pencil },
+    { key: "tasks", label: "Tasks", icon: CheckSquare },
     { key: "journal", label: `Journal (${entries.length})`, icon: BookOpen },
     { key: "links", label: `Links (${links.length})`, icon: Link2 },
     { key: "memory", label: "Memory", icon: Brain },
@@ -448,6 +450,10 @@ function EntityDetailContent() {
               </>
             )}
           </div>
+        )}
+
+        {activeTab === "tasks" && (
+          <EntityTasksTab entityId={entity.id} />
         )}
 
         {activeTab === "journal" && (
