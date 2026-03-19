@@ -595,25 +595,13 @@ export default function ProjectDetailPage() {
                   <>
                     {notes.length > 0 ? (
                       <div className="border rounded-lg divide-y">
-                        {notes.slice(0, 5).map((note) => (
+                        {notes.map((note) => (
                           <NoteListItem
                             key={note.id}
                             note={note}
                             onClick={() => router.push(`/projects/${projectId}/notes/${note.id}`)}
                           />
                         ))}
-                        {notes.length > 5 && (
-                          <div className="p-3 text-center">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => router.push(`/projects/${projectId}/notes`)}
-                            >
-                              View all {notes.length} notes
-                              <ChevronRight className="h-4 w-4 ml-1" />
-                            </Button>
-                          </div>
-                        )}
                       </div>
                     ) : (
                       <div className="text-center py-8 text-muted-foreground border rounded-lg border-dashed">
