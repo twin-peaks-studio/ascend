@@ -48,7 +48,7 @@ async function fetchProjectNotes(projectId: string): Promise<Note[]> {
       .from("notes")
       .select("*")
       .eq("project_id", projectId)
-      .order("updated_at", { ascending: false }),
+      .order("created_at", { ascending: false }),
     TIMEOUTS.DATA_QUERY,
     "Fetching notes timed out"
   );

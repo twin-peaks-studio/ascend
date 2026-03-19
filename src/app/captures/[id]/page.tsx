@@ -595,16 +595,28 @@ function CaptureDetailContent({ captureId }: { captureId: string }) {
           )}
         </div>
 
-        {/* Last updated info */}
-        <div className="mt-8 pt-4 border-t border-border/40 text-xs text-muted-foreground">
-          Last updated:{" "}
-          {new Date(capture.updated_at).toLocaleDateString("en-US", {
-            month: "long",
-            day: "numeric",
-            year: "numeric",
-            hour: "numeric",
-            minute: "2-digit",
-          })}
+        {/* Date info */}
+        <div className="mt-8 pt-4 border-t border-border/40 text-xs text-muted-foreground space-y-1">
+          <div>
+            Created:{" "}
+            {new Date(capture.created_at).toLocaleDateString("en-US", {
+              month: "long",
+              day: "numeric",
+              year: "numeric",
+              hour: "numeric",
+              minute: "2-digit",
+            })}
+          </div>
+          <div>
+            Last updated:{" "}
+            {new Date(capture.updated_at).toLocaleDateString("en-US", {
+              month: "long",
+              day: "numeric",
+              year: "numeric",
+              hour: "numeric",
+              minute: "2-digit",
+            })}
+          </div>
         </div>
       </div>
 

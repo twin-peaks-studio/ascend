@@ -70,7 +70,7 @@ export function NoteListItem({ note, onClick }: NoteListItemProps) {
         <div className="flex items-center justify-between gap-2">
           <h4 className="text-sm font-medium truncate">{note.title}</h4>
           <span className="text-xs text-muted-foreground whitespace-nowrap">
-            {formatDate(note.updated_at)}
+            {formatDate(note.created_at)}
           </span>
         </div>
         {contentPreview && (
