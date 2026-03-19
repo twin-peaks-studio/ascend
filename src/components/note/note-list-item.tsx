@@ -17,8 +17,11 @@ export function NoteListItem({ note, onClick }: NoteListItemProps) {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
-    const diffInDays = Math.floor(
-      (now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24)
+    // Compare calendar dates in local timezone, not raw ms diff
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const noteDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    const diffInDays = Math.round(
+      (today.getTime() - noteDay.getTime()) / (1000 * 60 * 60 * 24)
     );
 
     if (diffInDays === 0) {
