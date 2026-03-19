@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Plus, Briefcase, Brain, Trash2, FolderKanban, BookOpen, Package, Network } from "lucide-react";
+import { Plus, Briefcase, Brain, Trash2, FolderKanban, BookOpen, Package, Network, CheckSquare } from "lucide-react";
 import { AppShell, Header } from "@/components/layout";
 import { ProjectCard, ProjectDialog } from "@/components/project";
 import { Button } from "@/components/ui/button";
@@ -15,11 +15,12 @@ import { useWorkspaceMutations } from "@/hooks/use-workspaces";
 import { WorkspaceCapturesTab } from "@/components/workspace/workspace-captures-tab";
 import { WorkspaceProductsTab } from "@/components/workspace/workspace-products-tab";
 import { WorkspaceEntitiesTab } from "@/components/workspace/workspace-entities-tab";
+import { WorkspaceTasksTab } from "@/components/workspace/workspace-tasks-tab";
 import { cn } from "@/lib/utils";
 import type { ProjectStatus } from "@/types";
 import type { CreateProjectInput, UpdateProjectInput } from "@/lib/validation";
 
-type WorkspaceTab = "projects" | "captures" | "products" | "entities";
+type WorkspaceTab = "projects" | "tasks" | "captures" | "products" | "entities";
 
 function WorkspaceContent() {
   const params = useParams();
@@ -96,6 +97,7 @@ function WorkspaceContent() {
 
   const workspaceTabs: { key: WorkspaceTab; label: string; icon: React.ElementType }[] = [
     { key: "projects", label: "Projects", icon: FolderKanban },
+    { key: "tasks", label: "Tasks", icon: CheckSquare },
     ...(isIntelligence
       ? [
           { key: "captures" as WorkspaceTab, label: "Captures", icon: BookOpen },
@@ -218,6 +220,10 @@ function WorkspaceContent() {
               </div>
             )}
           </>
+        )}
+
+        {activeTab === "tasks" && (
+          <WorkspaceTasksTab workspaceId={workspaceId} />
         )}
 
         {activeTab === "captures" && (

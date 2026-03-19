@@ -147,3 +147,51 @@ export function parseSortOptionKey(key: string): {
   const [field, direction] = key.split(":") as [TaskSortField, TaskSortDirection];
   return { field: field || "position", direction: direction || "asc" };
 }
+
+/**
+ * Due date filter options for task lists
+ */
+export type DueDateFilter = "all" | "unscheduled" | "overdue" | "this_week";
+
+export interface DueDateFilterOption {
+  value: DueDateFilter;
+  label: string;
+}
+
+export const DUE_DATE_FILTER_OPTIONS: DueDateFilterOption[] = [
+  { value: "all", label: "All dates" },
+  { value: "unscheduled", label: "Unscheduled" },
+  { value: "overdue", label: "Overdue" },
+  { value: "this_week", label: "Due this week" },
+];
+
+/**
+ * Filter tasks by due date category
+ */
+export function filterTasksByDueDate<T extends TaskWithProject | Task>(
+  tasks: T[],
+  filter: DueDateFilter
+): T[] {
+  if (filter === "all") return tasks;
+
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  switch (filter) {
+    case "unscheduled":
+      return tasks.filter((t) => !t.due_date);
+    case "overdue":
+      return tasks.filter(
+        (t) => t.due_date && new Date(t.due_date) < today && t.status !== "done"
+      );
+    case "this_week": {
+      const endOfWeek = new Date(today);
+      endOfWeek.setDate(today.getDate() + (7 - today.getDay()));
+      return tasks.filter(
+        (t) => t.due_date && new Date(t.due_date) >= today && new Date(t.due_date) <= endOfWeek
+      );
+    }
+    default:
+      return tasks;
+  }
+}
