@@ -855,7 +855,7 @@ const sections: WikiSection[] = [
       {
         heading: "Browsing Entities",
         paragraphs: [
-          "Click on an intelligence workspace in the sidebar to open it. You'll see tabs at the top: Projects, Captures, Products, and Entities. Select the Entities tab to see all entities grouped by type with search and filter pills. Click any entity to view its detail page.",
+          "Click on an intelligence workspace in the sidebar to open it. You'll see tabs at the top: Projects, Tasks, Captures, Products, and Entities. Select the Entities tab to see all entities grouped by type with search and filter pills. Click any entity to view its detail page.",
           "The Products tab shows only product entities — things you ship like apps, platforms, and services.",
         ],
       },
@@ -947,6 +947,21 @@ const sections: WikiSection[] = [
           "Stakeholders are only linked when there's a clear dependency or follow-up action — not just because they were mentioned in the note.",
         ],
         tip: "Entity links on tasks appear as badges across all task views: list, kanban, and today page. This makes it easy to see at a glance which products and initiatives a task affects.",
+      },
+      {
+        heading: "Workspace Tasks Tab",
+        paragraphs: [
+          "Every workspace — both standard and intelligence — has a Tasks tab on its detail page. This tab shows all tasks across every project in the workspace in a single flat list.",
+          "Use the sort dropdown to order by priority, due date, or default position. Toggle 'Show done' to include completed tasks.",
+        ],
+        tip: "The workspace Tasks tab is the fastest way to find unscheduled tasks — use the date filter and select 'Unscheduled' to see every task without a due date across all your projects.",
+      },
+      {
+        heading: "Due Date Filters",
+        paragraphs: [
+          "Both the workspace Tasks tab and the entity Tasks tab include a date filter dropdown with four options: All dates (default), Unscheduled (tasks with no due date), Overdue (past due and not completed), and Due this week (due between today and end of the current week).",
+          "When a date filter is active, the button switches to a filled style so you can see at a glance that a filter is applied. The task count summary also shows how many unscheduled tasks exist.",
+        ],
       },
     ],
   },

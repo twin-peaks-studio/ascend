@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { TaskListItem } from "@/components/task/task-list-view";
-import { useEntityTasks } from "@/hooks/use-entity-tasks";
+import { useWorkspaceTasks } from "@/hooks/use-workspace-tasks";
 import { useTaskMutations } from "@/hooks/use-tasks";
 import {
   sortTasksWithCompletedLast,
@@ -25,14 +25,13 @@ import {
 import type { TaskWithProject, TaskStatus } from "@/types";
 import type { Task } from "@/types/database";
 
-interface EntityTasksTabProps {
-  entityId: string;
-  workspaceId?: string | null;
+interface WorkspaceTasksTabProps {
+  workspaceId: string;
 }
 
-export function EntityTasksTab({ entityId, workspaceId }: EntityTasksTabProps) {
+export function WorkspaceTasksTab({ workspaceId }: WorkspaceTasksTabProps) {
   const router = useRouter();
-  const { tasks, loading } = useEntityTasks(entityId);
+  const { tasks, loading } = useWorkspaceTasks(workspaceId);
   const { updateTask } = useTaskMutations();
 
   const [sortField, setSortField] = useState<TaskSortField>("priority");
@@ -48,6 +47,7 @@ export function EntityTasksTab({ entityId, workspaceId }: EntityTasksTabProps) {
 
   const completedCount = useMemo(() => tasks.filter((t) => t.status === "done").length, [tasks]);
   const openCount = tasks.length - completedCount;
+  const unscheduledCount = useMemo(() => tasks.filter((t) => !t.due_date && t.status !== "done").length, [tasks]);
 
   const handleStatusToggle = useCallback(
     async (task: TaskWithProject | Task) => {
@@ -59,11 +59,10 @@ export function EntityTasksTab({ entityId, workspaceId }: EntityTasksTabProps) {
 
   const handleTaskClick = useCallback(
     (task: TaskWithProject | Task) => {
-      const params = new URLSearchParams({ from: "entity", entityId });
-      if (workspaceId) params.set("workspace", workspaceId);
+      const params = new URLSearchParams({ workspace: workspaceId });
       router.push(`/tasks/${task.id}?${params.toString()}`);
     },
-    [router, entityId, workspaceId]
+    [router, workspaceId]
   );
 
   const currentSortLabel = TASK_SORT_OPTIONS.find(
@@ -90,6 +89,7 @@ export function EntityTasksTab({ entityId, workspaceId }: EntityTasksTabProps) {
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
           {openCount} open{completedCount > 0 ? `, ${completedCount} completed` : ""}
+          {unscheduledCount > 0 ? ` · ${unscheduledCount} unscheduled` : ""}
         </p>
         <div className="flex items-center gap-1.5">
           {/* Due date filter */}
@@ -161,14 +161,14 @@ export function EntityTasksTab({ entityId, workspaceId }: EntityTasksTabProps) {
         <div className="rounded-lg border border-dashed p-8 text-center">
           <p className="text-sm text-muted-foreground mb-1">
             {tasks.length === 0
-              ? "No tasks linked to this entity yet."
+              ? "No tasks in this workspace yet."
               : dueDateFilter !== "all"
                 ? `No ${currentDateLabel.toLowerCase()} tasks found.`
                 : "All tasks are completed."}
           </p>
           <p className="text-xs text-muted-foreground">
             {tasks.length === 0
-              ? "Tasks are linked during AI extraction from notes and captures."
+              ? "Tasks created in workspace projects will appear here."
               : dueDateFilter !== "all"
                 ? "Try changing the date filter to see more tasks."
                 : "Toggle \"Show done\" to see completed tasks."}

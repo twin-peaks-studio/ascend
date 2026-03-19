@@ -108,7 +108,7 @@ Workspaces (`src/contexts/workspace-context.tsx`) provide workspace isolation. E
 
 **Workspace types:** `"standard"` (basic project container) and `"intelligence"` (unlocks Captures, daily journal, entities).
 
-**Workspace detail page tabs:** Intelligence workspaces show tabs at `/workspaces/[id]`: Projects, Captures, Products, Entities. Standard workspaces only show the Projects grid (no tab bar). Tab components live in `src/components/workspace/workspace-*-tab.tsx`.
+**Workspace detail page tabs:** All workspaces show Projects and Tasks tabs at `/workspaces/[id]`. Intelligence workspaces additionally show Captures, Products, and Entities tabs. Tab components live in `src/components/workspace/workspace-*-tab.tsx`. The Tasks tab (`WorkspaceTasksTab`) fetches all tasks across projects in the workspace via `useWorkspaceTasks` and supports sort, show-completed toggle, and due date filters (All, Unscheduled, Overdue, Due this week).
 
 **Captures** are notes with `capture_type` set (not null). They live in the existing `notes` table with added columns: `workspace_id`, `capture_type`, `occurred_at`. Standard notes have `capture_type = null`. The captures hook (`use-captures.ts`) is separate from `use-notes.ts`. Captures are only accessible through the workspace detail page (Captures tab) — there is no sidebar or mobile nav link. The `/captures` route redirects to the active workspace. Capture detail links include `?workspace=[id]` for correct back-navigation. Captures have the same full editing experience as notes: Tiptap rich text editor with auto-save, linked tasks via `note_tasks` junction table, inline task creation (requires selecting a project), and AI task extraction with per-task project assignment.
 
@@ -124,6 +124,7 @@ Key files:
 - `src/contexts/workspace-context.tsx` — `WorkspaceProvider`, `useWorkspaceContext()`
 - `src/hooks/use-workspaces.ts` — workspace CRUD
 - `src/hooks/use-workspace-members.ts` — member management
+- `src/hooks/use-workspace-tasks.ts` — all tasks across workspace projects (with entity enrichment)
 - `src/hooks/use-captures.ts` — capture CRUD with daily grouping
 - `src/hooks/use-entities.ts` — entity CRUD with workspace scoping
 - `src/hooks/use-entity-links.ts` — entity-to-entity relationships
@@ -132,6 +133,7 @@ Key files:
 - `src/components/workspace/workspace-captures-tab.tsx` — captures tab content
 - `src/components/workspace/workspace-products-tab.tsx` — products tab content
 - `src/components/workspace/workspace-entities-tab.tsx` — entities tab content
+- `src/components/workspace/workspace-tasks-tab.tsx` — workspace-wide tasks with due date filters
 - `src/app/captures/[id]/page.tsx` — capture detail page (mirrors note detail: rich text, tasks, AI extraction)
 - `src/components/capture/` — capture-list, capture-editor
 
@@ -192,6 +194,8 @@ Key files:
 **Entity-Linked Task Extraction (Phase 4.7):** AI task extraction links tasks to entities via a `task_entities` junction table. Entities mentioned in the source note/capture are passed (with foundational context) to the extraction prompt; Claude suggests entity associations per task; users review/edit in the extraction dialog. Stakeholders only linked for clear dependencies. The review dialog's entity dropdown shows **all workspace entities** (not just those mentioned in the note) via an `allEntities` prop, with type-to-search when the list exceeds 5 items. The creation logic in `use-task-extraction.ts` resolves entity types from the DB for any IDs not in `sourceEntities`. See `docs/initiatives/ENTITY_MEMORY_IMPLEMENTATION.md` Phase 4.7 for full spec.
 
 **Entity Display on Task Views (Phase 4.8):** All task surfaces (`TaskListItem`, `TaskCard`, `TodayTaskRow`) show entity pills from `task_entities` — products (purple), initiatives (amber), stakeholders (green). All entities shown on desktop (no truncation). See `docs/initiatives/ENTITY_MEMORY_IMPLEMENTATION.md` Phase 4.8 for full spec.
+
+**Due Date Filters (Phase 4.9):** The workspace Tasks tab and entity Tasks tab both support a due date filter dropdown with options: All, Unscheduled (`due_date IS NULL`), Overdue (`due_date < today AND status != done`), and Due this week. The filter logic lives in `filterTasksByDueDate()` in `src/lib/task-sort.ts`. The active filter button uses `variant="default"` to visually indicate filtering is applied.
 
 ### Project Status & Sidebar Filtering
 

@@ -69,6 +69,26 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: "March 19, 2026",
+    version: "0.26.1",
+    title: "Workspace Tasks & Due Date Filters",
+    description: "View all tasks across a workspace from a single tab, and filter by due date status on both workspace and entity task views.",
+    features: [
+      {
+        icon: CheckSquare,
+        title: "Workspace Tasks Tab",
+        description: "A new Tasks tab on the workspace detail page shows all tasks across every project in the workspace. Sort, filter by due date, and toggle completed tasks — all in one place.",
+        tag: "new",
+      },
+      {
+        icon: CalendarDays,
+        title: "Due Date Filters",
+        description: "Filter tasks by date status: Unscheduled (no due date), Overdue, or Due this week. Available on both workspace and entity task views.",
+        tag: "new",
+      },
+    ],
+  },
+  {
+    date: "March 19, 2026",
     version: "0.26.0",
     title: "Context-Aware Memory & Entity-Linked Tasks",
     description: "AI memory now uses foundational context to understand internal terminology. Task extraction links tasks to entities, and entity badges appear on all task views.",
