@@ -5,20 +5,26 @@ import { useParams, useRouter } from "next/navigation";
 import { Plus, Briefcase, Brain, Trash2, FolderKanban, BookOpen, Package, Network, CheckSquare } from "lucide-react";
 import { AppShell, Header } from "@/components/layout";
 import { ProjectCard, ProjectDialog } from "@/components/project";
+import { TaskDialog } from "@/components/task";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DeleteConfirmationDialog } from "@/components/ui/delete-confirmation-dialog";
 import { useProjects, useProjectMutations } from "@/hooks/use-projects";
+import { useTaskMutations } from "@/hooks/use-tasks";
+import { useProfiles } from "@/hooks/use-profiles";
+import { useAuth } from "@/hooks/use-auth";
 import { useWorkspaceContext } from "@/contexts/workspace-context";
 import { useWorkspaceMutations } from "@/hooks/use-workspaces";
 import { WorkspaceCapturesTab } from "@/components/workspace/workspace-captures-tab";
 import { WorkspaceProductsTab } from "@/components/workspace/workspace-products-tab";
 import { WorkspaceEntitiesTab } from "@/components/workspace/workspace-entities-tab";
 import { WorkspaceTasksTab } from "@/components/workspace/workspace-tasks-tab";
+import { workspaceTaskKeys } from "@/hooks/use-workspace-tasks";
+import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
-import type { ProjectStatus } from "@/types";
-import type { CreateProjectInput, UpdateProjectInput } from "@/lib/validation";
+import type { ProjectStatus, Project } from "@/types";
+import type { CreateProjectInput, UpdateProjectInput, CreateTaskInput } from "@/lib/validation";
 
 type WorkspaceTab = "projects" | "tasks" | "captures" | "products" | "entities";
 
@@ -39,10 +45,15 @@ function WorkspaceContent() {
 
   const { projects, loading, refetch } = useProjects(workspaceId);
   const { createProject, deleteProject, loading: mutationLoading } = useProjectMutations();
+  const { createTask, loading: taskMutationLoading } = useTaskMutations();
+  const { profiles } = useProfiles();
+  const { user } = useAuth();
   const { deleteWorkspace, loading: wsLoading } = useWorkspaceMutations();
+  const queryClient = useQueryClient();
 
   const [activeTab, setActiveTab] = useState<WorkspaceTab>("projects");
   const [showProjectDialog, setShowProjectDialog] = useState(false);
+  const [showTaskDialog, setShowTaskDialog] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [deleteWsConfirm, setDeleteWsConfirm] = useState(false);
   const [statusFilter, setStatusFilter] = useState<ProjectStatus | "all">("all");
@@ -78,6 +89,26 @@ function WorkspaceContent() {
       router.push("/");
     }
   }, [deleteWorkspace, workspaceId, router]);
+
+  const handleCreateTask = useCallback(
+    async (data: CreateTaskInput) => {
+      await createTask(data);
+      queryClient.invalidateQueries({ queryKey: workspaceTaskKeys.list(workspaceId) });
+    },
+    [createTask, queryClient, workspaceId]
+  );
+
+  // Cmd+7 (Mac) / Ctrl+7 (Win/Linux) → open task creation dialog
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "7") {
+        e.preventDefault();
+        setShowTaskDialog(true);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   if (!workspace && !loading) {
     return (
@@ -133,6 +164,12 @@ function WorkspaceContent() {
               <Trash2 className="h-4 w-4" />
               Delete
             </Button>
+            {activeTab === "tasks" && (
+              <Button size="sm" className="gap-1.5" onClick={() => setShowTaskDialog(true)}>
+                <Plus className="h-4 w-4" />
+                New Task
+              </Button>
+            )}
             {activeTab === "projects" && (
               <Button size="sm" className="gap-1.5" onClick={() => setShowProjectDialog(true)}>
                 <Plus className="h-4 w-4" />
@@ -238,6 +275,19 @@ function WorkspaceContent() {
           <WorkspaceEntitiesTab workspaceId={workspaceId} />
         )}
       </div>
+
+      {/* Create Task Dialog (Cmd+7 or "New Task" button) */}
+      <TaskDialog
+        open={showTaskDialog}
+        onOpenChange={setShowTaskDialog}
+        projects={projects as Project[]}
+        profiles={profiles}
+        defaultStatus="todo"
+        defaultAssigneeId={user?.id ?? null}
+        onSubmit={handleCreateTask}
+        loading={taskMutationLoading}
+        workspaceId={workspaceId}
+      />
 
       {/* Create Project Dialog */}
       <ProjectDialog
