@@ -388,6 +388,9 @@ export function useTaskExtraction(): UseTaskExtractionReturn {
           const entityTypeMap = new Map(
             sourceEntities.map((e) => [e.id, e.type])
           );
+          const entityNameMap = new Map(
+            sourceEntities.map((e) => [e.id, e.name])
+          );
           const entityRows = task.entityIds
             .filter((eid) => entityTypeMap.has(eid))
             .map((eid) => ({
@@ -396,10 +399,29 @@ export function useTaskExtraction(): UseTaskExtractionReturn {
               entity_type: entityTypeMap.get(eid)!,
             }));
 
+          console.log("[TaskExtraction] Linking entities to task:", {
+            taskTitle: task.title,
+            taskId: createdTask.id,
+            aiEntityIds: task.entityIds,
+            resolvedEntities: task.entityIds.map((eid) => ({
+              id: eid,
+              name: entityNameMap.get(eid) ?? "UNKNOWN",
+              type: entityTypeMap.get(eid) ?? "UNKNOWN",
+            })),
+            rowsToInsert: entityRows,
+          });
+
           if (entityRows.length > 0) {
-            const { error: entityLinkError } = await supabase
+            const { data: insertedRows, error: entityLinkError } = await supabase
               .from("task_entities")
-              .insert(entityRows);
+              .insert(entityRows)
+              .select();
+
+            console.log("[TaskExtraction] task_entities insert result:", {
+              taskId: createdTask.id,
+              insertedRows,
+              error: entityLinkError,
+            });
 
             if (entityLinkError) {
               logger.error("Failed to link task to entities", {
