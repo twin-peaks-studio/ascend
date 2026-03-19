@@ -223,13 +223,24 @@ export async function POST(
       );
     }
 
-    // 4. Fetch entity (use select("*") so optional columns like memory_guidance
-    //    and memory_source_hash don't cause the query to fail if not yet migrated)
+    // 4. Fetch entity — select("*") so optional columns (memory_guidance,
+    //    memory_source_hash) don't break the query if migration hasn't run.
+    interface EntityRow {
+      id: string;
+      workspace_id: string;
+      entity_type: string;
+      name: string;
+      foundational_context: string | null;
+      ai_memory: string | null;
+      memory_refreshed_at: string | null;
+      memory_guidance?: string | null;
+      memory_source_hash?: string | null;
+    }
     const { data: entity, error: entityError } = await supabase
       .from("entities")
       .select("*")
       .eq("id", entityId)
-      .single();
+      .single() as unknown as { data: EntityRow | null; error: { code: string; message: string } | null };
 
     if (entityError || !entity) {
       logger.error("Entity lookup failed", {
