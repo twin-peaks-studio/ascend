@@ -1,6 +1,8 @@
 /**
  * AI Memory Refresh API Route
  *
+ * POST /api/ai/memory-refresh
+ *
  * Synthesizes an entity's ai_memory from three sources:
  * 1. Foundational context (permanent truths)
  * 2. Journal entries (evolving knowledge)
