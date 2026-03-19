@@ -187,6 +187,52 @@ Key files:
 - `src/hooks/use-memory-refresh.ts` — Client hook (`refresh({ force? })`, `refreshing`, `error`; handles `skipped` response)
 - `src/app/entities/[id]/page.tsx` — Memory tab UI with guidance editor, generate/refresh button, and formatted display
 
+**Context-Aware Relevance Filtering (Phase 4.6):** The system prompt instructs Claude to use Foundational Context to understand internal terminology, abbreviations, and feature names when deciding which parts of mentioned content are relevant. This ensures entities referenced indirectly (e.g., "Genius R" for a product called "Restaurant Platform") are correctly identified.
+
+### Entity-Linked Task Extraction (Phase 4.7)
+
+AI task extraction links extracted tasks to relevant entities. When extracting from a note/capture, the system passes the entities mentioned in that source (with their foundational context) so the AI can suggest entity associations per task.
+
+**Data model:** `task_entities` junction table (many-to-many: tasks ↔ entities). Separate from `entity_mentions` which tracks content-level #hashtag references. A task can link to multiple entities of any type (product, initiative, stakeholder). Stakeholders are only linked when there is a clear dependency or follow-up action.
+
+**Extraction flow:**
+1. Client collects entities mentioned in the source note/capture (from `entity_mentions` table or parsed from HTML)
+2. Entities + foundational context are sent to the extraction API alongside note content
+3. Claude suggests entity IDs per extracted task
+4. User reviews and edits entity associations in the extraction review dialog before confirming
+5. On creation, `task_entities` records are inserted alongside the task
+
+**Review UI:** The `ExtractedTaskItem` component shows entity pills (colored by type) that are removable and addable. The entity selector is scoped to entities mentioned in the source content.
+
+**The existing `initiative_entity_id` column on tasks** is a legacy field from Phase 1 that was never used. It should be deprecated in favor of `task_entities` which supports multiple entities of any type.
+
+Key files:
+- `src/lib/ai/prompts.ts` — extraction system/user prompts (entity context injection)
+- `src/lib/ai/types.ts` — `RawExtractedTask` and `ExtractedTask` types (entity fields)
+- `src/app/api/ai/extract-tasks/route.ts` — extraction API route (entity context handling)
+- `src/hooks/use-task-extraction.ts` — extraction hook (entity passing, `task_entities` creation)
+- `src/components/ai/extracted-task-item.tsx` — review UI (entity pills, add/remove)
+- `src/components/ai/task-extraction-dialog.tsx` — dialog (passes entity data through)
+
+### Entity Display on Task Views (Phase 4.8)
+
+All task surfaces display entity badges from the `task_entities` junction table. Entities are shown as colored pills (products: purple, initiatives: amber, stakeholders: green) — matching the entity mention pill colors from the rich text editor.
+
+**Display rules:**
+- Show all linked entities (typically 3-5 max) — no "+N more" truncation on desktop
+- Row heights may vary based on entity count — this is acceptable
+- Mobile truncation to be addressed separately
+- Entities render in a dedicated row/section within the task item, below the title
+
+**Affected components:**
+- `TaskListItem` (`src/components/task/task-list-view.tsx`) — list view on `/tasks` and `/projects/[id]`
+- `TaskCard` (`src/components/task/task-card.tsx`) — kanban board cards
+- `TodayTaskRow` (`src/app/today/page.tsx`) — today page custom rows
+
+**Data flow:** Tasks are enriched with entities at query time via a pattern similar to `enrichTasksWithProducts()`. A new `enrichTasksWithEntities()` function queries `task_entities` with entity details (name, type) and attaches them to the task object.
+
+**Replaces product-only display:** The current product badges (derived from `project.entity_id → entity_links`) are replaced by the direct `task_entities` display. Products linked via `task_entities` are shown alongside initiatives and stakeholders in the same row.
+
 ### Project Status & Sidebar Filtering
 
 Projects have a `status` field (`"active" | "completed" | "archived"`). The sidebar (`src/components/layout/sidebar.tsx`) filters out archived projects before rendering — if you add new status values, update this filter accordingly.

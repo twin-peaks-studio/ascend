@@ -44,6 +44,7 @@ import {
   Network,
   Keyboard,
   Hash,
+  Link2,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -66,6 +67,32 @@ interface ChangelogEntry {
 }
 
 const changelog: ChangelogEntry[] = [
+  {
+    date: "March 19, 2026",
+    version: "0.26.0",
+    title: "Context-Aware Memory & Entity-Linked Tasks",
+    description: "AI memory now uses foundational context to understand internal terminology. Task extraction links tasks to entities, and entity badges appear on all task views.",
+    features: [
+      {
+        icon: Brain,
+        title: "Smarter Memory Relevance",
+        description: "AI memory refresh now uses foundational context as a glossary to understand internal terminology, abbreviations, and feature names when filtering mentioned content.",
+        tag: "improved",
+      },
+      {
+        icon: Link2,
+        title: "Entity-Linked Task Extraction",
+        description: "AI task extraction suggests entity associations for each extracted task. Review and edit entity links before creating tasks. Stakeholders are only linked when there's a clear dependency.",
+        tag: "new",
+      },
+      {
+        icon: Eye,
+        title: "Entity Badges on Tasks",
+        description: "All task views — list, kanban, and today — now show colored entity pills (products, initiatives, stakeholders) linked to each task.",
+        tag: "new",
+      },
+    ],
+  },
   {
     date: "March 17, 2026",
     version: "0.25.0",

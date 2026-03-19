@@ -930,6 +930,23 @@ const sections: WikiSection[] = [
         ],
         tip: "Memory refresh reads all #mentions across your workspace. The more you use #mentions in notes and captures, the richer the synthesized memory becomes.",
       },
+      {
+        heading: "Internal Terminology & Foundational Context",
+        paragraphs: [
+          "The AI uses your Foundational Context as a glossary when deciding which parts of mentioned notes are relevant. If your team uses internal terms, abbreviations, or codenames (e.g., 'Genius R' for 'Restaurant Platform'), write them in the Foundational Context on the Overview tab.",
+          "This way, when a note discusses 'Genius R' and mentions the entity, the AI knows to include that content in the memory — even though the entity name itself doesn't appear.",
+        ],
+        tip: "Think of Foundational Context as teaching the AI your team's vocabulary for this entity.",
+      },
+      {
+        heading: "Entity-Linked Tasks",
+        paragraphs: [
+          "When you extract tasks from a note or capture using AI, the system automatically suggests which entities each task relates to. These suggestions are based on the entities mentioned in your source content.",
+          "In the extraction review dialog, you'll see colored entity pills on each task — purple for products, amber for initiatives, green for stakeholders. You can remove or add entity links before creating the tasks.",
+          "Stakeholders are only linked when there's a clear dependency or follow-up action — not just because they were mentioned in the note.",
+        ],
+        tip: "Entity links on tasks appear as badges across all task views: list, kanban, and today page. This makes it easy to see at a glance which products and initiatives a task affects.",
+      },
     ],
   },
   {

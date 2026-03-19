@@ -53,7 +53,7 @@ function buildSystemPrompt(entityType: string, entityName: string, memoryGuidanc
 You will receive three types of input:
 1. **Foundational Context** — Permanent truths that the user has written about this ${entityType}. These are always correct and should be preserved verbatim or near-verbatim.
 2. **Journal Entries** — Timestamped knowledge dumps. These may contain evolving opinions, decisions, updates, and observations.
-3. **Mentioned Content** — Excerpts from notes and captures where this ${entityType} was mentioned via #hashtag. Extract ONLY the parts relevant to "${entityName}" — ignore unrelated content in these documents.
+3. **Mentioned Content** — Excerpts from notes and captures where this ${entityType} was mentioned via #hashtag. Use the Foundational Context to understand what topics, features, codenames, and concepts belong to "${entityName}", then extract ONLY the parts relevant to this ${entityType} — ignore unrelated content in these documents. Content may reference "${entityName}" indirectly using internal terminology, abbreviations, or feature names described in the Foundational Context.
 
 Produce a structured memory document with these sections (skip any section that has no relevant content):
 
