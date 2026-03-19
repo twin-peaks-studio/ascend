@@ -17,7 +17,7 @@ import { withTimeout, TIMEOUTS } from "@/lib/utils/with-timeout";
 import { logger } from "@/lib/logger/logger";
 import { useAuth } from "@/hooks/use-auth";
 import { taskKeys } from "@/hooks/use-tasks";
-import { enrichTasksWithProducts } from "@/lib/utils/enrich-task-products";
+import { enrichTasksWithEntities } from "@/lib/utils/enrich-task-entities";
 import type { Note, Task, TaskWithProject, CaptureWithRelations, NoteTaskJoinResult } from "@/types";
 import type { NoteInsert, NoteUpdate, Project } from "@/types/database";
 
@@ -154,8 +154,8 @@ async function fetchCaptureById(
     .map((nt) => nt.task)
     .filter((task): task is TaskWithProject => task !== null && !task.is_archived);
 
-  // Enrich tasks with product labels from entity links
-  await enrichTasksWithProducts(tasks);
+  // Enrich tasks with entity labels from task_entities
+  await enrichTasksWithEntities(tasks);
 
   const data = result.data as unknown as NoteWithProjectRow;
   return {

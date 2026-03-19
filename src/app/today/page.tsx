@@ -9,7 +9,10 @@ import {
   Loader2,
   RefreshCw,
   Package,
+  Rocket,
+  User,
 } from "lucide-react";
+import { ENTITY_TYPE_COLORS } from "@/lib/utils/entity-colors";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { AppShell } from "@/components/layout/app-shell";
@@ -322,13 +325,16 @@ function TodayTaskRow({
 
         {/* Badges row */}
         <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-          {task.products && task.products.length > 0 && (
-            <span className="inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] font-medium bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400">
-              <Package className="h-2.5 w-2.5" />
-              {task.products[0].name}
-              {task.products.length > 1 && ` +${task.products.length - 1}`}
-            </span>
-          )}
+          {task.entities && task.entities.map((entity) => {
+            const colors = ENTITY_TYPE_COLORS[entity.entity_type] || ENTITY_TYPE_COLORS.product;
+            const Icon = entity.entity_type === "initiative" ? Rocket : entity.entity_type === "stakeholder" ? User : Package;
+            return (
+              <span key={entity.id} className={`inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] font-medium ${colors.bg} ${colors.text}`}>
+                <Icon className="h-2.5 w-2.5" />
+                {entity.name}
+              </span>
+            );
+          })}
           {overdue && (
             <span className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
               Overdue

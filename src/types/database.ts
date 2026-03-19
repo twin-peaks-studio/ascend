@@ -880,6 +880,8 @@ export type Database = {
           foundational_context: string | null;
           ai_memory: string | null;
           memory_refreshed_at: string | null;
+          memory_guidance: string | null;
+          memory_source_hash: string | null;
           metadata: Json;
           created_by: string;
           created_at: string;
@@ -895,6 +897,8 @@ export type Database = {
           foundational_context?: string | null;
           ai_memory?: string | null;
           memory_refreshed_at?: string | null;
+          memory_guidance?: string | null;
+          memory_source_hash?: string | null;
           metadata?: Json;
           created_by: string;
           created_at?: string;
@@ -910,6 +914,8 @@ export type Database = {
           foundational_context?: string | null;
           ai_memory?: string | null;
           memory_refreshed_at?: string | null;
+          memory_guidance?: string | null;
+          memory_source_hash?: string | null;
           metadata?: Json;
           created_by?: string;
           created_at?: string;
@@ -1009,6 +1015,45 @@ export type Database = {
             columns: ["workspace_id"];
             isOneToOne: false;
             referencedRelation: "workspaces";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      task_entities: {
+        Row: {
+          id: string;
+          task_id: string;
+          entity_id: string;
+          entity_type: "product" | "initiative" | "stakeholder";
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          task_id: string;
+          entity_id: string;
+          entity_type: "product" | "initiative" | "stakeholder";
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          task_id?: string;
+          entity_id?: string;
+          entity_type?: "product" | "initiative" | "stakeholder";
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "task_entities_task_id_fkey";
+            columns: ["task_id"];
+            isOneToOne: false;
+            referencedRelation: "tasks";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "task_entities_entity_id_fkey";
+            columns: ["entity_id"];
+            isOneToOne: false;
+            referencedRelation: "entities";
             referencedColumns: ["id"];
           }
         ];

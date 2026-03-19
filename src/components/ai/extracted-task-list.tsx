@@ -11,7 +11,7 @@
 
 import { Button } from "@/components/ui/button";
 import { ExtractedTaskItem } from "./extracted-task-item";
-import type { ExtractedTask } from "@/lib/ai/types";
+import type { ExtractedTask, ExtractionEntity } from "@/lib/ai/types";
 
 interface ProjectOption {
   id: string;
@@ -26,6 +26,8 @@ interface ExtractedTaskListProps {
   onDeselectAll: () => void;
   /** When provided, show per-task project selector (used for captures) */
   projects?: ProjectOption[];
+  /** Available entities for linking */
+  entities?: ExtractionEntity[];
 }
 
 export function ExtractedTaskList({
@@ -35,6 +37,7 @@ export function ExtractedTaskList({
   onSelectAll,
   onDeselectAll,
   projects,
+  entities,
 }: ExtractedTaskListProps) {
   const selectedCount = tasks.filter((t) => t.selected).length;
   const allSelected = selectedCount === tasks.length;
@@ -67,6 +70,7 @@ export function ExtractedTaskList({
               onUpdate={(updates) => onUpdateTask(task.id, updates)}
               onToggleSelection={() => onToggleSelection(task.id)}
               projects={projects}
+              entities={entities}
             />
           ))}
         </div>

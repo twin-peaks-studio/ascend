@@ -22,6 +22,9 @@ import {
   Circle,
   CheckCircle2,
   FileText,
+  RefreshCw,
+  Loader2,
+  Sparkles,
 } from "lucide-react";
 import { AppShell } from "@/components/layout";
 import { Header } from "@/components/layout";
@@ -49,6 +52,8 @@ import { useEntityLinks } from "@/hooks/use-entity-links";
 import { useEntityContextEntries, useEntityContextEntryMutations } from "@/hooks/use-entity-context-entries";
 import { useEntityMentionsByEntity } from "@/hooks/use-entity-mentions";
 import { useInitiativeTaskRollup, useProductTaskRollup, type TaskRollupSummary } from "@/hooks/use-entity-task-rollup";
+import { useMemoryRefresh } from "@/hooks/use-memory-refresh";
+import { EntityTasksTab } from "@/components/entity/entity-tasks-tab";
 import { cn } from "@/lib/utils";
 import type { EntityType, EntityContextEntry } from "@/types/database";
 
@@ -61,7 +66,7 @@ const ENTITY_TYPE_CONFIG: Record<
   stakeholder: { label: "Stakeholder", icon: Users, color: "text-green-500" },
 };
 
-type Tab = "overview" | "journal" | "links" | "memory" | "mentions";
+type Tab = "overview" | "tasks" | "journal" | "links" | "memory" | "mentions";
 
 function JournalEntryCard({
   entry,
@@ -191,6 +196,7 @@ function EntityDetailContent() {
   const { updateEntity, deleteEntity, loading: mutating } = useEntityMutations();
   const { createEntry, updateEntry, deleteEntry, loading: entryMutating } = useEntityContextEntryMutations();
   const { mentions } = useEntityMentionsByEntity(entityId);
+  const { refresh: refreshMemory, refreshing: memoryRefreshing } = useMemoryRefresh(entityId);
 
   // Derive linked initiative IDs for product task rollup
   const linkedInitiativeIds = useMemo(() => {
@@ -212,7 +218,8 @@ function EntityDetailContent() {
     linkedInitiativeIds
   );
 
-  const [activeTab, setActiveTab] = useState<Tab>("overview");
+  const initialTab = (searchParams.get("tab") as Tab) || "overview";
+  const [activeTab, setActiveTab] = useState<Tab>(initialTab);
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState("");
   const [editDescription, setEditDescription] = useState("");
@@ -220,6 +227,8 @@ function EntityDetailContent() {
   const [showDelete, setShowDelete] = useState(false);
   const [newEntry, setNewEntry] = useState("");
   const [showNewEntry, setShowNewEntry] = useState(false);
+  const [editingGuidance, setEditingGuidance] = useState(false);
+  const [guidanceText, setGuidanceText] = useState("");
 
   // Build the back link — navigate to workspace if we came from one
   const backHref = workspaceId ? `/workspaces/${workspaceId}` : "/";
@@ -301,6 +310,7 @@ function EntityDetailContent() {
 
   const tabs: { key: Tab; label: string; icon: React.ElementType }[] = [
     { key: "overview", label: "Overview", icon: Pencil },
+    { key: "tasks", label: "Tasks", icon: CheckSquare },
     { key: "journal", label: `Journal (${entries.length})`, icon: BookOpen },
     { key: "links", label: `Links (${links.length})`, icon: Link2 },
     { key: "memory", label: "Memory", icon: Brain },
@@ -443,6 +453,10 @@ function EntityDetailContent() {
           </div>
         )}
 
+        {activeTab === "tasks" && (
+          <EntityTasksTab entityId={entity.id} workspaceId={workspaceId} />
+        )}
+
         {activeTab === "journal" && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
@@ -496,7 +510,7 @@ function EntityDetailContent() {
                   No journal entries yet.
                 </p>
                 <p className="text-xs text-muted-foreground mb-3">
-                  Brain dump everything you know about this {config.label.toLowerCase()} — decisions made, quirks, constraints, history.
+                  Record everything you know about this {config.label.toLowerCase()} — decisions made, quirks, constraints, history.
                 </p>
                 <Button variant="outline" size="sm" onClick={() => setShowNewEntry(true)}>
                   <Plus className="h-4 w-4 mr-1" />
@@ -617,28 +631,179 @@ function EntityDetailContent() {
 
         {activeTab === "memory" && (
           <div className="space-y-4">
+            {/* Header with refresh button */}
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">
+                Synthesized from foundational context, journal entries, and #mentions.
+              </p>
+              <Button
+                size="sm"
+                variant={entity.ai_memory ? "outline" : "default"}
+                onClick={() => refreshMemory()}
+                disabled={memoryRefreshing || editingGuidance}
+                className="gap-1.5 shrink-0"
+              >
+                {memoryRefreshing ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Synthesizing...
+                  </>
+                ) : (
+                  <>
+                    {entity.ai_memory ? (
+                      <RefreshCw className="h-4 w-4" />
+                    ) : (
+                      <Sparkles className="h-4 w-4" />
+                    )}
+                    {entity.ai_memory ? "Refresh" : "Generate Memory"}
+                  </>
+                )}
+              </Button>
+            </div>
+
+            {/* Memory Guidance section */}
+            <div className="space-y-2">
+              {editingGuidance ? (
+                <div className="rounded-lg border bg-card p-4 space-y-3">
+                  <div>
+                    <h4 className="text-sm font-medium mb-1">Guidance</h4>
+                    <p className="text-xs text-muted-foreground">
+                      Persistent corrections and instructions for the AI. These override conflicting information from other sources and persist across refreshes.
+                    </p>
+                  </div>
+                  <Textarea
+                    value={guidanceText}
+                    onChange={(e) => setGuidanceText(e.target.value)}
+                    placeholder="e.g., &quot;The launch date was moved to Q3 2026&quot; or &quot;Ignore mentions of the old pricing model&quot;"
+                    rows={4}
+                    className="text-sm"
+                  />
+                  <div className="flex gap-2 justify-end">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setEditingGuidance(false)}
+                    >
+                      <X className="h-3.5 w-3.5 mr-1" />
+                      Cancel
+                    </Button>
+                    <Button
+                      size="sm"
+                      disabled={mutating}
+                      onClick={async () => {
+                        const value = guidanceText.trim() || null;
+                        await updateEntity(entity.id, { memory_guidance: value });
+                        setEditingGuidance(false);
+                      }}
+                    >
+                      <Save className="h-3.5 w-3.5 mr-1" />
+                      Save
+                    </Button>
+                  </div>
+                </div>
+              ) : entity.memory_guidance ? (
+                <div className="rounded-lg border bg-card p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-sm font-medium">Guidance</h4>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 px-2 text-xs"
+                      onClick={() => {
+                        setGuidanceText(entity.memory_guidance ?? "");
+                        setEditingGuidance(true);
+                      }}
+                    >
+                      <Pencil className="h-3 w-3 mr-1" />
+                      Edit
+                    </Button>
+                  </div>
+                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">{entity.memory_guidance}</p>
+                </div>
+              ) : (
+                <button
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  onClick={() => {
+                    setGuidanceText("");
+                    setEditingGuidance(true);
+                  }}
+                >
+                  + Add guidance to steer AI memory synthesis
+                </button>
+              )}
+            </div>
+
+            {/* Loading state */}
+            {memoryRefreshing && !entity.ai_memory && (
+              <div className="rounded-lg border border-dashed p-8 text-center space-y-3">
+                <Loader2 className="h-8 w-8 text-muted-foreground mx-auto animate-spin" />
+                <div>
+                  <p className="text-sm font-medium">Synthesizing memory...</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Reading foundational context, journal entries, and mentions to build a comprehensive memory.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Memory content */}
             {entity.ai_memory ? (
               <>
-                <div className="rounded-lg border bg-card p-4 whitespace-pre-wrap text-sm">
-                  {entity.ai_memory}
+                {memoryRefreshing && (
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 rounded-md px-3 py-2">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    Refreshing memory...
+                  </div>
+                )}
+                <div className="rounded-lg border bg-card p-5 prose prose-sm dark:prose-invert max-w-none">
+                  {entity.ai_memory.split("\n").map((line, i) => {
+                    if (line.startsWith("## ")) {
+                      return (
+                        <h3 key={i} className="text-sm font-semibold mt-4 mb-2 first:mt-0">
+                          {line.replace("## ", "")}
+                        </h3>
+                      );
+                    }
+                    if (line.startsWith("- ")) {
+                      return (
+                        <p key={i} className="text-sm pl-3 py-0.5 border-l-2 border-muted-foreground/20 mb-1">
+                          {line.replace("- ", "")}
+                        </p>
+                      );
+                    }
+                    if (line.trim() === "") {
+                      return <div key={i} className="h-2" />;
+                    }
+                    return (
+                      <p key={i} className="text-sm mb-1">
+                        {line}
+                      </p>
+                    );
+                  })}
                 </div>
                 {entity.memory_refreshed_at && (
                   <p className="text-xs text-muted-foreground">
-                    Last refreshed: {new Date(entity.memory_refreshed_at).toLocaleDateString()}
+                    Last refreshed: {new Date(entity.memory_refreshed_at).toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                      hour: "numeric",
+                      minute: "2-digit",
+                    })}
                   </p>
                 )}
               </>
-            ) : (
-              <div className="rounded-lg border border-dashed p-6 text-center">
-                <Brain className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                <p className="text-sm text-muted-foreground mb-1">
-                  No AI memory yet.
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Memory is synthesized from foundational context + journal entries + @mentions. The refresh system will be built in Phase 4.
-                </p>
+            ) : !memoryRefreshing ? (
+              <div className="rounded-lg border border-dashed p-8 text-center space-y-3">
+                <Brain className="h-8 w-8 text-muted-foreground mx-auto" />
+                <div>
+                  <p className="text-sm font-medium">No AI memory yet</p>
+                  <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
+                    Click &quot;Generate Memory&quot; to synthesize knowledge from foundational context, journal entries, and #mentions into a structured memory document.
+                  </p>
+                </div>
               </div>
-            )}
+            ) : null}
           </div>
         )}
 

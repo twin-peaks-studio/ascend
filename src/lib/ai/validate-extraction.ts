@@ -15,6 +15,13 @@ export const extractionSourceTypeSchema = z.enum([
   "project_description",
 ]);
 
+const extractionEntitySchema = z.object({
+  id: z.string().uuid("Invalid entity ID"),
+  name: z.string().max(200),
+  type: z.enum(["product", "initiative", "stakeholder"]),
+  foundationalContext: z.string().max(50000).nullable(),
+});
+
 /**
  * Schema for extraction API request
  */
@@ -28,6 +35,7 @@ export const extractTasksRequestSchema = z.object({
   projectId: z.string().uuid("Invalid project ID").optional(),
   projectTitle: z.string().max(200).optional(),
   existingTaskTitles: z.array(z.string().max(200)).max(100).optional(),
+  entities: z.array(extractionEntitySchema).max(50).optional(),
 });
 
 export type ExtractTasksRequestInput = z.infer<typeof extractTasksRequestSchema>;
@@ -46,6 +54,7 @@ export const extractedTaskSchema = z.object({
   suggestedDueDate: z.string().max(100).nullable(),
   confidence: z.number().min(0).max(1),
   sourceText: z.string().max(2000).nullable(),
+  entityIds: z.array(z.string()).default([]),
 });
 
 /**

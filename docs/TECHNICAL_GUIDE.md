@@ -2543,6 +2543,53 @@ syncMentions() diffs against entity_mentions table → inserts new, deletes remo
 
 ---
 
+### AI Memory Refresh Architecture
+
+The Memory tab on entity detail pages allows users to synthesize an AI memory document from three data sources. This is the core of the "PM brain" — turning scattered knowledge into structured, queryable understanding.
+
+#### Database columns
+- `entities.ai_memory` (text, nullable) — The synthesized memory document (markdown-formatted)
+- `entities.memory_refreshed_at` (timestamptz, nullable) — When memory was last refreshed
+
+#### Data flow
+```
+User clicks "Generate Memory" / "Refresh" on entity Memory tab
+    ↓
+POST /api/ai/memory-refresh { entityId }
+    ↓
+Server-side (authenticated + rate-limited):
+  1. Fetch entity.foundational_context
+  2. Fetch entity_context_entries (journal) ordered by created_at DESC
+  3. Fetch entity_mentions → resolve source_id to notes.content (HTML → plain text)
+  4. Build system prompt (entity type + name specific) + user prompt (all 3 sources)
+  5. Call Claude Sonnet (max_tokens: 4096, timeout: 120s)
+  6. Store result in entities.ai_memory + entities.memory_refreshed_at
+    ↓
+Client receives { aiMemory, refreshedAt, sources }
+    ↓
+useMemoryRefresh hook updates React Query cache (entityKeys.detail) optimistically
+    ↓
+Memory tab renders structured markdown (## headings, - bullets)
+```
+
+#### Key files
+- `src/app/api/ai/memory-refresh/route.ts` — Server route: auth, data gathering, Claude API call, DB update. Uses shared `aiExtraction` rate limit bucket (5 req/min). HTML→plain text conversion via `htmlToPlainText()`.
+- `src/hooks/use-memory-refresh.ts` — Client hook: `useMemoryRefresh(entityId)` returns `{ refresh, refreshing, error }`. Updates entity cache optimistically on success.
+- `src/app/entities/[id]/page.tsx` — Memory tab UI: Generate/Refresh button, loading states, markdown-like rendering of sections.
+
+#### Prompt structure
+- **System prompt** is entity-type and name-specific. Instructs Claude to produce structured sections: Key Facts, Recent Decisions, Open Questions, Stakeholder Notes, Status & Progress, Action Items. Sections with no content are skipped.
+- **User prompt** concatenates three labeled sections: `=== FOUNDATIONAL CONTEXT ===`, `=== JOURNAL ENTRIES (N) ===` (with dates), `=== MENTIONED IN N DOCUMENT(S) ===` (with source type + title).
+
+#### Constraints
+- Memory is user-triggered (not automatic). No background refresh jobs.
+- Shares the `aiExtraction` rate limit bucket — 5 requests per minute per user.
+- Journal entries and mentions are sent newest-first. Large entities with many mentions may approach token limits; the 4096 max_tokens output cap keeps responses focused.
+- HTML from notes/captures is converted to plain text server-side to reduce token usage and avoid confusing the AI with markup.
+- The `ai_memory` field is plain text with markdown-style formatting (## headings, - bullets). The client renders this with simple string splitting, not a full markdown parser.
+
+---
+
 ### Feedback Forms Architecture
 
 Feedback Forms allow developers to create structured feedback forms via AI chat, share password-protected URLs with testers, and have each submission auto-create an Ascend task. This is a fully unauthenticated user-facing flow layered on top of the existing Supabase + Next.js stack.
@@ -2646,5 +2693,49 @@ Testers have no Supabase session, so this route uses `createServiceClient()` (se
 #### Tracker reuse of existing components
 
 The tracker uses a custom lean `TrackerCard` / `TrackerListRow` (not the full `TaskListItem` / `KanbanBoard`). This was intentional — `TrackerTask` does not conform to the full `Task` DB shape those components require, and a lean read-only card is simpler and more appropriate here.
+
+### Phase 4.5: Memory Guidance & Source Change Detection
+
+#### Memory Guidance (4.5A)
+
+The `memory_guidance` column on `entities` stores user-provided corrections and instructions that override conflicting information from other sources. It is injected into the Claude system prompt as a high-priority section (`=== USER CORRECTIONS & GUIDANCE (HIGH PRIORITY) ===`).
+
+The guidance is editable from the Memory tab on the entity detail page. The UI uses a collapsible edit pattern: if no guidance exists, a subtle "+ Add guidance" link appears. When guidance exists, it renders in a card with an Edit button. Saving calls `updateEntity(entity.id, { memory_guidance: value })`.
+
+Validation: `memory_guidance` is added to `updateEntitySchema` in `src/lib/validation.ts` with a 10,000 character limit via `safeOptionalString(10000)`.
+
+#### Source Change Detection (4.5B)
+
+`memory_source_hash` on `entities` stores a SHA-256 hex digest computed from the concatenation of:
+1. `foundational_context ?? ""`
+2. Journal entries sorted by `created_at` ascending (each: content + created_at + null byte separator)
+3. Mentioned content sorted by title (each: content + null byte separator)
+4. `memory_guidance ?? ""`
+
+The hash is computed in `computeSourceHash()` in the API route using Node's built-in `crypto.createHash('sha256')`.
+
+**Skip logic:** After computing the hash and before calling Claude, the API compares against `entity.memory_source_hash`. If they match, `entity.ai_memory` exists, and `force` is not true, it returns the existing memory with `skipped: true`. The client hook shows an info toast.
+
+**Force param:** The `useMemoryRefresh` hook accepts `refresh({ force: true })` to bypass the hash check. This is rarely needed since any source change (including guidance edits) changes the hash.
+
+Key files:
+- `src/app/api/ai/memory-refresh/route.ts` — `computeSourceHash()`, hash comparison, `force` param handling
+- `src/hooks/use-memory-refresh.ts` — `refresh(options?)`, `skipped` handling
+- `src/app/entities/[id]/page.tsx` — Guidance UI (edit mode, display mode, add link)
+- `supabase/migrations/20260317_entity_memory_refinements.sql` — adds `memory_guidance` and `memory_source_hash` columns
+
+### Phase 4.6: Context-Aware Relevance Filtering
+
+A targeted system prompt improvement. The memory refresh system prompt now explicitly instructs Claude to use Foundational Context as a glossary when deciding which parts of Mentioned Content are relevant to the entity.
+
+**Problem:** When a note discusses an entity using internal terminology (e.g., "Genius R" for "Restaurant Platform"), Claude could miss the connection if it only knows the entity name.
+
+**Solution:** Updated the Mentioned Content instruction in `buildSystemPrompt()` to: *"Use the Foundational Context to understand what topics, features, codenames, and concepts belong to this entity... Content may reference the entity indirectly using internal terminology, abbreviations, or feature names described in the Foundational Context."*
+
+No schema changes. No new API fields. The foundational context was already sent in the user prompt — this change just tells Claude to actively cross-reference it when filtering mentioned content.
+
+Key file: `src/app/api/ai/memory-refresh/route.ts` (system prompt, line 56)
+
+Phases 4.7 (Entity-Linked Task Extraction) and 4.8 (Entity Display on Task Views) are documented in `docs/initiatives/ENTITY_MEMORY_IMPLEMENTATION.md`.
 
 *Last updated: March 2026*

@@ -11,6 +11,7 @@
  */
 
 import { Loader2, AlertCircle, Sparkles, CheckCircle } from "lucide-react";
+import type { ExtractionEntity } from "@/lib/ai/types";
 import {
   Dialog,
   DialogContent,
@@ -36,6 +37,8 @@ interface TaskExtractionDialogProps {
   onRetry: () => void;
   /** When provided, show per-task project selector (used for captures) */
   projects?: ProjectOption[];
+  /** Available entities for linking (scoped to source mentions) */
+  entities?: ExtractionEntity[];
 }
 
 export function TaskExtractionDialog({
@@ -44,6 +47,7 @@ export function TaskExtractionDialog({
   extraction,
   onRetry,
   projects,
+  entities,
 }: TaskExtractionDialogProps) {
   const {
     status,
@@ -137,6 +141,7 @@ export function TaskExtractionDialog({
                 onSelectAll={selectAll}
                 onDeselectAll={deselectAll}
                 projects={projects}
+                entities={entities}
               />
             </div>
 

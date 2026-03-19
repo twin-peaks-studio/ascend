@@ -862,14 +862,14 @@ const sections: WikiSection[] = [
       {
         heading: "Entity Detail Page",
         paragraphs: [
-          "Each entity has a detail page with five tabs: Overview (name, description, foundational context), Journal (timestamped knowledge entries), Links (connected products/initiatives), Memory (AI-synthesized knowledge — coming soon), and Mentions (where this entity is referenced — coming soon).",
+          "Each entity has a detail page with five tabs: Overview (name, description, foundational context), Journal (timestamped knowledge entries), Links (connected products/initiatives), Memory (AI-synthesized knowledge — click 'Generate Memory' to create), and Mentions (where this entity is referenced via #mentions).",
         ],
       },
       {
-        heading: "Entity Journal (Brain Dump)",
+        heading: "Entity Journal",
         paragraphs: [
           "The Journal tab is where you record evolving knowledge about an entity. Click 'Add Entry' and write anything — decisions made, preferences, constraints, history. Each entry is timestamped and can be edited or deleted later.",
-          "This is separate from Foundational Context (Overview tab), which is for permanent truths that rarely change. Journal entries capture knowledge that evolves over time. When the AI memory refresh system is built, it will synthesize both sources into a coherent ai_memory blob.",
+          "This is separate from Foundational Context (Overview tab), which is for permanent truths that rarely change. Journal entries capture knowledge that evolves over time. The AI memory refresh synthesizes both sources (plus #mentions) into a structured memory document on the Memory tab.",
         ],
         tip: "Think of Foundational Context as the entity's Wikipedia intro, and the Journal as a running log of everything you learn about it.",
       },
@@ -904,6 +904,48 @@ const sections: WikiSection[] = [
           "Mentions power the AI memory refresh: when you click 'Refresh Memory' on an entity page, the AI reads all documents that mention that entity to synthesize knowledge.",
         ],
         tip: "Use # to link entities in notes. Use @ in comments to mention team members. These are separate systems — # is for entity linking, @ is for user notifications.",
+      },
+      {
+        heading: "AI Memory Refresh",
+        paragraphs: [
+          "The Memory tab on each entity detail page lets you generate a synthesized knowledge document using AI. Click 'Generate Memory' (or 'Refresh' if memory already exists) to start the process.",
+          "The AI reads three sources: (1) Foundational Context — permanent truths you wrote on the Overview tab, (2) Journal Entries — timestamped knowledge from the Journal tab, and (3) Mentions — content from every note and capture that references this entity via #mention.",
+          "The output is a structured document with sections: Key Facts, Recent Decisions, Open Questions, Stakeholder Notes, Status & Progress, and Action Items. Only sections with relevant content appear.",
+        ],
+      },
+      {
+        heading: "Memory Guidance",
+        paragraphs: [
+          "On the Memory tab, you can add persistent Guidance — corrections and instructions that the AI must follow on every refresh. Use this when the AI gets something wrong, or when you want to steer the output in a specific direction.",
+          "Guidance overrides conflicting information from other sources. For example, you could write: \"The launch date was moved to Q3 2026\" or \"Ignore mentions of the old pricing model — it was replaced.\"",
+          "Guidance persists across refreshes. You write it once, and every future memory generation respects it. Edit or remove guidance at any time from the Memory tab.",
+        ],
+        tip: "Editing your guidance counts as a source change, so the next refresh will always run after you update guidance.",
+      },
+      {
+        heading: "When to Refresh Memory",
+        paragraphs: [
+          "Memory is not auto-refreshed — you decide when to generate or update it. Good times to refresh: after adding new journal entries, after a meeting where the entity was discussed in captures, or before a planning session when you want a quick summary of everything known about an entity.",
+          "If you click Refresh and nothing has changed since your last refresh (no new journal entries, no updated mentions, no guidance edits), the system will let you know that no update was needed — saving time and API costs.",
+        ],
+        tip: "Memory refresh reads all #mentions across your workspace. The more you use #mentions in notes and captures, the richer the synthesized memory becomes.",
+      },
+      {
+        heading: "Internal Terminology & Foundational Context",
+        paragraphs: [
+          "The AI uses your Foundational Context as a glossary when deciding which parts of mentioned notes are relevant. If your team uses internal terms, abbreviations, or codenames (e.g., 'Genius R' for 'Restaurant Platform'), write them in the Foundational Context on the Overview tab.",
+          "This way, when a note discusses 'Genius R' and mentions the entity, the AI knows to include that content in the memory — even though the entity name itself doesn't appear.",
+        ],
+        tip: "Think of Foundational Context as teaching the AI your team's vocabulary for this entity.",
+      },
+      {
+        heading: "Entity-Linked Tasks",
+        paragraphs: [
+          "When you extract tasks from a note or capture using AI, the system automatically suggests which entities each task relates to. These suggestions are based on the entities mentioned in your source content.",
+          "In the extraction review dialog, you'll see colored entity pills on each task — purple for products, amber for initiatives, green for stakeholders. You can remove or add entity links before creating the tasks.",
+          "Stakeholders are only linked when there's a clear dependency or follow-up action — not just because they were mentioned in the note.",
+        ],
+        tip: "Entity links on tasks appear as badges across all task views: list, kanban, and today page. This makes it easy to see at a glance which products and initiatives a task affects.",
       },
     ],
   },

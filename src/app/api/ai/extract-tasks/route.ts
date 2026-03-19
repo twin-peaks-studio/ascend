@@ -11,7 +11,7 @@ import {
   extractTasksRequestSchema,
   aiExtractionResponseSchema,
 } from "@/lib/ai/validate-extraction";
-import { SYSTEM_PROMPT, buildUserPrompt } from "@/lib/ai/prompts";
+import { buildSystemPrompt, buildUserPrompt } from "@/lib/ai/prompts";
 import { withTimeoutAndAbort, isTimeoutError } from "@/lib/utils/with-timeout";
 import {
   withRateLimit,
@@ -81,7 +81,7 @@ export async function POST(
       );
     }
 
-    const { sourceType, content, projectTitle, existingTaskTitles } =
+    const { sourceType, content, projectTitle, existingTaskTitles, entities } =
       validated.data;
 
     // 4. Check for empty content
@@ -115,11 +115,14 @@ export async function POST(
     }
 
     // 6. Call Claude API with timeout
+    const hasEntities = !!entities && entities.length > 0;
+    const systemPrompt = buildSystemPrompt(hasEntities);
     const userPrompt = buildUserPrompt({
       sourceType,
       content,
       projectTitle,
       existingTaskTitles,
+      entities,
     });
 
     const aiResponse = await withTimeoutAndAbort(
@@ -134,7 +137,7 @@ export async function POST(
           body: JSON.stringify({
             model: CLAUDE_MODEL,
             max_tokens: 16384,
-            system: SYSTEM_PROMPT,
+            system: systemPrompt,
             messages: [{ role: "user", content: userPrompt }],
           }),
           signal,

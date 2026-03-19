@@ -3,7 +3,8 @@
 import { useRef, useEffect } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, MoreHorizontal, Copy, Archive, Trash2, Pencil, Calendar, Package } from "lucide-react";
+import { GripVertical, MoreHorizontal, Copy, Archive, Trash2, Pencil, Calendar, Package, Rocket, User } from "lucide-react";
+import { ENTITY_TYPE_COLORS } from "@/lib/utils/entity-colors";
 import { cn } from "@/lib/utils";
 import { stripFormatting } from "@/lib/description-utils";
 import { Card } from "@/components/ui/card";
@@ -193,14 +194,17 @@ export function TaskCard({
             </Badge>
           )}
 
-          {/* Product badge */}
-          {task.products && task.products.length > 0 && (
-            <Badge variant="outline" className="text-xs text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-800">
-              <Package className="h-3 w-3 mr-1" />
-              {task.products[0].name}
-              {task.products.length > 1 && ` +${task.products.length - 1}`}
-            </Badge>
-          )}
+          {/* Entity badges */}
+          {task.entities && task.entities.map((entity) => {
+            const colors = ENTITY_TYPE_COLORS[entity.entity_type] || ENTITY_TYPE_COLORS.product;
+            const Icon = entity.entity_type === "initiative" ? Rocket : entity.entity_type === "stakeholder" ? User : Package;
+            return (
+              <Badge key={entity.id} variant="outline" className={cn("text-xs", colors.text, colors.border)}>
+                <Icon className="h-3 w-3 mr-1" />
+                {entity.name}
+              </Badge>
+            );
+          })}
 
           {/* Duplicate badge */}
           {task.is_duplicate && (

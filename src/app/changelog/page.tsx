@@ -44,6 +44,7 @@ import {
   Network,
   Keyboard,
   Hash,
+  Link2,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -66,6 +67,72 @@ interface ChangelogEntry {
 }
 
 const changelog: ChangelogEntry[] = [
+  {
+    date: "March 19, 2026",
+    version: "0.26.0",
+    title: "Context-Aware Memory & Entity-Linked Tasks",
+    description: "AI memory now uses foundational context to understand internal terminology. Task extraction links tasks to entities, and entity badges appear on all task views.",
+    features: [
+      {
+        icon: Brain,
+        title: "Smarter Memory Relevance",
+        description: "AI memory refresh now uses foundational context as a glossary to understand internal terminology, abbreviations, and feature names when filtering mentioned content.",
+        tag: "improved",
+      },
+      {
+        icon: Link2,
+        title: "Entity-Linked Task Extraction",
+        description: "AI task extraction suggests entity associations for each extracted task. Review and edit entity links before creating tasks. Stakeholders are only linked when there's a clear dependency.",
+        tag: "new",
+      },
+      {
+        icon: Eye,
+        title: "Entity Badges on Tasks",
+        description: "All task views — list, kanban, and today — now show colored entity pills (products, initiatives, stakeholders) linked to each task.",
+        tag: "new",
+      },
+    ],
+  },
+  {
+    date: "March 17, 2026",
+    version: "0.25.0",
+    title: "Memory Guidance & Source Detection",
+    description: "Steer AI memory synthesis with persistent corrections and skip unnecessary refreshes when sources haven't changed.",
+    features: [
+      {
+        icon: Brain,
+        title: "Memory Guidance",
+        description: "Add persistent corrections and instructions that override AI memory synthesis. Your guidance survives across refreshes so you never need to repeat corrections.",
+        tag: "new",
+      },
+      {
+        icon: RefreshCw,
+        title: "Smart Refresh Detection",
+        description: "Memory refresh now detects when source material hasn't changed since the last refresh and lets you know — saving time and API costs.",
+        tag: "improved",
+      },
+    ],
+  },
+  {
+    date: "March 17, 2026",
+    version: "0.24.0",
+    title: "AI Memory Refresh for Entities",
+    description: "Entities can now synthesize knowledge from all their sources — foundational context, journal entries, and #mentions — into a structured AI memory document.",
+    features: [
+      {
+        icon: Brain,
+        title: "AI Memory Refresh",
+        description: "Click 'Generate Memory' on any entity's Memory tab. The AI reads your foundational context, journal entries, and every note/capture that mentions the entity, then synthesizes a structured summary: key facts, decisions, open questions, stakeholder notes, and action items.",
+        tag: "new",
+      },
+      {
+        icon: Sparkles,
+        title: "Structured Memory Output",
+        description: "AI memory is organized into clear sections — Key Facts, Recent Decisions, Open Questions, Stakeholder Notes, Status & Progress, and Action Items. Each section is rendered with clean formatting on the Memory tab.",
+        tag: "new",
+      },
+    ],
+  },
   {
     date: "March 17, 2026",
     version: "0.23.0",
@@ -160,7 +227,7 @@ const changelog: ChangelogEntry[] = [
       },
       {
         icon: BookOpen,
-        title: "Entity Journal (Brain Dump)",
+        title: "Entity Journal",
         description: "Each entity detail page now has a Journal tab for recording evolving knowledge. Add timestamped context entries about any product, initiative, or stakeholder. Journal entries will be synthesized into AI memory alongside foundational context during memory refresh.",
         tag: "new",
       },

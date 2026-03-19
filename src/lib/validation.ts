@@ -347,6 +347,7 @@ export const updateEntitySchema = z.object({
   name: safeRequiredString(200).optional(),
   description: safeOptionalString(1000),
   foundational_context: safeOptionalString(50000),
+  memory_guidance: safeOptionalString(10000),
 });
 
 export type CreateEntityInput = z.infer<typeof createEntitySchema>;

@@ -166,6 +166,33 @@ Key files:
 - `src/hooks/use-entity-mentions.ts` — `useMentionSync()`, `useEntityMentionsByEntity()`
 - `src/components/shared/rich-text-editor.tsx` — `workspaceId` prop integration
 
+### AI Memory Refresh (Phase 4)
+
+The Memory tab on entity detail pages synthesizes knowledge from three sources into a structured AI memory document. Users click "Generate Memory" (or "Refresh") to trigger on-demand synthesis.
+
+**Data sources:** `entity.foundational_context` + `entity_context_entries` (journal) + `entity_mentions` → resolved `notes.content` (HTML → plain text).
+
+**Architecture:** `POST /api/ai/memory-refresh` (server-side, authenticated, rate-limited via `aiExtraction` bucket). Calls Claude Sonnet with structured system prompt. Stores result in `entities.ai_memory` + `entities.memory_refreshed_at`. Client hook (`useMemoryRefresh`) updates React Query cache optimistically.
+
+**Memory is user-triggered, not automatic.** No background jobs or auto-refresh. The user decides when to synthesize.
+
+**Output format:** The `ai_memory` field contains plain text with markdown-style headings (`## Key Facts`, `## Recent Decisions`, etc.) and bullet points (`- `). The Memory tab UI renders these with simple string splitting — no full markdown parser.
+
+**Memory Guidance (Phase 4.5A):** `memory_guidance` text field on `entities` — persistent user corrections injected as high-priority overrides in the system prompt. Editable from the Memory tab UI. Guidance changes are included in the source hash, so updating guidance ensures the next refresh runs.
+
+**Source Change Detection (Phase 4.5B):** `memory_source_hash` (SHA-256) on `entities` — computed from all source material (foundational context + journal entries sorted by `created_at` + mentioned content sorted by title + memory guidance). Stored after each successful refresh. On next refresh, if the hash matches and `entity.ai_memory` exists, the API returns `skipped: true` without calling Claude. The hook shows an info toast. Pass `{ force: true }` to bypass the hash check.
+
+Key files:
+- `src/app/api/ai/memory-refresh/route.ts` — API route (auth, data gathering, hash check, guidance injection, Claude call, DB update)
+- `src/hooks/use-memory-refresh.ts` — Client hook (`refresh({ force? })`, `refreshing`, `error`; handles `skipped` response)
+- `src/app/entities/[id]/page.tsx` — Memory tab UI with guidance editor, generate/refresh button, and formatted display
+
+**Context-Aware Relevance Filtering (Phase 4.6):** The system prompt instructs Claude to use Foundational Context to understand internal terminology, abbreviations, and feature names when deciding which parts of mentioned content are relevant. This ensures entities referenced indirectly (e.g., "Genius R" for a product called "Restaurant Platform") are correctly identified.
+
+**Entity-Linked Task Extraction (Phase 4.7):** AI task extraction links tasks to entities via a `task_entities` junction table. Entities mentioned in the source note/capture are passed (with foundational context) to the extraction prompt; Claude suggests entity associations per task; users review/edit in the extraction dialog. Stakeholders only linked for clear dependencies. See `docs/initiatives/ENTITY_MEMORY_IMPLEMENTATION.md` Phase 4.7 for full spec.
+
+**Entity Display on Task Views (Phase 4.8):** All task surfaces (`TaskListItem`, `TaskCard`, `TodayTaskRow`) show entity pills from `task_entities` — products (purple), initiatives (amber), stakeholders (green). All entities shown on desktop (no truncation). See `docs/initiatives/ENTITY_MEMORY_IMPLEMENTATION.md` Phase 4.8 for full spec.
+
 ### Project Status & Sidebar Filtering
 
 Projects have a `status` field (`"active" | "completed" | "archived"`). The sidebar (`src/components/layout/sidebar.tsx`) filters out archived projects before rendering — if you add new status values, update this filter accordingly.

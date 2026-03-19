@@ -1,8 +1,8 @@
 # Entity Memory Implementation Plan
 
-> **Status:** Planning
+> **Status:** Phase 4.7 complete, 4.8 in progress (v0.20.0–v0.26.0)
 > **Created:** March 12, 2026
-> **Context:** Evolves MVP 2 (Entities + Brain Dump) from MEMORY_LAYER.md with new Product → Initiative hierarchy and @mention-driven memory system.
+> **Context:** Evolves MVP 2 (Entities) from MEMORY_LAYER.md with new Product → Initiative hierarchy and @mention-driven memory system.
 
 ---
 
@@ -10,7 +10,7 @@
 
 This plan replaces the original MVP 2 spec with a richer model based on product management workflows. The key evolution:
 
-**Original MVP 2:** Generic entities + brain dump extraction
+**Original MVP 2:** Generic entities
 **New MVP 2:** Products, Initiatives, Stakeholders as entity types + @mention-driven memory + AI-synthesized entity memory with manual refresh
 
 ### Core Concepts
@@ -288,7 +288,7 @@ Workspace (your whole work context)
 - **Memory**: AI-synthesized memory + "Refresh Memory" button + last refreshed timestamp (empty until Phase 4)
 - **Mentions**: All content that references this entity (empty until Phase 3)
 - **Links**: Connected products/initiatives/stakeholders with task rollup
-- **Journal**: Timestamped knowledge entries (brain dumps, decisions, context)
+- **Journal**: Timestamped knowledge entries (decisions, context, evolving knowledge)
 - **For Products**: The Links tab shows linked initiatives with a progress bar and task count breakdown (todo/in-progress/done)
 - **For Initiatives**: The Links tab shows linked products, plus a Tasks section listing all active tasks from the initiative's project(s) with status icons and a progress bar
 
@@ -456,6 +456,299 @@ On the entity detail page (`/entities/[id]`), the Memory tab shows:
 
 ---
 
+## Phase 4.5: Memory Refinements ✅
+
+### 4.5A. Memory Guidance
+
+`memory_guidance` text column on `entities` — persistent user corrections injected as high-priority overrides in the system prompt. Editable from the Memory tab. Guidance changes are included in the source hash so updating guidance ensures the next refresh runs.
+
+### 4.5B. Source Change Detection
+
+`memory_source_hash` (SHA-256) on `entities` — computed from all source material (foundational context + journal entries sorted by `created_at` + mentioned content sorted by title + guidance). Stored after each successful refresh. On next refresh, if the hash matches and `entity.ai_memory` exists, the API returns `skipped: true` without calling Claude. Pass `{ force: true }` to bypass.
+
+**Migration:** `supabase/migrations/20260317_entity_memory_refinements.sql`
+
+---
+
+## Phase 4.6: Context-Aware Relevance Filtering ✅
+
+A targeted system prompt improvement. The memory refresh system prompt now instructs Claude to use Foundational Context as a glossary when deciding which parts of Mentioned Content are relevant to the entity.
+
+**Problem:** When a note discusses an entity using internal terminology (e.g., "Genius R" for "Restaurant Platform"), Claude could miss the connection if it only knows the entity name.
+
+**Solution:** Updated the Mentioned Content instruction in `buildSystemPrompt()`: *"Use the Foundational Context to understand what topics, features, codenames, and concepts belong to this entity... Content may reference the entity indirectly using internal terminology, abbreviations, or feature names described in the Foundational Context."*
+
+No schema changes. No new API fields. The foundational context was already sent in the user prompt — this change just tells Claude to actively cross-reference it.
+
+**Key file:** `src/app/api/ai/memory-refresh/route.ts` (system prompt)
+
+---
+
+## Phase 4.7: Entity-Linked Task Extraction ✅
+
+### Overview
+
+AI task extraction gains entity awareness. When extracting tasks from a note or capture, the system passes entity context to Claude so it can suggest which entities each task relates to. Users review and edit these associations before confirming.
+
+### 4.7A. Database: `task_entities` Junction Table
+
+New migration: `supabase/migrations/YYYYMMDD_task_entities.sql`
+
+```sql
+CREATE TABLE task_entities (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  task_id UUID NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+  entity_id UUID NOT NULL REFERENCES entities(id) ON DELETE CASCADE,
+  entity_type TEXT NOT NULL, -- denormalized from entities.entity_type for display queries
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE(task_id, entity_id)
+);
+
+CREATE INDEX idx_task_entities_task_id ON task_entities(task_id);
+CREATE INDEX idx_task_entities_entity_id ON task_entities(entity_id);
+
+ALTER TABLE task_entities ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "workspace members can manage task entities"
+  ON task_entities FOR ALL
+  USING (entity_id IN (
+    SELECT id FROM entities WHERE workspace_id IN (
+      SELECT workspace_id FROM workspace_members WHERE user_id = auth.uid()
+    )
+  ));
+```
+
+**Why not reuse `entity_mentions`?** Different semantics. `entity_mentions` = "this content references entity X via #hashtag" (content-level, auto-synced from HTML). `task_entities` = "this task is about entity X" (task-level, set by AI or user). A task may link to entities that aren't mentioned in its description text. Both tables coexist.
+
+**Why not use `initiative_entity_id`?** It's a single FK supporting only initiatives. `task_entities` supports multiple entities of any type. `initiative_entity_id` should be deprecated.
+
+### 4.7B. Extraction API Changes
+
+**File:** `src/app/api/ai/extract-tasks/route.ts`
+
+New request field: `entities` — array of `{ id, name, type, foundationalContext }` for entities mentioned in the source. Resolved by the client from `entity_mentions` before calling the API.
+
+**File:** `src/lib/ai/types.ts`
+
+```typescript
+// Updated types
+interface RawExtractedTask {
+  title: string;
+  description: string | null;
+  priority: "low" | "medium" | "high" | "urgent";
+  suggestedDueDate: string | null;
+  confidence: number;
+  sourceText: string | null;
+  entityIds: string[];  // NEW — suggested entity associations
+}
+
+interface ExtractedTask extends RawExtractedTask {
+  id: string;
+  selected: boolean;
+  projectId?: string;
+  entityIds: string[];  // Editable in review UI
+}
+```
+
+### 4.7C. Extraction Prompt Changes
+
+**File:** `src/lib/ai/prompts.ts`
+
+Updated `UserPromptParams` to accept `entities` array. When entities are provided, append an `=== ENTITY CONTEXT ===` section listing each entity with type, name, and foundational context.
+
+Updated system prompt output schema adds `entityIds: string[]` per task.
+
+**Stakeholder linking rules** (injected into system prompt):
+- Products and initiatives: link whenever the task is clearly about or affects that entity
+- Stakeholders: ONLY link when there is a clear dependency, follow-up action, approval needed, or deliverable involving that specific person/team
+- Do NOT link stakeholders just because they were mentioned in the source
+
+### 4.7D. Extraction Hook Changes
+
+**File:** `src/hooks/use-task-extraction.ts`
+
+- `extractFromNote()` and `extractFromCapture()` accept optional `entities` parameter
+- Client resolves entities before calling the API by querying `entity_mentions` for the source, then fetching entity details (name, type, foundational_context)
+- `createSelectedTasks()` inserts `task_entities` records after task creation
+
+### 4.7E. Review UI Changes
+
+**File:** `src/components/ai/extracted-task-item.tsx`
+
+New prop: `entities` — the full list of entities available for linking (scoped to those mentioned in the source).
+
+New UI in the meta row: Entity pills colored by type (product: purple, initiative: amber, stakeholder: green) with X button to remove. A "+" button opens a dropdown to add from available entities.
+
+Pill colors match the entity mention styles from `globals.css` (`.entity-mention--product`, etc.).
+
+**File:** `src/components/ai/task-extraction-dialog.tsx` — passes `entities` prop through.
+
+### Integration Points
+
+Callers of `extractFromNote()` / `extractFromCapture()` resolve entities:
+
+1. **Note detail page** (`src/app/projects/[id]/notes/[noteId]/page.tsx`): Query `entity_mentions` for the note, fetch entity details, pass to extraction.
+2. **Capture detail page** (`src/app/captures/[id]/page.tsx`): Same pattern.
+
+---
+
+## Phase 4.8: Entity Display on Task Views (Replace Products Enrichment)
+
+### Overview
+
+All task surfaces show entity badges sourced from `task_entities` — the direct, per-task entity associations created by AI extraction or manual linking. This **replaces** the current `products` enrichment path entirely.
+
+### Why Replace, Not Layer
+
+The current product display (`task.products`) is derived indirectly: `task.project.entity_id → entity_links → target entity (product)`. This path has fundamental problems:
+
+1. **Wrong granularity** — every task in a project gets the same product badge, regardless of which entity the task actually relates to. A project linked to "CFD" shows CFD on every task, even tasks about "OO" or "KDS".
+2. **Indirect chain** — the entity shown comes from the project, not the task. If a task was extracted from a note about #OO and the AI correctly linked it to OO in `task_entities`, the display still shows CFD because it reads from the project path.
+3. **No multi-entity support** — a task can relate to multiple entities (a product AND an initiative), but the products path only shows what the project is linked to.
+
+`task_entities` solves all of this: it stores per-task, multi-entity associations set during AI extraction or manually by the user. Phase 4.8 cuts over to this as the sole source of entity display data.
+
+### 4.8A. New Enrichment Utility
+
+**Replace:** `src/lib/utils/enrich-task-products.ts` → `src/lib/utils/enrich-task-entities.ts`
+
+```typescript
+/**
+ * Enrich tasks with entity data from task_entities junction table.
+ * Single query for all task IDs. Replaces the old products enrichment
+ * that derived entities indirectly from project → entity_links.
+ */
+
+interface TaskEntityRow {
+  task_id: string;
+  entity: { id: string; name: string; entity_type: string } | null;
+}
+
+export async function enrichTasksWithEntities<T extends TaskWithProject>(
+  tasks: T[]
+): Promise<T[]> {
+  if (tasks.length === 0) return tasks;
+
+  const taskIds = tasks.map((t) => t.id);
+  const supabase = getClient();
+
+  const { data, error } = await supabase
+    .from("task_entities")
+    .select("task_id, entity:entities(id, name, entity_type)")
+    .in("task_id", taskIds);
+
+  if (error) {
+    // Graceful degradation — entity badges are non-critical
+    logger.error("Error fetching task entities", { error });
+    return tasks;
+  }
+
+  // Build Map<task_id, TaskEntity[]>
+  const entityMap = new Map<string, TaskEntity[]>();
+  for (const row of (data as TaskEntityRow[]) || []) {
+    if (!row.entity) continue;
+    const existing = entityMap.get(row.task_id) || [];
+    existing.push({
+      id: row.entity.id,
+      name: row.entity.name,
+      entity_type: row.entity.entity_type as TaskEntity["entity_type"],
+    });
+    entityMap.set(row.task_id, existing);
+  }
+
+  for (const task of tasks) {
+    task.entities = entityMap.get(task.id) ?? [];
+  }
+
+  return tasks;
+}
+```
+
+### 4.8B. Hook Changes (3 files)
+
+Replace `enrichTasksWithProducts` → `enrichTasksWithEntities` in all three hooks:
+
+| File | Line | Change |
+|------|------|--------|
+| `src/hooks/use-tasks.ts` | ~26, ~126 | Import and call `enrichTasksWithEntities` instead of `enrichTasksWithProducts` |
+| `src/hooks/use-notes.ts` | ~21, ~104 | Same |
+| `src/hooks/use-captures.ts` | ~20, ~158 | Same |
+
+### 4.8C. Component Changes (3 files)
+
+All components switch from reading `task.products` to `task.entities`.
+
+**`TaskListItem`** (`src/components/task/task-list-view.tsx`):
+- Line ~74: Change `const products = ...` → `const entities = ('entities' in task && task.entities) ? task.entities : [];`
+- Lines ~121-130: Replace single purple product pill with entity pills colored by type
+- Each entity renders as a pill with type-specific icon and color
+
+**`TaskCard`** (`src/components/task/task-card.tsx`):
+- Lines ~197-202: Replace `task.products` badge with entity pills in footer
+- Same color scheme as TaskListItem
+
+**`TodayTaskRow`** (`src/app/today/page.tsx`):
+- Replace product-only badge with entity pills
+- Same pattern as TaskListItem
+
+### 4.8D. Display Rules
+
+- Show ALL linked entities — no "+N more" truncation on desktop
+- Entity pills colored by type: product (purple), initiative (amber), stakeholder (green)
+- Pills wrap naturally via `flex-wrap`; row heights may vary (acceptable)
+- Mobile truncation deferred to a later pass
+- Tasks with no `task_entities` records show no entity pills (clean slate)
+
+### 4.8E. Shared Color Constants
+
+**New file:** `src/lib/utils/entity-colors.ts`
+
+```typescript
+export const ENTITY_TYPE_COLORS = {
+  product: {
+    bg: "bg-purple-100 dark:bg-purple-900/30",
+    text: "text-purple-700 dark:text-purple-400",
+    border: "border-purple-200 dark:border-purple-800",
+  },
+  initiative: {
+    bg: "bg-amber-100 dark:bg-amber-900/30",
+    text: "text-amber-700 dark:text-amber-400",
+    border: "border-amber-200 dark:border-amber-800",
+  },
+  stakeholder: {
+    bg: "bg-green-100 dark:bg-green-900/30",
+    text: "text-green-700 dark:text-green-400",
+    border: "border-green-200 dark:border-green-800",
+  },
+} as const;
+```
+
+### 4.8F. Cleanup
+
+After the cutover:
+
+1. **Delete** `src/lib/utils/enrich-task-products.ts` — no longer used
+2. **Remove** `TaskProduct` interface from `src/types/index.ts`
+3. **Remove** `products?: TaskProduct[]` from `TaskWithProject` interface
+4. **Remove** `Package` icon imports that were only used for the old product pill
+5. **Keep** `entities?: TaskEntity[]` on `TaskWithProject` (already exists)
+
+### 4.8G. Cache Mutation Compatibility
+
+The existing `setQueriesData` calls in `updateTask` and `deleteTask` use object spread (`{ ...t, ...updateData }`), which preserves the `entities` array on tasks. No changes needed to cache mutations — entities survive optimistic updates.
+
+### What About Existing Tasks Without `task_entities`?
+
+Tasks created before Phase 4.7 (entity-linked extraction) won't have `task_entities` records. These tasks will show **no entity pills** — this is correct and expected. Entities are earned through AI extraction or manual linking, not inherited from the project.
+
+If a user wants entities on old tasks, they can:
+1. Re-extract tasks from the source note/capture (entities are now linked during extraction)
+2. Manually link entities via the task detail page (future: Phase 4.9)
+
+There is **no fallback** to the old products path. The indirection through `project.entity_id → entity_links` showed the wrong entity and is the exact bug this phase fixes.
+
+---
+
 ## Phase 5: Portfolio View (New UI Reading From Entity Model)
 
 > **Note:** This phase is future work. Documenting the vision so the data model supports it.
@@ -533,9 +826,41 @@ Phase 3: #MENTION SYSTEM (inline entity linking in Tiptap editors) ✅ (MVP — 
   3D: Mention parsing & persistence (useMentionSync) ✅
   3E: Mention rendering in read-only views — ✅ (CSS styles in globals.css, rendered via dangerouslySetInnerHTML)
     ↓
-Phase 4: AI MEMORY REFRESH (entity intelligence)
-  4A: AI memory refresh API route
-  4B: Entity page Memory tab with refresh button
+Phase 4: AI MEMORY REFRESH (entity intelligence) ✅
+  4A: AI memory refresh API route ✅
+  4B: Entity page Memory tab with refresh button ✅
+    ↓
+Phase 4.5: MEMORY REFINEMENTS (efficiency + user steering) ✅
+  4.5A: Memory Guidance — persistent user corrections/overrides ✅
+    - New `memory_guidance` text column on `entities` table
+    - Free-text field on Memory tab (accumulates entries over time)
+    - Injected into system prompt as high-priority overrides
+    - Persists across refreshes so corrections don't need repeating
+  4.5B: Source change detection — skip refresh when nothing changed ✅
+    - Hash combined sources (foundational + journal + mentions + guidance)
+    - Store hash on entity (`memory_source_hash`)
+    - Compare before calling Claude API — skip if unchanged
+    - Pass `{ force: true }` to bypass hash check
+    ↓
+Phase 4.6: CONTEXT-AWARE RELEVANCE FILTERING ✅
+  - System prompt tells Claude to use Foundational Context as a glossary
+  - Understands internal terminology, abbreviations, feature names
+  - Resolves indirect references (e.g., "Genius R" → "Restaurant Platform")
+    ↓
+Phase 4.7: ENTITY-LINKED TASK EXTRACTION ✅
+  4.7A: Database — `task_entities` junction table (many-to-many) ✅
+  4.7B: Extraction API — accept entities + foundational context, return entityIds per task ✅
+  4.7C: Extraction prompt — entity context section, stakeholder linking rules ✅
+  4.7D: Extraction hook — pass entities, create task_entities on confirm ✅
+  4.7E: Review UI — entity pills (add/remove) per extracted task ✅
+  4.7F: Caller integration — note & capture pages resolve entity_mentions before extraction ✅
+    ↓
+Phase 4.8: ENTITY DISPLAY ON TASK VIEWS
+  4.8A: Data enrichment — `enrichTasksWithEntities()` from task_entities
+  4.8B: TaskListItem — entity pills in meta row (all shown, no truncation)
+  4.8C: TaskCard — entity pills in footer badges
+  4.8D: TodayTaskRow — entity pills in badges row
+  4.8E: Shared color constants (`entity-colors.ts`)
     ↓
 Phase 5: PORTFOLIO VIEW (future — data model supports it from Phase 1)
     ↓
@@ -632,13 +957,8 @@ Users type `@OnlineOrdering` not `@4f43b086-cdfd...`. Slugs (lowercase, no space
 | Original MVP | New Status |
 |-------------|-----------|
 | MVP 1 (Workspaces + Captures) | ✅ Complete (pending SQL migration) — unchanged |
-| MVP 2 (Entities + Brain Dump) | **Replaced by this plan** (Phases 1-4). Brain dump deferred to after @mention system is working. |
+| MVP 2 (Entities) | **Replaced by this plan** (Phases 1-4). |
 | MVP 3 (Embeddings + Search) | Unchanged — builds on entity_mentions for richer embedding |
 | MVP 4 (Chat + Task Creation) | Unchanged — entity memory becomes additional RAG context |
 | MVP 5 (Oracle) | Unchanged — can detect entity knowledge gaps |
 
-### Brain Dump: Deferred, Not Removed
-
-The brain dump feature from original MVP 2 is deferred to after Phase 3 (AI Memory) is working. Rationale: the @mention + manual refresh flow is the primary way to build entity memory. Brain dump is a power-user shortcut for bootstrapping — it's more valuable once the entity system is live and can receive the extracted data.
-
-When implemented, brain dump will use the same `entities` table and `foundational_context` field. The extraction pipeline writes to the same structures.

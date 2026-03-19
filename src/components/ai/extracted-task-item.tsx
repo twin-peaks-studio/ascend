@@ -11,8 +11,8 @@
  * - Confidence indicator
  */
 
-import { useState } from "react";
-import { Check, ChevronDown, ChevronUp, Sparkles } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { Check, ChevronDown, ChevronUp, Sparkles, X, Plus } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -25,7 +25,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import type { ExtractedTask } from "@/lib/ai/types";
+import type { ExtractedTask, ExtractionEntity } from "@/lib/ai/types";
 
 interface ProjectOption {
   id: string;
@@ -38,7 +38,15 @@ interface ExtractedTaskItemProps {
   onToggleSelection: () => void;
   /** When provided, show a per-task project selector (used for captures) */
   projects?: ProjectOption[];
+  /** Available entities for linking (scoped to source mentions) */
+  entities?: ExtractionEntity[];
 }
+
+const ENTITY_TYPE_STYLES: Record<string, string> = {
+  product: "bg-[#dbeafe] text-[#1d4ed8] dark:bg-blue-500/20 dark:text-blue-300",
+  initiative: "bg-[#fef3c7] text-[#92400e] dark:bg-amber-500/20 dark:text-amber-300",
+  stakeholder: "bg-[#dcfce7] text-[#166534] dark:bg-green-500/20 dark:text-green-300",
+};
 
 const PRIORITY_LABELS = {
   low: "Low",
@@ -52,10 +60,38 @@ export function ExtractedTaskItem({
   onUpdate,
   onToggleSelection,
   projects,
+  entities,
 }: ExtractedTaskItemProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [isEditingDescription, setIsEditingDescription] = useState(false);
+  const [showEntityDropdown, setShowEntityDropdown] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    if (!showEntityDropdown) return;
+    function handleClick(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setShowEntityDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [showEntityDropdown]);
+
+  // Entity helpers
+  const linkedEntities = entities?.filter((e) => task.entityIds.includes(e.id)) ?? [];
+  const availableEntities = entities?.filter((e) => !task.entityIds.includes(e.id)) ?? [];
+
+  const removeEntity = (entityId: string) => {
+    onUpdate({ entityIds: task.entityIds.filter((id) => id !== entityId) });
+  };
+
+  const addEntity = (entityId: string) => {
+    onUpdate({ entityIds: [...task.entityIds, entityId] });
+    setShowEntityDropdown(false);
+  };
 
   const confidencePercent = Math.round(task.confidence * 100);
 
@@ -186,6 +222,60 @@ export function ExtractedTaskItem({
               </Button>
             )}
           </div>
+
+          {/* Entity pills */}
+          {entities && entities.length > 0 && (
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {linkedEntities.map((entity) => (
+                <span
+                  key={entity.id}
+                  className={cn(
+                    "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium",
+                    ENTITY_TYPE_STYLES[entity.type]
+                  )}
+                >
+                  {entity.name}
+                  <button
+                    onClick={() => removeEntity(entity.id)}
+                    className="hover:opacity-70 -mr-0.5"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              ))}
+              {availableEntities.length > 0 && (
+                <div className="relative" ref={dropdownRef}>
+                  <button
+                    onClick={() => setShowEntityDropdown(!showEntityDropdown)}
+                    className="inline-flex items-center justify-center h-5 w-5 rounded-full border border-dashed border-muted-foreground/40 text-muted-foreground hover:border-primary hover:text-primary transition-colors"
+                  >
+                    <Plus className="h-3 w-3" />
+                  </button>
+                  {showEntityDropdown && (
+                    <div className="absolute top-full left-0 mt-1 z-50 bg-popover border border-border rounded-md shadow-md py-1 min-w-[160px]">
+                      {availableEntities.map((entity) => (
+                        <button
+                          key={entity.id}
+                          onClick={() => addEntity(entity.id)}
+                          className="flex items-center gap-2 w-full px-3 py-1.5 text-xs text-left hover:bg-accent transition-colors"
+                        >
+                          <span
+                            className={cn(
+                              "inline-block w-2 h-2 rounded-full",
+                              entity.type === "product" && "bg-blue-500",
+                              entity.type === "initiative" && "bg-amber-500",
+                              entity.type === "stakeholder" && "bg-green-500"
+                            )}
+                          />
+                          {entity.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Description (collapsible) */}
           {isExpanded && task.description && (

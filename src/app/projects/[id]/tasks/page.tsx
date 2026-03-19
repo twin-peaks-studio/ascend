@@ -13,7 +13,6 @@ import { parseSortOptionKey, type TaskSortField, type TaskSortDirection } from "
 import { AssigneeFilter, ASSIGNEE_FILTER_ASSIGNED_TO_ME, ASSIGNEE_FILTER_UNASSIGNED } from "@/components/filters";
 import { Button } from "@/components/ui/button";
 import { useProject } from "@/hooks/use-projects";
-import { useProjectProducts } from "@/hooks/use-project-products";
 import { useTaskMutations } from "@/hooks/use-tasks";
 import { useSections, useSectionMutations } from "@/hooks/use-sections";
 import { useRealtimeTasksForProject } from "@/hooks/use-realtime-tasks";
@@ -33,7 +32,6 @@ export default function ProjectTasksPage() {
 
   const { activeWorkspace } = useWorkspaceContext();
   const { project, setProject, loading, refetch } = useProject(projectId);
-  const projectProducts = useProjectProducts(project?.entity_id);
   const { members: projectMembers } = useProjectMembers(projectId);
   const isMobile = useIsMobile();
   const { user } = useAuth();
@@ -112,9 +110,8 @@ export default function ProjectTasksPage() {
     return project.tasks.map((task) => ({
       ...task,
       project: project as Project,
-      products: projectProducts,
     }));
-  }, [project, projectProducts]);
+  }, [project]);
 
   // Derive project-scoped profiles from project members
   const profiles: Profile[] = useMemo(() => {

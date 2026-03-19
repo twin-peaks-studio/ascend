@@ -80,11 +80,12 @@ export interface ProjectWithRelations extends DBProject {
 }
 
 /**
- * Lightweight product info attached to tasks via project → entity → entity_links
+ * Entity linked directly to a task via task_entities junction table
  */
-export interface TaskProduct {
+export interface TaskEntity {
   id: string;
   name: string;
+  entity_type: "product" | "initiative" | "stakeholder";
 }
 
 /**
@@ -94,7 +95,7 @@ export interface TaskWithProject extends DBTask {
   project: DBProject | null;
   assignee?: DBProfile | null;
   attachments?: DBAttachment[];
-  products?: TaskProduct[];
+  entities?: TaskEntity[];
 }
 
 /**

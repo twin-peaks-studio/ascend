@@ -23,7 +23,7 @@ import {
 } from "@/lib/notifications/create-notification";
 import { sendInngestEvents } from "@/lib/inngest/send-events";
 import type { Task, TaskWithProject, TaskStatus } from "@/types";
-import { enrichTasksWithProducts } from "@/lib/utils/enrich-task-products";
+import { enrichTasksWithEntities } from "@/lib/utils/enrich-task-entities";
 import type { TaskInsert, TaskUpdate } from "@/types/database";
 import {
   createTaskSchema,
@@ -122,8 +122,8 @@ async function fetchTasksForUser(userId: string): Promise<TaskWithProject[]> {
 
   const tasks = (tasksResult.data as TaskWithProject[]) || [];
 
-  // Enrich tasks with product labels from entity links
-  await enrichTasksWithProducts(tasks);
+  // Enrich tasks with entity labels from task_entities
+  await enrichTasksWithEntities(tasks);
 
   return tasks;
 }
