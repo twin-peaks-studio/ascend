@@ -20,6 +20,7 @@ import {
   type TaskSortDirection,
 } from "@/lib/task-sort";
 import type { TaskWithProject, TaskStatus } from "@/types";
+import type { Task } from "@/types/database";
 
 interface EntityTasksTabProps {
   entityId: string;
@@ -43,7 +44,7 @@ export function EntityTasksTab({ entityId }: EntityTasksTabProps) {
   const openCount = tasks.length - completedCount;
 
   const handleStatusToggle = useCallback(
-    async (task: TaskWithProject) => {
+    async (task: TaskWithProject | Task) => {
       const newStatus: TaskStatus = task.status === "done" ? "todo" : "done";
       await updateTask(task.id, { status: newStatus });
     },
@@ -51,9 +52,11 @@ export function EntityTasksTab({ entityId }: EntityTasksTabProps) {
   );
 
   const handleTaskClick = useCallback(
-    (task: TaskWithProject) => {
-      if (task.project) {
+    (task: TaskWithProject | Task) => {
+      if ("project" in task && task.project) {
         router.push(`/projects/${task.project.id}/tasks?task=${task.id}`);
+      } else if (task.project_id) {
+        router.push(`/projects/${task.project_id}/tasks?task=${task.id}`);
       }
     },
     [router]
