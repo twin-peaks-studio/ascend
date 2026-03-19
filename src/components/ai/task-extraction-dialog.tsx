@@ -37,8 +37,10 @@ interface TaskExtractionDialogProps {
   onRetry: () => void;
   /** When provided, show per-task project selector (used for captures) */
   projects?: ProjectOption[];
-  /** Available entities for linking (scoped to source mentions) */
+  /** Available entities for linking (scoped to source mentions — sent to AI) */
   entities?: ExtractionEntity[];
+  /** Full workspace entity list for manual linking in the review UI */
+  allEntities?: ExtractionEntity[];
 }
 
 export function TaskExtractionDialog({
@@ -48,6 +50,7 @@ export function TaskExtractionDialog({
   onRetry,
   projects,
   entities,
+  allEntities,
 }: TaskExtractionDialogProps) {
   const {
     status,
@@ -142,6 +145,7 @@ export function TaskExtractionDialog({
                 onDeselectAll={deselectAll}
                 projects={projects}
                 entities={entities}
+                allEntities={allEntities}
               />
             </div>
 

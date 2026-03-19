@@ -28,6 +28,8 @@ interface ExtractedTaskListProps {
   projects?: ProjectOption[];
   /** Available entities for linking */
   entities?: ExtractionEntity[];
+  /** Full workspace entity list for manual linking */
+  allEntities?: ExtractionEntity[];
 }
 
 export function ExtractedTaskList({
@@ -38,6 +40,7 @@ export function ExtractedTaskList({
   onDeselectAll,
   projects,
   entities,
+  allEntities,
 }: ExtractedTaskListProps) {
   const selectedCount = tasks.filter((t) => t.selected).length;
   const allSelected = selectedCount === tasks.length;
@@ -71,6 +74,7 @@ export function ExtractedTaskList({
               onToggleSelection={() => onToggleSelection(task.id)}
               projects={projects}
               entities={entities}
+              allEntities={allEntities}
             />
           ))}
         </div>

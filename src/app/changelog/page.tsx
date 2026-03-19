@@ -91,6 +91,12 @@ const changelog: ChangelogEntry[] = [
         description: "All task views — list, kanban, and today — now show colored entity pills (products, initiatives, stakeholders) linked to each task.",
         tag: "new",
       },
+      {
+        icon: Search,
+        title: "Full Entity Search in Task Extraction",
+        description: "When reviewing extracted tasks, link any entity from your workspace — not just those mentioned in the note. Type to search when your entity list is long.",
+        tag: "improved",
+      },
     ],
   },
   {

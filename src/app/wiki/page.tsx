@@ -943,6 +943,7 @@ const sections: WikiSection[] = [
         paragraphs: [
           "When you extract tasks from a note or capture using AI, the system automatically suggests which entities each task relates to. These suggestions are based on the entities mentioned in your source content.",
           "In the extraction review dialog, you'll see colored entity pills on each task — purple for products, amber for initiatives, green for stakeholders. You can remove or add entity links before creating the tasks.",
+          "The entity dropdown shows all entities in your workspace — not just those mentioned in the note. If your workspace has many entities, a search field appears so you can type to find the one you need. Press Enter when only one match remains to add it instantly.",
           "Stakeholders are only linked when there's a clear dependency or follow-up action — not just because they were mentioned in the note.",
         ],
         tip: "Entity links on tasks appear as badges across all task views: list, kanban, and today page. This makes it easy to see at a glance which products and initiatives a task affects.",

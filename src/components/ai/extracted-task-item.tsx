@@ -40,6 +40,8 @@ interface ExtractedTaskItemProps {
   projects?: ProjectOption[];
   /** Available entities for linking (scoped to source mentions) */
   entities?: ExtractionEntity[];
+  /** Full workspace entity list for manual linking */
+  allEntities?: ExtractionEntity[];
 }
 
 const ENTITY_TYPE_STYLES: Record<string, string> = {
@@ -61,12 +63,15 @@ export function ExtractedTaskItem({
   onToggleSelection,
   projects,
   entities,
+  allEntities,
 }: ExtractedTaskItemProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [showEntityDropdown, setShowEntityDropdown] = useState(false);
+  const [entitySearch, setEntitySearch] = useState("");
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -80,9 +85,16 @@ export function ExtractedTaskItem({
     return () => document.removeEventListener("mousedown", handleClick);
   }, [showEntityDropdown]);
 
-  // Entity helpers
-  const linkedEntities = entities?.filter((e) => task.entityIds.includes(e.id)) ?? [];
-  const availableEntities = entities?.filter((e) => !task.entityIds.includes(e.id)) ?? [];
+  // Entity helpers — use allEntities (full workspace list) for the dropdown,
+  // fall back to entities (source mentions only) for backwards compat
+  const entityPool = allEntities ?? entities ?? [];
+  const linkedEntities = entityPool.filter((e) => task.entityIds.includes(e.id));
+  const availableEntities = entityPool.filter((e) => !task.entityIds.includes(e.id));
+  const filteredAvailable = entitySearch.trim()
+    ? availableEntities.filter((e) =>
+        e.name.toLowerCase().includes(entitySearch.trim().toLowerCase())
+      )
+    : availableEntities;
 
   const removeEntity = (entityId: string) => {
     onUpdate({ entityIds: task.entityIds.filter((id) => id !== entityId) });
@@ -90,6 +102,7 @@ export function ExtractedTaskItem({
 
   const addEntity = (entityId: string) => {
     onUpdate({ entityIds: [...task.entityIds, entityId] });
+    setEntitySearch("");
     setShowEntityDropdown(false);
   };
 
@@ -224,7 +237,7 @@ export function ExtractedTaskItem({
           </div>
 
           {/* Entity pills */}
-          {entities && entities.length > 0 && (
+          {entityPool.length > 0 && (
             <div className="flex items-center gap-1.5 flex-wrap">
               {linkedEntities.map((entity) => (
                 <span
@@ -246,30 +259,68 @@ export function ExtractedTaskItem({
               {availableEntities.length > 0 && (
                 <div className="relative" ref={dropdownRef}>
                   <button
-                    onClick={() => setShowEntityDropdown(!showEntityDropdown)}
+                    onClick={() => {
+                      setShowEntityDropdown(!showEntityDropdown);
+                      setEntitySearch("");
+                      if (!showEntityDropdown) {
+                        setTimeout(() => searchInputRef.current?.focus(), 0);
+                      }
+                    }}
                     className="inline-flex items-center justify-center h-5 w-5 rounded-full border border-dashed border-muted-foreground/40 text-muted-foreground hover:border-primary hover:text-primary transition-colors"
                   >
                     <Plus className="h-3 w-3" />
                   </button>
                   {showEntityDropdown && (
-                    <div className="absolute top-full left-0 mt-1 z-50 bg-popover border border-border rounded-md shadow-md py-1 min-w-[160px]">
-                      {availableEntities.map((entity) => (
-                        <button
-                          key={entity.id}
-                          onClick={() => addEntity(entity.id)}
-                          className="flex items-center gap-2 w-full px-3 py-1.5 text-xs text-left hover:bg-accent transition-colors"
-                        >
-                          <span
-                            className={cn(
-                              "inline-block w-2 h-2 rounded-full",
-                              entity.type === "product" && "bg-blue-500",
-                              entity.type === "initiative" && "bg-amber-500",
-                              entity.type === "stakeholder" && "bg-green-500"
-                            )}
+                    <div className="absolute top-full left-0 mt-1 z-50 bg-popover border border-border rounded-md shadow-md min-w-[200px]">
+                      {availableEntities.length > 5 && (
+                        <div className="p-1.5 border-b border-border">
+                          <input
+                            ref={searchInputRef}
+                            type="text"
+                            value={entitySearch}
+                            onChange={(e) => setEntitySearch(e.target.value)}
+                            placeholder="Search entities..."
+                            className="w-full px-2 py-1 text-xs bg-transparent border border-input rounded focus:outline-none focus:ring-1 focus:ring-primary"
+                            onKeyDown={(e) => {
+                              if (e.key === "Escape") {
+                                setShowEntityDropdown(false);
+                                setEntitySearch("");
+                              }
+                              if (e.key === "Enter" && filteredAvailable.length === 1) {
+                                addEntity(filteredAvailable[0].id);
+                              }
+                            }}
                           />
-                          {entity.name}
-                        </button>
-                      ))}
+                        </div>
+                      )}
+                      <div className="py-1 max-h-[200px] overflow-y-auto">
+                        {filteredAvailable.length === 0 ? (
+                          <div className="px-3 py-2 text-xs text-muted-foreground">
+                            No matching entities
+                          </div>
+                        ) : (
+                          filteredAvailable.map((entity) => (
+                            <button
+                              key={entity.id}
+                              onClick={() => addEntity(entity.id)}
+                              className="flex items-center gap-2 w-full px-3 py-1.5 text-xs text-left hover:bg-accent transition-colors"
+                            >
+                              <span
+                                className={cn(
+                                  "inline-block w-2 h-2 rounded-full shrink-0",
+                                  entity.type === "product" && "bg-blue-500",
+                                  entity.type === "initiative" && "bg-amber-500",
+                                  entity.type === "stakeholder" && "bg-green-500"
+                                )}
+                              />
+                              <span className="truncate">{entity.name}</span>
+                              <span className="ml-auto text-[10px] text-muted-foreground capitalize shrink-0">
+                                {entity.type}
+                              </span>
+                            </button>
+                          ))
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
