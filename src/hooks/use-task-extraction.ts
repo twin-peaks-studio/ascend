@@ -391,6 +391,23 @@ export function useTaskExtraction(): UseTaskExtractionReturn {
           const entityNameMap = new Map(
             sourceEntities.map((e) => [e.id, e.name])
           );
+
+          // Resolve entity types for any IDs not in sourceEntities
+          // (user may have added entities from the full workspace list)
+          const unknownIds = task.entityIds.filter((eid) => !entityTypeMap.has(eid));
+          if (unknownIds.length > 0) {
+            const { data: extraEntities } = await supabase
+              .from("entities")
+              .select("id, name, entity_type")
+              .in("id", unknownIds);
+            if (extraEntities) {
+              for (const e of extraEntities) {
+                entityTypeMap.set(e.id, e.entity_type as ExtractionEntity["type"]);
+                entityNameMap.set(e.id, e.name);
+              }
+            }
+          }
+
           const entityRows = task.entityIds
             .filter((eid) => entityTypeMap.has(eid))
             .map((eid) => ({

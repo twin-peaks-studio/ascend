@@ -18,6 +18,7 @@ import { DeleteConfirmationDialog } from "@/components/ui/delete-confirmation-di
 import { useProject } from "@/hooks/use-projects";
 import { useNote, useNoteMutations } from "@/hooks/use-notes";
 import { useTaskMutations } from "@/hooks/use-tasks";
+import { useEntities } from "@/hooks/use-entities";
 import { useMentionSync } from "@/hooks/use-entity-mentions";
 import { parseEntityMentions } from "@/lib/tiptap/entity-mention-extension";
 import { useWorkspaceContext } from "@/contexts/workspace-context";
@@ -40,6 +41,13 @@ export default function NoteDetailPage() {
   const { note, setNote, loading: noteLoading } = useNote(noteId);
   // Use the project's workspace_id (most reliable), then note's, then context
   const effectiveWorkspaceId = project?.workspace_id ?? note?.workspace_id ?? activeWorkspace?.id;
+  const { entities: workspaceEntities } = useEntities(effectiveWorkspaceId ?? null);
+  const allEntitiesForExtraction: ExtractionEntity[] = workspaceEntities.map((e) => ({
+    id: e.id,
+    name: e.name,
+    type: e.entity_type as ExtractionEntity["type"],
+    foundationalContext: e.foundational_context,
+  }));
   const {
     updateNote,
     deleteNote,
@@ -447,6 +455,7 @@ export default function NoteDetailPage() {
         extraction={taskExtraction}
         onRetry={handleExtractTasks}
         entities={taskExtraction.sourceEntities}
+        allEntities={allEntitiesForExtraction}
       />
     </AppShell>
   );

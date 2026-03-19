@@ -50,6 +50,7 @@ import { useTaskMutations } from "@/hooks/use-tasks";
 import { useProjects } from "@/hooks/use-projects";
 import { useWorkspaceContext } from "@/contexts/workspace-context";
 import { useTaskExtraction } from "@/hooks/use-task-extraction";
+import { useEntities } from "@/hooks/use-entities";
 import { useMentionSync } from "@/hooks/use-entity-mentions";
 import { parseEntityMentions } from "@/lib/tiptap/entity-mention-extension";
 import { getClient } from "@/lib/supabase/client-manager";
@@ -77,6 +78,13 @@ function CaptureDetailContent({ captureId }: { captureId: string }) {
 
   // Prefer the capture's own workspace_id, then URL param, then context
   const effectiveWorkspaceId = capture?.workspace_id ?? urlWorkspaceId ?? activeWorkspace?.id;
+  const { entities: workspaceEntities } = useEntities(effectiveWorkspaceId ?? null);
+  const allEntitiesForExtraction: ExtractionEntity[] = workspaceEntities.map((e) => ({
+    id: e.id,
+    name: e.name,
+    type: e.entity_type as ExtractionEntity["type"],
+    foundationalContext: e.foundational_context,
+  }));
 
   // Back URL: return to workspace if we came from one
   const backWorkspaceId = urlWorkspaceId ?? activeWorkspace?.id;
@@ -637,6 +645,7 @@ function CaptureDetailContent({ captureId }: { captureId: string }) {
         onRetry={handleExtractTasks}
         projects={activeProjects.map((p) => ({ id: p.id, title: p.title }))}
         entities={taskExtraction.sourceEntities}
+        allEntities={allEntitiesForExtraction}
       />
     </>
   );
