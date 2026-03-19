@@ -1019,6 +1019,45 @@ export type Database = {
           }
         ];
       };
+      task_entities: {
+        Row: {
+          id: string;
+          task_id: string;
+          entity_id: string;
+          entity_type: "product" | "initiative" | "stakeholder";
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          task_id: string;
+          entity_id: string;
+          entity_type: "product" | "initiative" | "stakeholder";
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          task_id?: string;
+          entity_id?: string;
+          entity_type?: "product" | "initiative" | "stakeholder";
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "task_entities_task_id_fkey";
+            columns: ["task_id"];
+            isOneToOne: false;
+            referencedRelation: "tasks";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "task_entities_entity_id_fkey";
+            columns: ["entity_id"];
+            isOneToOne: false;
+            referencedRelation: "entities";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
       entity_context_entries: {
         Row: {
           id: string;

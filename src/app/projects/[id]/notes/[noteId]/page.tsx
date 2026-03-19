@@ -25,6 +25,8 @@ import { QuickAddNoteTask } from "@/components/note";
 import { TaskListItem } from "@/components/task";
 import { TaskExtractionDialog } from "@/components/ai";
 import { useTaskExtraction } from "@/hooks/use-task-extraction";
+import { getClient } from "@/lib/supabase/client-manager";
+import type { ExtractionEntity } from "@/lib/ai/types";
 import type { Task, TaskStatus, TaskWithProject } from "@/types";
 
 export default function NoteDetailPage() {
@@ -205,10 +207,41 @@ export default function NoteDetailPage() {
     setDeleteConfirm(false);
   }, [noteId, projectId, deleteNote, router]);
 
-  // Handle AI task extraction
-  const handleExtractTasks = useCallback(() => {
+  // Handle AI task extraction — resolve entity mentions before calling API
+  const handleExtractTasks = useCallback(async () => {
     setShowExtractionDialog(true);
-    taskExtraction.extractFromNote(noteId, content, projectId, project?.title);
+
+    // Resolve entities mentioned in this note via entity_mentions table
+    let entities: ExtractionEntity[] = [];
+    try {
+      const supabase = getClient();
+      const { data: mentions } = await supabase
+        .from("entity_mentions")
+        .select("entity_id")
+        .eq("source_type", "note")
+        .eq("source_id", noteId);
+
+      if (mentions && mentions.length > 0) {
+        const entityIds = [...new Set(mentions.map((m: { entity_id: string }) => m.entity_id))];
+        const { data: entityRows } = await supabase
+          .from("entities")
+          .select("id, name, entity_type, foundational_context")
+          .in("id", entityIds);
+
+        if (entityRows) {
+          entities = entityRows.map((e: { id: string; name: string; entity_type: string; foundational_context: string | null }) => ({
+            id: e.id,
+            name: e.name,
+            type: e.entity_type as ExtractionEntity["type"],
+            foundationalContext: e.foundational_context,
+          }));
+        }
+      }
+    } catch {
+      // Non-blocking — extraction works without entities
+    }
+
+    taskExtraction.extractFromNote(noteId, content, projectId, project?.title, entities);
   }, [noteId, content, projectId, project?.title, taskExtraction]);
 
   if (projectLoading || noteLoading || isDeleting) {
@@ -401,6 +434,7 @@ export default function NoteDetailPage() {
         onOpenChange={setShowExtractionDialog}
         extraction={taskExtraction}
         onRetry={handleExtractTasks}
+        entities={taskExtraction.sourceEntities}
       />
     </AppShell>
   );

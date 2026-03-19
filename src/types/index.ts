@@ -88,6 +88,15 @@ export interface TaskProduct {
 }
 
 /**
+ * Entity linked directly to a task via task_entities junction table
+ */
+export interface TaskEntity {
+  id: string;
+  name: string;
+  entity_type: "product" | "initiative" | "stakeholder";
+}
+
+/**
  * Task with project relation loaded (project is optional)
  */
 export interface TaskWithProject extends DBTask {
@@ -95,6 +104,7 @@ export interface TaskWithProject extends DBTask {
   assignee?: DBProfile | null;
   attachments?: DBAttachment[];
   products?: TaskProduct[];
+  entities?: TaskEntity[];
 }
 
 /**

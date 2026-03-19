@@ -28,6 +28,7 @@ import type {
   RawExtractedTask,
   ExtractionStatus,
   ExtractionError,
+  ExtractionEntity,
   ExtractTasksResponse,
   UseTaskExtractionReturn,
   TaskSourceType,
@@ -78,6 +79,7 @@ export function useTaskExtraction(): UseTaskExtractionReturn {
   const [createdCount, setCreatedCount] = useState(0);
   const [sourceNoteId, setSourceNoteId] = useState<string | null>(null);
   const [sourceProjectId, setSourceProjectId] = useState<string | null>(null);
+  const [sourceEntities, setSourceEntities] = useState<ExtractionEntity[]>([]);
 
   /**
    * Extract tasks from a note's content
@@ -87,7 +89,8 @@ export function useTaskExtraction(): UseTaskExtractionReturn {
       noteId: string,
       content: string,
       projectId: string,
-      projectTitle?: string
+      projectTitle?: string,
+      entities?: ExtractionEntity[]
     ): Promise<void> => {
       if (!user) {
         toast.error("You must be logged in to extract tasks");
@@ -104,6 +107,7 @@ export function useTaskExtraction(): UseTaskExtractionReturn {
       setError(null);
       setSourceNoteId(noteId);
       setSourceProjectId(projectId);
+      setSourceEntities(entities ?? []);
 
       try {
         const response = await fetch("/api/ai/extract-tasks", {
@@ -115,6 +119,7 @@ export function useTaskExtraction(): UseTaskExtractionReturn {
             content,
             projectId,
             projectTitle,
+            entities,
           }),
         });
 
@@ -177,7 +182,8 @@ export function useTaskExtraction(): UseTaskExtractionReturn {
       captureId: string,
       content: string,
       defaultProjectId?: string,
-      projectTitle?: string
+      projectTitle?: string,
+      entities?: ExtractionEntity[]
     ): Promise<void> => {
       if (!user) {
         toast.error("You must be logged in to extract tasks");
@@ -194,6 +200,7 @@ export function useTaskExtraction(): UseTaskExtractionReturn {
       setError(null);
       setSourceNoteId(captureId);
       setSourceProjectId(defaultProjectId ?? null);
+      setSourceEntities(entities ?? []);
 
       try {
         const response = await fetch("/api/ai/extract-tasks", {
@@ -205,6 +212,7 @@ export function useTaskExtraction(): UseTaskExtractionReturn {
             content,
             projectId: defaultProjectId,
             projectTitle,
+            entities,
           }),
         });
 
@@ -375,6 +383,35 @@ export function useTaskExtraction(): UseTaskExtractionReturn {
           });
         }
 
+        // Link task to entities (from AI suggestions + user edits)
+        if (task.entityIds.length > 0) {
+          const entityTypeMap = new Map(
+            sourceEntities.map((e) => [e.id, e.type])
+          );
+          const entityRows = task.entityIds
+            .filter((eid) => entityTypeMap.has(eid))
+            .map((eid) => ({
+              task_id: createdTask.id,
+              entity_id: eid,
+              entity_type: entityTypeMap.get(eid)!,
+            }));
+
+          if (entityRows.length > 0) {
+            const { error: entityLinkError } = await supabase
+              .from("task_entities")
+              .insert(entityRows);
+
+            if (entityLinkError) {
+              logger.error("Failed to link task to entities", {
+                userId: user.id,
+                taskId: createdTask.id,
+                entityIds: task.entityIds,
+                error: entityLinkError
+              });
+            }
+          }
+        }
+
         successCount++;
         setCreatedCount(successCount);
       } catch (err) {
@@ -406,7 +443,7 @@ export function useTaskExtraction(): UseTaskExtractionReturn {
       setStatus("error");
       setError({ type: "api_error", message: "Failed to create tasks" });
     }
-  }, [user, sourceNoteId, sourceProjectId, extractedTasks, queryClient]);
+  }, [user, sourceNoteId, sourceProjectId, extractedTasks, sourceEntities, queryClient]);
 
   /**
    * Reset the extraction state
@@ -418,6 +455,7 @@ export function useTaskExtraction(): UseTaskExtractionReturn {
     setCreatedCount(0);
     setSourceNoteId(null);
     setSourceProjectId(null);
+    setSourceEntities([]);
   }, []);
 
   return {
@@ -428,6 +466,7 @@ export function useTaskExtraction(): UseTaskExtractionReturn {
     createdCount,
     sourceNoteId,
     sourceProjectId,
+    sourceEntities,
     // Actions
     extractFromNote,
     extractFromCapture,

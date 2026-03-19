@@ -1,6 +1,6 @@
 # Entity Memory Implementation Plan
 
-> **Status:** Phase 4.6 complete, 4.7–4.8 planned (v0.20.0–v0.26.0)
+> **Status:** Phase 4.7 complete, 4.8 planned (v0.20.0–v0.26.0)
 > **Created:** March 12, 2026
 > **Context:** Evolves MVP 2 (Entities) from MEMORY_LAYER.md with new Product → Initiative hierarchy and @mention-driven memory system.
 
@@ -484,7 +484,7 @@ No schema changes. No new API fields. The foundational context was already sent 
 
 ---
 
-## Phase 4.7: Entity-Linked Task Extraction
+## Phase 4.7: Entity-Linked Task Extraction ✅
 
 ### Overview
 
@@ -766,12 +766,13 @@ Phase 4.6: CONTEXT-AWARE RELEVANCE FILTERING ✅
   - Understands internal terminology, abbreviations, feature names
   - Resolves indirect references (e.g., "Genius R" → "Restaurant Platform")
     ↓
-Phase 4.7: ENTITY-LINKED TASK EXTRACTION
-  4.7A: Database — `task_entities` junction table (many-to-many)
-  4.7B: Extraction API — accept entities + foundational context, return entityIds per task
-  4.7C: Extraction prompt — entity context section, stakeholder linking rules
-  4.7D: Extraction hook — pass entities, create task_entities on confirm
-  4.7E: Review UI — entity pills (add/remove) per extracted task
+Phase 4.7: ENTITY-LINKED TASK EXTRACTION ✅
+  4.7A: Database — `task_entities` junction table (many-to-many) ✅
+  4.7B: Extraction API — accept entities + foundational context, return entityIds per task ✅
+  4.7C: Extraction prompt — entity context section, stakeholder linking rules ✅
+  4.7D: Extraction hook — pass entities, create task_entities on confirm ✅
+  4.7E: Review UI — entity pills (add/remove) per extracted task ✅
+  4.7F: Caller integration — note & capture pages resolve entity_mentions before extraction ✅
     ↓
 Phase 4.8: ENTITY DISPLAY ON TASK VIEWS
   4.8A: Data enrichment — `enrichTasksWithEntities()` from task_entities

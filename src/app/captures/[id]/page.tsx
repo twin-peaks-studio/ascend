@@ -52,6 +52,8 @@ import { useWorkspaceContext } from "@/contexts/workspace-context";
 import { useTaskExtraction } from "@/hooks/use-task-extraction";
 import { useMentionSync } from "@/hooks/use-entity-mentions";
 import { parseEntityMentions } from "@/lib/tiptap/entity-mention-extension";
+import { getClient } from "@/lib/supabase/client-manager";
+import type { ExtractionEntity } from "@/lib/ai/types";
 import type { Task, TaskStatus, TaskWithProject, CaptureWithRelations } from "@/types";
 import type { CaptureType } from "@/types/database";
 
@@ -275,14 +277,46 @@ function CaptureDetailContent({ captureId }: { captureId: string }) {
     setDeleteConfirm(false);
   }, [captureId, deleteCapture, router, backUrl, effectiveWorkspaceId]);
 
-  // Handle AI task extraction
-  const handleExtractTasks = useCallback(() => {
+  // Handle AI task extraction — resolve entity mentions before calling API
+  const handleExtractTasks = useCallback(async () => {
     setShowExtractionDialog(true);
+
+    // Resolve entities mentioned in this capture via entity_mentions table
+    let entities: ExtractionEntity[] = [];
+    try {
+      const supabase = getClient();
+      const { data: mentions } = await supabase
+        .from("entity_mentions")
+        .select("entity_id")
+        .eq("source_type", "capture")
+        .eq("source_id", captureId);
+
+      if (mentions && mentions.length > 0) {
+        const entityIds = [...new Set(mentions.map((m: { entity_id: string }) => m.entity_id))];
+        const { data: entityRows } = await supabase
+          .from("entities")
+          .select("id, name, entity_type, foundational_context")
+          .in("id", entityIds);
+
+        if (entityRows) {
+          entities = entityRows.map((e: { id: string; name: string; entity_type: string; foundational_context: string | null }) => ({
+            id: e.id,
+            name: e.name,
+            type: e.entity_type as ExtractionEntity["type"],
+            foundationalContext: e.foundational_context,
+          }));
+        }
+      }
+    } catch {
+      // Non-blocking — extraction works without entities
+    }
+
     taskExtraction.extractFromCapture(
       captureId,
       content,
       capture?.project_id ?? undefined,
-      capture?.project?.title
+      capture?.project?.title,
+      entities
     );
   }, [captureId, content, capture?.project_id, capture?.project?.title, taskExtraction]);
 
@@ -590,6 +624,7 @@ function CaptureDetailContent({ captureId }: { captureId: string }) {
         extraction={taskExtraction}
         onRetry={handleExtractTasks}
         projects={activeProjects.map((p) => ({ id: p.id, title: p.title }))}
+        entities={taskExtraction.sourceEntities}
       />
     </>
   );

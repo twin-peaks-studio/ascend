@@ -26,6 +26,14 @@ export interface ExtractionSource {
   projectTitle?: string;
 }
 
+// Entity context passed to extraction API
+export interface ExtractionEntity {
+  id: string;
+  name: string;
+  type: "product" | "initiative" | "stakeholder";
+  foundationalContext: string | null;
+}
+
 // Raw task from AI response (before client processing)
 export interface RawExtractedTask {
   title: string;
@@ -35,6 +43,8 @@ export interface RawExtractedTask {
   confidence: number;
   /** Verbatim excerpt from the source content that prompted this task */
   sourceText: string | null;
+  /** Entity IDs that this task relates to (suggested by AI) */
+  entityIds: string[];
 }
 
 // Client-side extracted task with UI state
@@ -42,6 +52,7 @@ export interface ExtractedTask extends RawExtractedTask {
   id: string; // Client-generated UUID for list key
   selected: boolean; // User selection state
   projectId?: string; // Per-task project assignment (used for captures where project varies)
+  entityIds: string[]; // Editable in review UI
 }
 
 // API request body
@@ -52,6 +63,7 @@ export interface ExtractTasksRequest {
   projectId?: string;
   projectTitle?: string;
   existingTaskTitles?: string[];
+  entities?: ExtractionEntity[];
 }
 
 // Successful API response
@@ -105,6 +117,7 @@ export interface UseTaskExtractionState {
   createdCount: number;
   sourceNoteId: string | null;
   sourceProjectId: string | null;
+  sourceEntities: ExtractionEntity[];
 }
 
 // Hook actions
@@ -113,13 +126,15 @@ export interface UseTaskExtractionActions {
     noteId: string,
     content: string,
     projectId: string,
-    projectTitle?: string
+    projectTitle?: string,
+    entities?: ExtractionEntity[]
   ) => Promise<void>;
   extractFromCapture: (
     captureId: string,
     content: string,
     defaultProjectId?: string,
-    projectTitle?: string
+    projectTitle?: string,
+    entities?: ExtractionEntity[]
   ) => Promise<void>;
   updateTask: (id: string, updates: Partial<ExtractedTask>) => void;
   toggleSelection: (id: string) => void;
