@@ -73,6 +73,12 @@ export function TaskCard({
       return;
     }
 
+    // Cmd+click (Mac) or Ctrl+click (Windows/Linux) opens in new tab
+    if (e.metaKey || e.ctrlKey) {
+      window.open(`/tasks/${task.id}`, "_blank");
+      return;
+    }
+
     onOpenDetails?.(task);
   };
 

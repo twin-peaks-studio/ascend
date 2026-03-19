@@ -65,7 +65,12 @@ export function TaskListItem({ task, onTaskClick, onStatusToggle, assignee }: Ta
     onStatusToggle?.(task);
   }, [task, onStatusToggle]);
 
-  const handleRowClick = useCallback(() => {
+  const handleRowClick = useCallback((e: React.MouseEvent) => {
+    // Cmd+click (Mac) or Ctrl+click (Windows/Linux) opens in new tab
+    if (e.metaKey || e.ctrlKey) {
+      window.open(`/tasks/${task.id}`, "_blank");
+      return;
+    }
     onTaskClick?.(task);
   }, [task, onTaskClick]);
 

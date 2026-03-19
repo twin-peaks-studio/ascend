@@ -290,7 +290,13 @@ function TodayTaskRow({
 
   return (
     <div
-      onClick={() => onTaskClick(task)}
+      onClick={(e) => {
+        if (e.metaKey || e.ctrlKey) {
+          window.open(`/tasks/${task.id}`, "_blank");
+          return;
+        }
+        onTaskClick(task);
+      }}
       className={cn(
         "group flex items-center gap-3 py-3 px-3 border-b border-border/40 last:border-0 cursor-pointer",
         "hover:bg-muted/30 transition-colors",
