@@ -218,7 +218,8 @@ function EntityDetailContent() {
     linkedInitiativeIds
   );
 
-  const [activeTab, setActiveTab] = useState<Tab>("overview");
+  const initialTab = (searchParams.get("tab") as Tab) || "overview";
+  const [activeTab, setActiveTab] = useState<Tab>(initialTab);
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState("");
   const [editDescription, setEditDescription] = useState("");
@@ -453,7 +454,7 @@ function EntityDetailContent() {
         )}
 
         {activeTab === "tasks" && (
-          <EntityTasksTab entityId={entity.id} />
+          <EntityTasksTab entityId={entity.id} workspaceId={workspaceId} />
         )}
 
         {activeTab === "journal" && (

@@ -24,9 +24,10 @@ import type { Task } from "@/types/database";
 
 interface EntityTasksTabProps {
   entityId: string;
+  workspaceId?: string | null;
 }
 
-export function EntityTasksTab({ entityId }: EntityTasksTabProps) {
+export function EntityTasksTab({ entityId, workspaceId }: EntityTasksTabProps) {
   const router = useRouter();
   const { tasks, loading } = useEntityTasks(entityId);
   const { updateTask } = useTaskMutations();
@@ -53,9 +54,11 @@ export function EntityTasksTab({ entityId }: EntityTasksTabProps) {
 
   const handleTaskClick = useCallback(
     (task: TaskWithProject | Task) => {
-      router.push(`/tasks/${task.id}?from=entities`);
+      const params = new URLSearchParams({ from: "entity", entityId });
+      if (workspaceId) params.set("workspace", workspaceId);
+      router.push(`/tasks/${task.id}?${params.toString()}`);
     },
-    [router]
+    [router, entityId, workspaceId]
   );
 
   const currentSortLabel = TASK_SORT_OPTIONS.find(

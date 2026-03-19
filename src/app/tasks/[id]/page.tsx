@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
@@ -92,7 +92,11 @@ export default function TaskDetailPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const taskId = params.id as string;
-  const cameFromTasks = searchParams.get("from") === "tasks";
+  const fromParam = searchParams.get("from");
+  const cameFromTasks = fromParam === "tasks";
+  const cameFromEntity = fromParam === "entity";
+  const sourceEntityId = searchParams.get("entityId");
+  const sourceWorkspaceId = searchParams.get("workspace");
 
   // Fetch task data
   const { task, isLoading, error } = useTask(taskId);
@@ -165,14 +169,22 @@ export default function TaskDetailPage() {
     setShowAttachments(true);
   }
 
+  const entityBackUrl = useMemo(() => {
+    if (!sourceEntityId) return null;
+    const params = new URLSearchParams({ tab: "tasks" });
+    if (sourceWorkspaceId) params.set("workspace", sourceWorkspaceId);
+    return `/entities/${sourceEntityId}?${params.toString()}`;
+  }, [sourceEntityId, sourceWorkspaceId]);
+
   const handleBack = useCallback(() => {
-    // Smart back navigation
-    if (window.history.length > 1) {
+    if (cameFromEntity && entityBackUrl) {
+      router.push(entityBackUrl);
+    } else if (window.history.length > 1) {
       router.back();
     } else {
       router.push("/tasks");
     }
-  }, [router]);
+  }, [router, cameFromEntity, entityBackUrl]);
 
   const handleUpdate = useCallback(
     async (data: UpdateTaskInput) => {
@@ -307,12 +319,18 @@ export default function TaskDetailPage() {
     if (!task) return;
     setIsDeleting(true);
     // Navigate back to where the user came from:
+    // - From entity page → /entities/[id]
     // - From /tasks page (has ?from=tasks) → /tasks
     // - From a project context → /projects/[id]/tasks
     // - Independent task (no project) → /tasks
-    const destination = cameFromTasks || !task.project_id
-      ? "/tasks"
-      : `/projects/${task.project_id}/tasks`;
+    let destination: string;
+    if (cameFromEntity && entityBackUrl) {
+      destination = entityBackUrl;
+    } else if (cameFromTasks || !task.project_id) {
+      destination = "/tasks";
+    } else {
+      destination = `/projects/${task.project_id}/tasks`;
+    }
     const success = await deleteTask(task.id);
     if (success) {
       router.push(destination);
@@ -320,7 +338,7 @@ export default function TaskDetailPage() {
       setIsDeleting(false);
     }
     setDeleteConfirm(false);
-  }, [task, deleteTask, router, cameFromTasks]);
+  }, [task, deleteTask, router, cameFromTasks, cameFromEntity, entityBackUrl]);
 
   const handleKeyDown = useCallback(
     (
