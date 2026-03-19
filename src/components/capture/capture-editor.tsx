@@ -58,7 +58,7 @@ export function CaptureEditor({ capture, onSaved, workspaceId: workspaceIdProp }
   const router = useRouter();
   const { activeWorkspace } = useWorkspaceContext();
   const effectiveWorkspaceId = workspaceIdProp ?? activeWorkspace?.id;
-  const { projects } = useProjects();
+  const { projects } = useProjects(effectiveWorkspaceId);
   const { createCapture, updateCapture, deleteCapture, loading } =
     useCaptureMutations();
   const { syncMentions } = useMentionSync();

@@ -96,7 +96,7 @@ function CaptureDetailContent({ captureId }: { captureId: string }) {
     loading: captureMutationLoading,
   } = useCaptureMutations();
   const { updateTask } = useTaskMutations();
-  const { projects } = useProjects();
+  const { projects } = useProjects(effectiveWorkspaceId);
   const taskExtraction = useTaskExtraction();
   const { syncMentions } = useMentionSync();
 
