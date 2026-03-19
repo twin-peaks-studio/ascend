@@ -231,6 +231,13 @@ export async function POST(
       .single();
 
     if (entityError || !entity) {
+      logger.error("Entity lookup failed", {
+        feature: "ai-memory-refresh",
+        entityId,
+        userId: user.id,
+        entityError,
+        entityData: entity,
+      });
       return NextResponse.json(
         { success: false, error: { type: "not_found", message: "Entity not found" } },
         { status: 404 }
