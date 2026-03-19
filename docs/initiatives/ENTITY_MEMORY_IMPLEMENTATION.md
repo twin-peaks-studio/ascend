@@ -1,6 +1,6 @@
 # Entity Memory Implementation Plan
 
-> **Status:** Phase 4.7 complete, 4.8 planned (v0.20.0–v0.26.0)
+> **Status:** Phase 4.7 complete, 4.8 in progress (v0.20.0–v0.26.0)
 > **Created:** March 12, 2026
 > **Context:** Evolves MVP 2 (Entities) from MEMORY_LAYER.md with new Product → Initiative hierarchy and @mention-driven memory system.
 
@@ -592,47 +592,112 @@ Callers of `extractFromNote()` / `extractFromCapture()` resolve entities:
 
 ---
 
-## Phase 4.8: Entity Display on Task Views
+## Phase 4.8: Entity Display on Task Views (Replace Products Enrichment)
 
 ### Overview
 
-All task surfaces show entity badges from `task_entities`. Entities appear as colored pills — products (purple), initiatives (amber), stakeholders (green).
+All task surfaces show entity badges sourced from `task_entities` — the direct, per-task entity associations created by AI extraction or manual linking. This **replaces** the current `products` enrichment path entirely.
 
-### 4.8A. Data Enrichment
+### Why Replace, Not Layer
 
-**New file:** `src/lib/utils/enrich-task-entities.ts`
+The current product display (`task.products`) is derived indirectly: `task.project.entity_id → entity_links → target entity (product)`. This path has fundamental problems:
 
-Pattern mirrors `enrich-task-products.ts`:
+1. **Wrong granularity** — every task in a project gets the same product badge, regardless of which entity the task actually relates to. A project linked to "CFD" shows CFD on every task, even tasks about "OO" or "KDS".
+2. **Indirect chain** — the entity shown comes from the project, not the task. If a task was extracted from a note about #OO and the AI correctly linked it to OO in `task_entities`, the display still shows CFD because it reads from the project path.
+3. **No multi-entity support** — a task can relate to multiple entities (a product AND an initiative), but the products path only shows what the project is linked to.
+
+`task_entities` solves all of this: it stores per-task, multi-entity associations set during AI extraction or manually by the user. Phase 4.8 cuts over to this as the sole source of entity display data.
+
+### 4.8A. New Enrichment Utility
+
+**Replace:** `src/lib/utils/enrich-task-products.ts` → `src/lib/utils/enrich-task-entities.ts`
 
 ```typescript
-interface TaskEntity {
-  id: string;
-  name: string;
-  entity_type: "product" | "initiative" | "stakeholder";
+/**
+ * Enrich tasks with entity data from task_entities junction table.
+ * Single query for all task IDs. Replaces the old products enrichment
+ * that derived entities indirectly from project → entity_links.
+ */
+
+interface TaskEntityRow {
+  task_id: string;
+  entity: { id: string; name: string; entity_type: string } | null;
 }
 
-async function enrichTasksWithEntities<T extends { id: string }>(
+export async function enrichTasksWithEntities<T extends TaskWithProject>(
   tasks: T[]
-): Promise<(T & { entities: TaskEntity[] })[]>
+): Promise<T[]> {
+  if (tasks.length === 0) return tasks;
+
+  const taskIds = tasks.map((t) => t.id);
+  const supabase = getClient();
+
+  const { data, error } = await supabase
+    .from("task_entities")
+    .select("task_id, entity:entities(id, name, entity_type)")
+    .in("task_id", taskIds);
+
+  if (error) {
+    // Graceful degradation — entity badges are non-critical
+    logger.error("Error fetching task entities", { error });
+    return tasks;
+  }
+
+  // Build Map<task_id, TaskEntity[]>
+  const entityMap = new Map<string, TaskEntity[]>();
+  for (const row of (data as TaskEntityRow[]) || []) {
+    if (!row.entity) continue;
+    const existing = entityMap.get(row.task_id) || [];
+    existing.push({
+      id: row.entity.id,
+      name: row.entity.name,
+      entity_type: row.entity.entity_type as TaskEntity["entity_type"],
+    });
+    entityMap.set(row.task_id, existing);
+  }
+
+  for (const task of tasks) {
+    task.entities = entityMap.get(task.id) ?? [];
+  }
+
+  return tasks;
+}
 ```
 
-Single query: `task_entities` joined with `entities` for all task IDs. Returns `Map<task_id, TaskEntity[]>`.
+### 4.8B. Hook Changes (3 files)
 
-**Type update** (`src/types/index.ts`): Add `entities?: TaskEntity[]` to `TaskWithProject`.
+Replace `enrichTasksWithProducts` → `enrichTasksWithEntities` in all three hooks:
 
-### 4.8B–D. Component Changes
+| File | Line | Change |
+|------|------|--------|
+| `src/hooks/use-tasks.ts` | ~26, ~126 | Import and call `enrichTasksWithEntities` instead of `enrichTasksWithProducts` |
+| `src/hooks/use-notes.ts` | ~21, ~104 | Same |
+| `src/hooks/use-captures.ts` | ~20, ~158 | Same |
 
-**Display rules:**
-- Show ALL linked entities (typically 3-5) — no "+N more" truncation on desktop
-- Row heights may vary — this is acceptable
-- Mobile truncation to be addressed separately
-- Pills wrap naturally via `flex-wrap`
+### 4.8C. Component Changes (3 files)
 
-**`TaskListItem`** (`src/components/task/task-list-view.tsx`): Entity pills in meta row.
+All components switch from reading `task.products` to `task.entities`.
 
-**`TaskCard`** (`src/components/task/task-card.tsx`): Entity pills in footer badges. Replaces current single product badge.
+**`TaskListItem`** (`src/components/task/task-list-view.tsx`):
+- Line ~74: Change `const products = ...` → `const entities = ('entities' in task && task.entities) ? task.entities : [];`
+- Lines ~121-130: Replace single purple product pill with entity pills colored by type
+- Each entity renders as a pill with type-specific icon and color
 
-**`TodayTaskRow`** (`src/app/today/page.tsx`): Entity pills in badges row. Replaces current product-only badge.
+**`TaskCard`** (`src/components/task/task-card.tsx`):
+- Lines ~197-202: Replace `task.products` badge with entity pills in footer
+- Same color scheme as TaskListItem
+
+**`TodayTaskRow`** (`src/app/today/page.tsx`):
+- Replace product-only badge with entity pills
+- Same pattern as TaskListItem
+
+### 4.8D. Display Rules
+
+- Show ALL linked entities — no "+N more" truncation on desktop
+- Entity pills colored by type: product (purple), initiative (amber), stakeholder (green)
+- Pills wrap naturally via `flex-wrap`; row heights may vary (acceptable)
+- Mobile truncation deferred to a later pass
+- Tasks with no `task_entities` records show no entity pills (clean slate)
 
 ### 4.8E. Shared Color Constants
 
@@ -658,13 +723,29 @@ export const ENTITY_TYPE_COLORS = {
 } as const;
 ```
 
-### Migration Path from Products to Entities
+### 4.8F. Cleanup
 
-The current product display (`task.products`) is derived from `project.entity_id → entity_links`. Phase 4.8 replaces this with direct `task_entities` display:
+After the cutover:
 
-1. Existing tasks won't have `task_entities` records — show no entity badges until re-extracted or manually linked
-2. `enrichTasksWithProducts()` can remain as fallback: if a task has no `task_entities` but its project has linked products, show those as inherited (visual indicator)
-3. Long-term: phase out `enrichTasksWithProducts()` once most tasks have direct entity links
+1. **Delete** `src/lib/utils/enrich-task-products.ts` — no longer used
+2. **Remove** `TaskProduct` interface from `src/types/index.ts`
+3. **Remove** `products?: TaskProduct[]` from `TaskWithProject` interface
+4. **Remove** `Package` icon imports that were only used for the old product pill
+5. **Keep** `entities?: TaskEntity[]` on `TaskWithProject` (already exists)
+
+### 4.8G. Cache Mutation Compatibility
+
+The existing `setQueriesData` calls in `updateTask` and `deleteTask` use object spread (`{ ...t, ...updateData }`), which preserves the `entities` array on tasks. No changes needed to cache mutations — entities survive optimistic updates.
+
+### What About Existing Tasks Without `task_entities`?
+
+Tasks created before Phase 4.7 (entity-linked extraction) won't have `task_entities` records. These tasks will show **no entity pills** — this is correct and expected. Entities are earned through AI extraction or manual linking, not inherited from the project.
+
+If a user wants entities on old tasks, they can:
+1. Re-extract tasks from the source note/capture (entities are now linked during extraction)
+2. Manually link entities via the task detail page (future: Phase 4.9)
+
+There is **no fallback** to the old products path. The indirection through `project.entity_id → entity_links` showed the wrong entity and is the exact bug this phase fixes.
 
 ---
 
