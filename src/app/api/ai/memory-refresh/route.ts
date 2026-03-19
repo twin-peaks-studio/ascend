@@ -223,10 +223,11 @@ export async function POST(
       );
     }
 
-    // 4. Fetch entity
+    // 4. Fetch entity (use select("*") so optional columns like memory_guidance
+    //    and memory_source_hash don't cause the query to fail if not yet migrated)
     const { data: entity, error: entityError } = await supabase
       .from("entities")
-      .select("id, workspace_id, entity_type, name, foundational_context, memory_guidance, ai_memory, memory_refreshed_at, memory_source_hash")
+      .select("*")
       .eq("id", entityId)
       .single();
 
@@ -306,14 +307,18 @@ export async function POST(
     }
 
     // 8. Compute source hash and check for changes
+    //    memory_guidance and memory_source_hash are optional columns
+    const memoryGuidance = entity.memory_guidance ?? null;
+    const existingSourceHash = entity.memory_source_hash ?? null;
+
     const sourceHash = computeSourceHash(
       entity.foundational_context,
       journalEntries ?? [],
       mentionedContent,
-      entity.memory_guidance
+      memoryGuidance
     );
 
-    if (!force && entity.memory_source_hash === sourceHash && entity.ai_memory) {
+    if (!force && existingSourceHash === sourceHash && entity.ai_memory) {
       return NextResponse.json({
         success: true,
         aiMemory: entity.ai_memory,
@@ -341,7 +346,7 @@ export async function POST(
     }
 
     // 10. Call Claude API
-    const systemPrompt = buildSystemPrompt(entity.entity_type, entity.name, entity.memory_guidance);
+    const systemPrompt = buildSystemPrompt(entity.entity_type, entity.name, memoryGuidance);
     const userPrompt = buildUserPrompt(
       entity.foundational_context,
       journalEntries ?? [],
@@ -413,14 +418,18 @@ export async function POST(
     const refreshedAt = new Date().toISOString();
 
     // 12. Store the synthesized memory on the entity
+    //     Only include memory_source_hash if the column exists (was migrated)
+    const updatePayload: Record<string, string> = {
+      ai_memory: aiMemory,
+      memory_refreshed_at: refreshedAt,
+      updated_at: refreshedAt,
+    };
+    if ("memory_source_hash" in entity) {
+      updatePayload.memory_source_hash = sourceHash;
+    }
     const { error: updateError } = await supabase
       .from("entities")
-      .update({
-        ai_memory: aiMemory,
-        memory_refreshed_at: refreshedAt,
-        memory_source_hash: sourceHash,
-        updated_at: refreshedAt,
-      })
+      .update(updatePayload)
       .eq("id", entityId);
 
     if (updateError) {
