@@ -13,6 +13,7 @@ import { logger } from "@/lib/logger/logger";
 import { taskKeys } from "@/hooks/use-tasks";
 import { toast } from "sonner";
 import type { TaskEntity } from "@/types";
+import type { EntityType } from "@/types/database";
 
 export interface TaskEntityRow {
   id: string; // junction row ID
@@ -80,7 +81,7 @@ export function useTaskEntities(taskId: string | null) {
     }));
 
   const addEntity = useCallback(
-    async (entityId: string, entityType: string) => {
+    async (entityId: string, entityType: EntityType) => {
       if (!taskId) return;
       setMutating(true);
       try {
