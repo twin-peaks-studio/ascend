@@ -48,7 +48,6 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { useWorkspaceContext } from "@/contexts/workspace-context";
 import { useLinkEntitiesToTask } from "@/hooks/use-link-entities-to-task";
 import { useProject, useProjectMutations } from "@/hooks/use-projects";
 import { useTaskMutations } from "@/hooks/use-tasks";
@@ -78,7 +77,6 @@ export default function ProjectDetailPage() {
   const projectId = params.id as string;
   const workspaceId = searchParams.get("workspace");
 
-  const { activeWorkspace } = useWorkspaceContext();
   const { project, setProject, loading, refetch } = useProject(projectId);
   const { documents, refetch: refetchDocuments } = useProjectDocuments(projectId);
   const { profiles } = useProfiles();
@@ -827,7 +825,6 @@ export default function ProjectDetailPage() {
         defaultProjectId={projectId}
         onSubmit={handleCreateTask}
         loading={taskMutationLoading}
-        workspaceId={activeWorkspace?.id}
         onEntitiesSelected={linkEntities}
       />
 

@@ -516,7 +516,6 @@ export default function TasksPage() {
         defaultAssigneeId={user?.id ?? null}
         onSubmit={editingTask ? handleUpdateTask : handleCreateTask}
         loading={mutationLoading}
-        workspaceId={activeWorkspace?.id}
         onEntitiesSelected={linkEntities}
       />
 
@@ -529,7 +528,6 @@ export default function TasksPage() {
         profiles={profiles}
         loading={mutationLoading}
         defaultAssigneeId={user?.id ?? null}
-        workspaceId={activeWorkspace?.id}
         onEntitiesSelected={linkEntities}
       />
 

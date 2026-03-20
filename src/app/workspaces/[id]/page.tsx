@@ -280,7 +280,6 @@ function WorkspaceContent() {
         defaultAssigneeId={user?.id ?? null}
         onSubmit={handleCreateTask}
         loading={taskMutationLoading}
-        workspaceId={workspaceId}
         onEntitiesSelected={linkEntities}
       />
 

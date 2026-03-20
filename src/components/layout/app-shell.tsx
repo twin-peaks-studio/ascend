@@ -18,7 +18,6 @@ import { useRecoveryState } from "@/hooks/use-recovery";
 import { useProjects } from "@/hooks/use-projects";
 import { useProfiles } from "@/hooks/use-profiles";
 import { useTaskMutations } from "@/hooks/use-tasks";
-import { useWorkspaceContext } from "@/contexts/workspace-context";
 import { useLinkEntitiesToTask } from "@/hooks/use-link-entities-to-task";
 import { cn } from "@/lib/utils";
 import type { ViewMode } from "./header";
@@ -138,7 +137,6 @@ export function AppShell({
   const { projects: allProjects } = useProjects();
   const { profiles: allProfiles } = useProfiles();
   const { createTask, loading: taskMutationLoading } = useTaskMutations();
-  const { activeWorkspace } = useWorkspaceContext();
   const { trackCreatedTask, linkEntities } = useLinkEntitiesToTask();
 
   const handleGlobalCreateTask = useCallback(
@@ -317,7 +315,6 @@ export function AppShell({
           defaultAssigneeId={user?.id ?? null}
           onSubmit={handleGlobalCreateTask}
           loading={taskMutationLoading}
-          workspaceId={activeWorkspace?.id}
           onEntitiesSelected={linkEntities}
         />
 

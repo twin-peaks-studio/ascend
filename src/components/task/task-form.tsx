@@ -17,7 +17,7 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { AssigneeSelector } from "@/components/task/assignee-selector";
 import { EntityPickerPopover } from "@/components/shared/entity-picker-popover";
 import { useProjectAssignees } from "@/hooks/use-project-assignees";
-import { useEntities } from "@/hooks/use-entities";
+import { useWorkspaces } from "@/hooks/use-workspaces";
 import { ENTITY_TYPE_COLORS } from "@/lib/utils/entity-colors";
 import { cn } from "@/lib/utils";
 import type { Task, TaskStatus, TaskPriority, Project, Profile } from "@/types";
@@ -25,6 +25,7 @@ import type { Entity } from "@/types/database";
 import type { CreateTaskInput, UpdateTaskInput } from "@/lib/validation";
 
 const NO_PROJECT_VALUE = "__none__";
+const NO_WORKSPACE_VALUE = "__none__";
 
 const ENTITY_ICONS: Record<string, React.ElementType> = {
   product: Package,
@@ -43,8 +44,6 @@ interface TaskFormProps {
   onCancel: () => void;
   isEditing?: boolean;
   loading?: boolean;
-  /** When provided, enables #entity mentions in the description editor */
-  workspaceId?: string | null;
   /** Called after submit with selected entity IDs to link */
   onEntitiesSelected?: (entityIds: { id: string; type: string }[]) => void;
 }
@@ -60,12 +59,12 @@ export function TaskForm({
   onCancel,
   isEditing = false,
   loading = false,
-  workspaceId,
   onEntitiesSelected,
 }: TaskFormProps) {
   const [title, setTitle] = useState(initialData?.title || "");
   const [description, setDescription] = useState(initialData?.description || "");
   const [selectedEntities, setSelectedEntities] = useState<Entity[]>([]);
+  const [selectedWorkspaceId, setSelectedWorkspaceId] = useState(NO_WORKSPACE_VALUE);
   const [projectId, setProjectId] = useState(
     initialData?.project_id || defaultProjectId || NO_PROJECT_VALUE
   );
@@ -81,6 +80,15 @@ export function TaskForm({
   const [assigneeId, setAssigneeId] = useState<string | null>(
     initialData?.assignee_id ?? defaultAssigneeId ?? null
   );
+
+  // Get workspaces for the selector
+  const { workspaces } = useWorkspaces();
+  const effectiveWorkspaceId = selectedWorkspaceId === NO_WORKSPACE_VALUE ? null : selectedWorkspaceId;
+
+  // Clear entities when workspace changes
+  useEffect(() => {
+    setSelectedEntities([]);
+  }, [selectedWorkspaceId]);
 
   // Get assignable profiles based on selected project
   const effectiveProjectId = projectId === NO_PROJECT_VALUE ? null : projectId;
@@ -163,7 +171,7 @@ export function TaskForm({
           onChange={setDescription}
           placeholder="Add a description... Use # to mention entities"
           minHeight={80}
-          workspaceId={workspaceId}
+          workspaceId={effectiveWorkspaceId}
         />
       </div>
 
@@ -256,48 +264,73 @@ export function TaskForm({
         />
       </div>
 
-      {/* Entities (only for creation with workspace context) */}
-      {!isEditing && workspaceId && (
-        <div className="space-y-2">
-          <Label className="flex items-center gap-1.5">
-            Entities
-            <EntityPickerPopover
-              workspaceId={workspaceId}
-              linkedEntityIds={selectedEntityIds}
-              onToggle={handleEntityToggle}
-            />
-          </Label>
-          {selectedEntities.length > 0 ? (
-            <div className="flex flex-wrap gap-1.5">
-              {selectedEntities.map((entity) => {
-                const colors = ENTITY_TYPE_COLORS[entity.entity_type];
-                const Icon = ENTITY_ICONS[entity.entity_type] || Package;
-                return (
-                  <span
-                    key={entity.id}
-                    className={cn(
-                      "inline-flex items-center gap-1 pl-1.5 pr-0.5 py-0.5 rounded text-xs font-medium",
-                      colors.bg,
-                      colors.text
-                    )}
-                  >
-                    <Icon className="h-3 w-3" />
-                    {entity.name}
-                    <button
-                      type="button"
-                      onClick={() => setSelectedEntities((prev) => prev.filter((e) => e.id !== entity.id))}
-                      className="ml-0.5 p-0.5 rounded hover:bg-black/10 dark:hover:bg-white/10"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </span>
-                );
-              })}
+      {/* Workspace & Entities (only for creation) */}
+      {!isEditing && workspaces.length > 0 && (
+        <>
+          {/* Workspace selector */}
+          <div className="space-y-2">
+            <Label htmlFor="workspace">Workspace</Label>
+            <Select value={selectedWorkspaceId} onValueChange={setSelectedWorkspaceId}>
+              <SelectTrigger id="workspace">
+                <SelectValue placeholder="Select workspace (optional)" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={NO_WORKSPACE_VALUE}>
+                  <span className="text-muted-foreground">No workspace</span>
+                </SelectItem>
+                {workspaces.map((ws) => (
+                  <SelectItem key={ws.id} value={ws.id}>
+                    {ws.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Entity picker (only when workspace selected) */}
+          {effectiveWorkspaceId && (
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1.5">
+                Entities
+                <EntityPickerPopover
+                  workspaceId={effectiveWorkspaceId}
+                  linkedEntityIds={selectedEntityIds}
+                  onToggle={handleEntityToggle}
+                />
+              </Label>
+              {selectedEntities.length > 0 ? (
+                <div className="flex flex-wrap gap-1.5">
+                  {selectedEntities.map((entity) => {
+                    const colors = ENTITY_TYPE_COLORS[entity.entity_type];
+                    const Icon = ENTITY_ICONS[entity.entity_type] || Package;
+                    return (
+                      <span
+                        key={entity.id}
+                        className={cn(
+                          "inline-flex items-center gap-1 pl-1.5 pr-0.5 py-0.5 rounded text-xs font-medium",
+                          colors.bg,
+                          colors.text
+                        )}
+                      >
+                        <Icon className="h-3 w-3" />
+                        {entity.name}
+                        <button
+                          type="button"
+                          onClick={() => setSelectedEntities((prev) => prev.filter((e) => e.id !== entity.id))}
+                          className="ml-0.5 p-0.5 rounded hover:bg-black/10 dark:hover:bg-white/10"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground">None selected</p>
+              )}
             </div>
-          ) : (
-            <p className="text-xs text-muted-foreground">None selected</p>
           )}
-        </div>
+        </>
       )}
 
       {/* Actions */}
