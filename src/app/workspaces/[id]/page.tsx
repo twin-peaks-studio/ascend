@@ -92,7 +92,7 @@ function WorkspaceContent() {
 
   const handleCreateTask = useCallback(
     async (data: CreateTaskInput | UpdateTaskInput) => {
-      await createTask(data);
+      await createTask(data as CreateTaskInput);
       queryClient.invalidateQueries({ queryKey: workspaceTaskKeys.list(workspaceId) });
     },
     [createTask, queryClient, workspaceId]
