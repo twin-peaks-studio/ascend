@@ -18,6 +18,7 @@ import { useProfiles } from "@/hooks/use-profiles";
 import { useIsMobile } from "@/hooks/use-media-query";
 import { useAuth } from "@/hooks/use-auth";
 import { useWorkspaceContext } from "@/contexts/workspace-context";
+import { useLinkEntitiesToTask } from "@/hooks/use-link-entities-to-task";
 import type { TaskWithProject, TaskStatus, Project } from "@/types";
 import type { CreateTaskInput, UpdateTaskInput } from "@/lib/validation";
 import { DeleteConfirmationDialog } from "@/components/ui/delete-confirmation-dialog";
@@ -207,15 +208,18 @@ export default function TasksPage() {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
 
+  const { trackCreatedTask, linkEntities } = useLinkEntitiesToTask();
+
   // Handle task creation
   const handleCreateTask = useCallback(
     async (data: CreateTaskInput | UpdateTaskInput) => {
       const result = await createTask(data as CreateTaskInput);
       if (result) {
+        trackCreatedTask(result);
         refetch();
       }
     },
-    [createTask, refetch]
+    [createTask, refetch, trackCreatedTask]
   );
 
   // Handle task update
@@ -364,10 +368,11 @@ export default function TasksPage() {
     async (data: CreateTaskInput) => {
       const result = await createTask(data);
       if (result) {
+        trackCreatedTask(result);
         refetch();
       }
     },
-    [createTask, refetch]
+    [createTask, refetch, trackCreatedTask]
   );
 
   const handleQuickCreate = () => {
@@ -511,7 +516,7 @@ export default function TasksPage() {
         defaultAssigneeId={user?.id ?? null}
         onSubmit={editingTask ? handleUpdateTask : handleCreateTask}
         loading={mutationLoading}
-        workspaceId={activeWorkspace?.id}
+        onEntitiesSelected={linkEntities}
       />
 
       {/* Quick add task drawer (mobile) */}
@@ -523,6 +528,7 @@ export default function TasksPage() {
         profiles={profiles}
         loading={mutationLoading}
         defaultAssigneeId={user?.id ?? null}
+        onEntitiesSelected={linkEntities}
       />
 
       {/* Delete confirmation dialog */}

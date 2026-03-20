@@ -9,14 +9,20 @@ import { SearchDialog } from "../search";
 import { AuthDialog } from "../auth";
 import { FeedbackDialog } from "../feedback-dialog";
 import { ConversationalTaskModal } from "../ai";
+import { TaskDialog } from "../task";
 
 import { TimerProvider, useTimerContext } from "@/contexts/timer-context";
 import { useSidebar } from "@/hooks/use-sidebar";
 import { useAuth } from "@/hooks/use-auth";
 import { useRecoveryState } from "@/hooks/use-recovery";
+import { useProjects } from "@/hooks/use-projects";
+import { useProfiles } from "@/hooks/use-profiles";
+import { useTaskMutations } from "@/hooks/use-tasks";
+import { useLinkEntitiesToTask } from "@/hooks/use-link-entities-to-task";
 import { cn } from "@/lib/utils";
 import type { ViewMode } from "./header";
 import type { Profile, Project, TaskWithProject } from "@/types";
+import type { CreateTaskInput, UpdateTaskInput } from "@/lib/validation";
 import type { TaskSortField, TaskSortDirection } from "@/lib/task-sort";
 
 // Context for search dialog trigger
@@ -122,11 +128,24 @@ export function AppShell({
   const [showFeedback, setShowFeedback] = useState(false);
   const [showAiCreate, setShowAiCreate] = useState(false);
   const [showAuthDialog, setShowAuthDialog] = useState(false);
+  const [showGlobalTaskDialog, setShowGlobalTaskDialog] = useState(false);
   const [isDark, setIsDark] = useState(false);
   const [themeMounted, setThemeMounted] = useState(false);
   const { isCollapsed } = useSidebar();
   const { user, initialized, confidence } = useAuth();
   const { isRefreshing } = useRecoveryState();
+  const { projects: allProjects } = useProjects();
+  const { profiles: allProfiles } = useProfiles();
+  const { createTask, loading: taskMutationLoading } = useTaskMutations();
+  const { trackCreatedTask, linkEntities } = useLinkEntitiesToTask();
+
+  const handleGlobalCreateTask = useCallback(
+    async (data: CreateTaskInput | UpdateTaskInput) => {
+      const result = await createTask(data as CreateTaskInput);
+      if (result) trackCreatedTask(result);
+    },
+    [createTask, trackCreatedTask]
+  );
 
   // Initialize theme from localStorage or system preference
   useIsomorphicLayoutEffect(() => {
@@ -213,6 +232,12 @@ export function AppShell({
         e.preventDefault();
         setShowShortcuts(true);
       }
+
+      // Cmd/Ctrl + 7 to create task (global)
+      if (e.key === "7" && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        setShowGlobalTaskDialog(true);
+      }
     };
 
     window.addEventListener("keydown", handleKeyDown);
@@ -280,6 +305,18 @@ export function AppShell({
             Uses usePathname() internally to detect project context. */}
         <ConversationalTaskModal open={showAiCreate} onOpenChange={setShowAiCreate} />
 
+        {/* Global task creation dialog (Cmd+7) */}
+        <TaskDialog
+          open={showGlobalTaskDialog}
+          onOpenChange={setShowGlobalTaskDialog}
+          projects={allProjects as Project[]}
+          profiles={allProfiles}
+          defaultStatus="todo"
+          defaultAssigneeId={user?.id ?? null}
+          onSubmit={handleGlobalCreateTask}
+          loading={taskMutationLoading}
+          onEntitiesSelected={linkEntities}
+        />
 
         {/* Task dialog for timer indicator clicks */}
         <TimerTaskNavigation />

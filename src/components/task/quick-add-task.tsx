@@ -9,6 +9,11 @@ import {
   MoreHorizontal,
   Send,
   Check,
+  Network,
+  Package,
+  Rocket,
+  X,
+  Layers,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -27,12 +32,22 @@ import {
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { TimePicker } from "@/components/ui/time-picker";
 import { Button } from "@/components/ui/button";
+import { EntityPickerContent } from "@/components/shared/entity-picker-popover";
+import { ENTITY_TYPE_COLORS } from "@/lib/utils/entity-colors";
 import type { Project, Profile, TaskPriority } from "@/types";
 import { PRIORITY_OPTIONS } from "@/types";
 import type { CreateTaskInput } from "@/lib/validation";
+import type { Entity } from "@/types/database";
 import { getInitials } from "@/lib/profile-utils";
 import { formatDueDate } from "@/lib/date-utils";
 import { useProjectAssignees } from "@/hooks/use-project-assignees";
+import { useWorkspaces } from "@/hooks/use-workspaces";
+
+const ENTITY_ICONS: Record<string, React.ElementType> = {
+  product: Package,
+  initiative: Rocket,
+  stakeholder: User,
+};
 
 interface QuickAddTaskProps {
   open: boolean;
@@ -44,6 +59,7 @@ interface QuickAddTaskProps {
   defaultAssigneeId?: string | null;
   defaultProjectId?: string | null;
   defaultSectionId?: string | null;
+  onEntitiesSelected?: (entityIds: { id: string; type: string }[]) => void;
 }
 
 /**
@@ -90,6 +106,7 @@ function QuickAddTaskForm({
   loading,
   defaultAssigneeId,
   defaultProjectId,
+  onEntitiesSelected,
 }: {
   onSubmit: (data: CreateTaskInput) => Promise<void>;
   onClose: () => void;
@@ -98,6 +115,7 @@ function QuickAddTaskForm({
   loading: boolean;
   defaultAssigneeId?: string | null;
   defaultProjectId?: string | null;
+  onEntitiesSelected?: (entityIds: { id: string; type: string }[]) => void;
 }) {
   // Form state - fresh on every mount
   const [title, setTitle] = useState("");
@@ -106,6 +124,8 @@ function QuickAddTaskForm({
   const [assigneeId, setAssigneeId] = useState<string | null>(defaultAssigneeId ?? null);
   const [dueDate, setDueDate] = useState<Date | null>(null);
   const [priority, setPriority] = useState<TaskPriority>("medium");
+  const [selectedEntities, setSelectedEntities] = useState<Entity[]>([]);
+  const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string | null>(null);
 
   // UI state for popovers
   const [datePickerOpen, setDatePickerOpen] = useState(false);
@@ -113,10 +133,20 @@ function QuickAddTaskForm({
   const [priorityOpen, setPriorityOpen] = useState(false);
   const [assigneeOpen, setAssigneeOpen] = useState(false);
   const [projectOpen, setProjectOpen] = useState(false);
+  const [workspaceOpen, setWorkspaceOpen] = useState(false);
+  const [entityOpen, setEntityOpen] = useState(false);
   const [showMoreOptions, setShowMoreOptions] = useState(false);
 
   // Refs
   const titleInputRef = useRef<HTMLInputElement>(null);
+
+  // Get workspaces for the selector
+  const { workspaces } = useWorkspaces();
+
+  // Clear entities when workspace changes
+  useEffect(() => {
+    setSelectedEntities([]);
+  }, [selectedWorkspaceId]);
 
   const handleDatePickerOpenChange = useCallback((open: boolean) => {
     if (open) {
@@ -153,6 +183,16 @@ function QuickAddTaskForm({
   const selectedProject = projectId ? projects.find((p) => p.id === projectId) : null;
   const selectedAssignee = assigneeId ? assignableProfiles.find((p) => p.id === assigneeId) : null;
   const priorityConfig = PRIORITY_OPTIONS.find((p) => p.value === priority) || PRIORITY_OPTIONS[2];
+  const selectedEntityIds = new Set<string>(selectedEntities.map((e) => e.id));
+  const selectedWorkspace = selectedWorkspaceId ? workspaces.find((w) => w.id === selectedWorkspaceId) : null;
+
+  const handleEntityToggle = (entity: Entity, isLinked: boolean) => {
+    if (isLinked) {
+      setSelectedEntities((prev) => prev.filter((e) => e.id !== entity.id));
+    } else {
+      setSelectedEntities((prev) => [...prev, entity]);
+    }
+  };
 
   const handleSubmit = async () => {
     if (!title.trim() || loading) return;
@@ -167,6 +207,12 @@ function QuickAddTaskForm({
       status: "todo",
       position: 0,
     });
+
+    if (selectedEntities.length > 0 && onEntitiesSelected) {
+      onEntitiesSelected(
+        selectedEntities.map((e) => ({ id: e.id, type: e.entity_type }))
+      );
+    }
 
     onClose();
   };
@@ -392,6 +438,82 @@ function QuickAddTaskForm({
               </Popover>
             )}
 
+            {/* Workspace chip */}
+            {workspaces.length > 0 && (
+              <Popover open={workspaceOpen} onOpenChange={setWorkspaceOpen} modal={false}>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    className={cn(
+                      "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm whitespace-nowrap transition-colors shrink-0 border",
+                      selectedWorkspace
+                        ? "bg-muted border-border"
+                        : "border-border/50 text-muted-foreground hover:border-border hover:text-foreground"
+                    )}
+                  >
+                    <Layers className="h-4 w-4" />
+                    <span className="max-w-[100px] truncate">{selectedWorkspace ? selectedWorkspace.name : "Workspace"}</span>
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-56 p-1" align="start">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedWorkspaceId(null);
+                      setWorkspaceOpen(false);
+                    }}
+                    className="flex items-center gap-2 w-full px-3 py-2 text-sm rounded-md hover:bg-muted transition-colors text-muted-foreground"
+                  >
+                    <Layers className="h-4 w-4" />
+                    <span className="flex-1">No workspace</span>
+                    {!selectedWorkspaceId && <Check className="h-4 w-4" />}
+                  </button>
+                  {workspaces.map((ws) => (
+                    <button
+                      key={ws.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedWorkspaceId(ws.id);
+                        setWorkspaceOpen(false);
+                      }}
+                      className="flex items-center gap-2 w-full px-3 py-2 text-sm rounded-md hover:bg-muted transition-colors"
+                    >
+                      <Layers className="h-4 w-4" />
+                      <span className="flex-1 truncate">{ws.name}</span>
+                      {selectedWorkspaceId === ws.id && <Check className="h-4 w-4" />}
+                    </button>
+                  ))}
+                </PopoverContent>
+              </Popover>
+            )}
+
+            {/* Entity chip (only when workspace selected) */}
+            {selectedWorkspaceId && (
+              <Popover open={entityOpen} onOpenChange={setEntityOpen} modal={false}>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    className={cn(
+                      "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm whitespace-nowrap transition-colors shrink-0 border",
+                      selectedEntities.length > 0
+                        ? "bg-muted border-border"
+                        : "border-border/50 text-muted-foreground hover:border-border hover:text-foreground"
+                    )}
+                  >
+                    <Network className="h-4 w-4" />
+                    <span>{selectedEntities.length > 0 ? `${selectedEntities.length} linked` : "Entities"}</span>
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-64 p-0" align="start">
+                  <EntityPickerContent
+                    workspaceId={selectedWorkspaceId}
+                    linkedEntityIds={selectedEntityIds}
+                    onToggle={handleEntityToggle}
+                  />
+                </PopoverContent>
+              </Popover>
+            )}
+
             {/* More options chip */}
             <PropertyChip
               icon={MoreHorizontal}
@@ -401,6 +523,36 @@ function QuickAddTaskForm({
             />
           </div>
         </div>
+
+        {/* Selected entities display */}
+        {selectedEntities.length > 0 && (
+          <div className="mt-2 px-5 flex flex-wrap gap-1.5">
+            {selectedEntities.map((entity) => {
+              const colors = ENTITY_TYPE_COLORS[entity.entity_type];
+              const Icon = ENTITY_ICONS[entity.entity_type] || Package;
+              return (
+                <span
+                  key={entity.id}
+                  className={cn(
+                    "inline-flex items-center gap-1 pl-1.5 pr-0.5 py-0.5 rounded text-xs font-medium",
+                    colors.bg,
+                    colors.text
+                  )}
+                >
+                  <Icon className="h-3 w-3" />
+                  {entity.name}
+                  <button
+                    type="button"
+                    onClick={() => setSelectedEntities((prev) => prev.filter((e) => e.id !== entity.id))}
+                    className="ml-0.5 p-0.5 rounded hover:bg-black/10 dark:hover:bg-white/10"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              );
+            })}
+          </div>
+        )}
 
         {/* Additional options when expanded */}
         {showMoreOptions && (
@@ -512,6 +664,7 @@ export function QuickAddTask({
   loading = false,
   defaultAssigneeId,
   defaultProjectId,
+  onEntitiesSelected,
 }: QuickAddTaskProps) {
   return (
     <Drawer open={open} onOpenChange={onOpenChange} repositionInputs={false}>
@@ -527,6 +680,7 @@ export function QuickAddTask({
             loading={loading}
             defaultAssigneeId={defaultAssigneeId}
             defaultProjectId={defaultProjectId}
+            onEntitiesSelected={onEntitiesSelected}
           />
         )}
       </DrawerContent>
