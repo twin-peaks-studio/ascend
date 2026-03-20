@@ -21,6 +21,7 @@ import { useProjectMembers } from "@/hooks/use-project-members";
 import { useIsMobile } from "@/hooks/use-media-query";
 import { useAuth } from "@/hooks/use-auth";
 import { useWorkspaceContext } from "@/contexts/workspace-context";
+import { useLinkEntitiesToTask } from "@/hooks/use-link-entities-to-task";
 import type { TaskWithProject, TaskStatus, Project, Task, Profile } from "@/types";
 import type { CreateTaskInput, UpdateTaskInput } from "@/lib/validation";
 import { DeleteConfirmationDialog } from "@/components/ui/delete-confirmation-dialog";
@@ -195,6 +196,8 @@ export default function ProjectTasksPage() {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [deleteSectionConfirm, setDeleteSectionConfirm] = useState<string | null>(null);
 
+  const { trackCreatedTask, linkEntities } = useLinkEntitiesToTask();
+
   // Handle task creation
   const handleCreateTask = useCallback(
     async (data: CreateTaskInput | UpdateTaskInput) => {
@@ -214,10 +217,11 @@ export default function ProjectTasksPage() {
         section_position: defaultSectionId ? sectionPosition : 0,
       } as CreateTaskInput);
       if (result) {
+        trackCreatedTask(result);
         refetch();
       }
     },
-    [createTask, refetch, projectId, defaultSectionId, project]
+    [createTask, refetch, projectId, defaultSectionId, project, trackCreatedTask]
   );
 
   // Handle task update
@@ -395,10 +399,11 @@ export default function ProjectTasksPage() {
         project_id: projectId,
       });
       if (result) {
+        trackCreatedTask(result);
         refetch();
       }
     },
-    [createTask, refetch, projectId]
+    [createTask, refetch, projectId, trackCreatedTask]
   );
 
   // Section handlers
@@ -646,6 +651,7 @@ export default function ProjectTasksPage() {
         onSubmit={editingTask ? handleUpdateTask : handleCreateTask}
         loading={mutationLoading}
         workspaceId={activeWorkspace?.id}
+        onEntitiesSelected={linkEntities}
       />
 
       {/* Quick add task drawer (mobile) */}
@@ -662,6 +668,8 @@ export default function ProjectTasksPage() {
         defaultAssigneeId={user?.id ?? null}
         defaultProjectId={projectId}
         defaultSectionId={defaultSectionId}
+        workspaceId={activeWorkspace?.id}
+        onEntitiesSelected={linkEntities}
       />
 
       {/* Delete task confirmation dialog */}

@@ -24,6 +24,7 @@ import { workspaceTaskKeys } from "@/hooks/use-workspace-tasks";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import type { ProjectStatus, Project } from "@/types";
+import { useLinkEntitiesToTask } from "@/hooks/use-link-entities-to-task";
 import type { CreateProjectInput, UpdateProjectInput, CreateTaskInput, UpdateTaskInput } from "@/lib/validation";
 
 type WorkspaceTab = "projects" | "tasks" | "captures" | "products" | "entities";
@@ -90,25 +91,18 @@ function WorkspaceContent() {
     }
   }, [deleteWorkspace, workspaceId, router]);
 
+  const { trackCreatedTask, linkEntities } = useLinkEntitiesToTask();
+
   const handleCreateTask = useCallback(
     async (data: CreateTaskInput | UpdateTaskInput) => {
-      await createTask(data as CreateTaskInput);
+      const result = await createTask(data as CreateTaskInput);
+      if (result) trackCreatedTask(result);
       queryClient.invalidateQueries({ queryKey: workspaceTaskKeys.list(workspaceId) });
     },
-    [createTask, queryClient, workspaceId]
+    [createTask, queryClient, workspaceId, trackCreatedTask]
   );
 
-  // Cmd+7 (Mac) / Ctrl+7 (Win/Linux) → open task creation dialog
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "7") {
-        e.preventDefault();
-        setShowTaskDialog(true);
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  // Cmd+7 is now handled globally in AppShell
 
   if (!workspace && !loading) {
     return (
@@ -287,6 +281,7 @@ function WorkspaceContent() {
         onSubmit={handleCreateTask}
         loading={taskMutationLoading}
         workspaceId={workspaceId}
+        onEntitiesSelected={linkEntities}
       />
 
       {/* Create Project Dialog */}

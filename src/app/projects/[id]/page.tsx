@@ -49,6 +49,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { useWorkspaceContext } from "@/contexts/workspace-context";
+import { useLinkEntitiesToTask } from "@/hooks/use-link-entities-to-task";
 import { useProject, useProjectMutations } from "@/hooks/use-projects";
 import { useTaskMutations } from "@/hooks/use-tasks";
 import { useProfiles } from "@/hooks/use-profiles";
@@ -249,13 +250,16 @@ export default function ProjectDetailPage() {
     router.push("/projects");
   }, [projectId, deleteProject, router]);
 
+  const { trackCreatedTask, linkEntities } = useLinkEntitiesToTask();
+
   // Handle task creation
   const handleCreateTask = useCallback(
     async (data: CreateTaskInput | UpdateTaskInput) => {
-      await createTask(data as CreateTaskInput);
+      const result = await createTask(data as CreateTaskInput);
+      if (result) trackCreatedTask(result);
       refetch();
     },
-    [createTask, refetch]
+    [createTask, refetch, trackCreatedTask]
   );
 
   // Handle opening task details - navigate to task page
@@ -824,6 +828,7 @@ export default function ProjectDetailPage() {
         onSubmit={handleCreateTask}
         loading={taskMutationLoading}
         workspaceId={activeWorkspace?.id}
+        onEntitiesSelected={linkEntities}
       />
 
       {/* Document create dialog */}
