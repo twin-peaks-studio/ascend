@@ -21,6 +21,10 @@ import {
   PanelRight,
   Settings2,
   X,
+  FileText,
+  BookOpen,
+  Package,
+  Rocket,
 } from "lucide-react";
 import { AppShell } from "@/components/layout";
 import { Button } from "@/components/ui/button";
@@ -55,16 +59,21 @@ import {
 } from "@/components/ui/sheet";
 import { useTask } from "@/hooks/use-task";
 import { useTaskMutations } from "@/hooks/use-tasks";
+import { useTaskNotes, type LinkedNote } from "@/hooks/use-task-notes";
+import { useTaskEntities } from "@/hooks/use-task-entities";
 import { useProfiles } from "@/hooks/use-profiles";
 import { useProjects } from "@/hooks/use-projects";
 import { useAttachments } from "@/hooks/use-attachments";
 import { useTimeTracking } from "@/hooks/use-time-tracking";
 import { useProjectAssignees } from "@/hooks/use-project-assignees";
+import { EntityPickerPopover } from "@/components/shared/entity-picker-popover";
+import { ENTITY_TYPE_COLORS } from "@/lib/utils/entity-colors";
 import { cn } from "@/lib/utils";
 import { PRIORITY_DISPLAY_SHORT, STATUS_CONFIG } from "@/types";
 import { getInitials } from "@/lib/profile-utils";
 import { formatDueDate, isOverdue } from "@/lib/date-utils";
 import type { TaskStatus, TaskPriority } from "@/types";
+import type { Entity } from "@/types/database";
 import type { UpdateTaskInput } from "@/lib/validation";
 
 /**
@@ -103,6 +112,8 @@ export default function TaskDetailPage() {
   const { profiles } = useProfiles();
   const { projects } = useProjects();
   const { updateTask, deleteTask } = useTaskMutations();
+  const { notes: linkedNotes } = useTaskNotes(taskId);
+  const { entities: linkedEntities, addEntity, removeEntity } = useTaskEntities(taskId);
 
   // Get assignable profiles based on task's project
   const { assignableProfiles } = useProjectAssignees(
@@ -355,6 +366,26 @@ export default function TaskDetailPage() {
     },
     []
   );
+
+  // Entity management helpers
+  const linkedEntityIds = useMemo(
+    () => new Set(linkedEntities.map((e) => e.id)),
+    [linkedEntities]
+  );
+
+  const handleEntityToggle = useCallback(
+    async (entity: Entity, isLinked: boolean) => {
+      if (isLinked) {
+        const row = linkedEntities.find((e) => e.id === entity.id);
+        if (row) await removeEntity(row.junctionId);
+      } else {
+        await addEntity(entity.id, entity.entity_type);
+      }
+    },
+    [linkedEntities, addEntity, removeEntity]
+  );
+
+  const workspaceId = (task?.project as Record<string, unknown> | null)?.workspace_id as string | null ?? null;
 
   // Loading state
   if (isLoading) {
@@ -970,6 +1001,72 @@ export default function TaskDetailPage() {
               className="w-full justify-center"
             />
           </SidebarRow>
+
+          {/* Source Note/Capture */}
+          <SidebarRow label="Source">
+            {linkedNotes.length === 0 ? (
+              <span className="text-muted-foreground">None</span>
+            ) : (
+              <div className="space-y-1">
+                {linkedNotes.map((note: LinkedNote) => {
+                  const isCapture = note.capture_type !== null;
+                  const NoteIcon = isCapture ? BookOpen : FileText;
+                  const href = isCapture
+                    ? `/captures/${note.id}${note.workspace_id ? `?workspace=${note.workspace_id}` : ""}`
+                    : note.project_id
+                      ? `/projects/${note.project_id}/notes/${note.id}`
+                      : "#";
+                  return (
+                    <Link
+                      key={note.id}
+                      href={href}
+                      className="flex items-center gap-1.5 hover:bg-muted/50 -mx-1.5 px-1.5 py-0.5 rounded transition-colors"
+                    >
+                      <NoteIcon className="h-3 w-3 shrink-0 text-muted-foreground" />
+                      <span className="truncate">{note.title || "Untitled"}</span>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </SidebarRow>
+
+          {/* Linked Entities */}
+          <SidebarRow label="Entities">
+            <div className="flex items-start gap-1">
+              <div className="flex-1 flex flex-wrap gap-1">
+                {linkedEntities.length === 0 ? (
+                  <span className="text-muted-foreground">None</span>
+                ) : (
+                  linkedEntities.map((entity) => {
+                    const colors = ENTITY_TYPE_COLORS[entity.entity_type];
+                    const Icon = entity.entity_type === "product" ? Package
+                      : entity.entity_type === "initiative" ? Rocket : User;
+                    return (
+                      <span
+                        key={entity.id}
+                        className={cn(
+                          "inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium",
+                          colors.bg,
+                          colors.text
+                        )}
+                      >
+                        <Icon className="h-2.5 w-2.5" />
+                        {entity.name}
+                      </span>
+                    );
+                  })
+                )}
+              </div>
+              {workspaceId && (
+                <EntityPickerPopover
+                  workspaceId={workspaceId}
+                  linkedEntityIds={linkedEntityIds}
+                  onToggle={handleEntityToggle}
+                />
+              )}
+            </div>
+          </SidebarRow>
         </div>
         )}
 
@@ -1190,6 +1287,72 @@ export default function TaskDetailPage() {
               showLabel={true}
               className="w-full justify-center"
             />
+          </SidebarRow>
+
+          {/* Source Note/Capture */}
+          <SidebarRow label="Source">
+            {linkedNotes.length === 0 ? (
+              <span className="text-muted-foreground">None</span>
+            ) : (
+              <div className="space-y-1">
+                {linkedNotes.map((note: LinkedNote) => {
+                  const isCapture = note.capture_type !== null;
+                  const NoteIcon = isCapture ? BookOpen : FileText;
+                  const href = isCapture
+                    ? `/captures/${note.id}${note.workspace_id ? `?workspace=${note.workspace_id}` : ""}`
+                    : note.project_id
+                      ? `/projects/${note.project_id}/notes/${note.id}`
+                      : "#";
+                  return (
+                    <Link
+                      key={note.id}
+                      href={href}
+                      className="flex items-center gap-1.5 hover:bg-muted/50 -mx-1.5 px-1.5 py-0.5 rounded transition-colors"
+                    >
+                      <NoteIcon className="h-3 w-3 shrink-0 text-muted-foreground" />
+                      <span className="truncate">{note.title || "Untitled"}</span>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </SidebarRow>
+
+          {/* Linked Entities */}
+          <SidebarRow label="Entities">
+            <div className="flex items-start gap-1">
+              <div className="flex-1 flex flex-wrap gap-1">
+                {linkedEntities.length === 0 ? (
+                  <span className="text-muted-foreground">None</span>
+                ) : (
+                  linkedEntities.map((entity) => {
+                    const colors = ENTITY_TYPE_COLORS[entity.entity_type];
+                    const Icon = entity.entity_type === "product" ? Package
+                      : entity.entity_type === "initiative" ? Rocket : User;
+                    return (
+                      <span
+                        key={entity.id}
+                        className={cn(
+                          "inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium",
+                          colors.bg,
+                          colors.text
+                        )}
+                      >
+                        <Icon className="h-2.5 w-2.5" />
+                        {entity.name}
+                      </span>
+                    );
+                  })
+                )}
+              </div>
+              {workspaceId && (
+                <EntityPickerPopover
+                  workspaceId={workspaceId}
+                  linkedEntityIds={linkedEntityIds}
+                  onToggle={handleEntityToggle}
+                />
+              )}
+            </div>
           </SidebarRow>
         </SheetContent>
       </Sheet>
