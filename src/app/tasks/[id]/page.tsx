@@ -67,6 +67,7 @@ import { useAttachments } from "@/hooks/use-attachments";
 import { useTimeTracking } from "@/hooks/use-time-tracking";
 import { useProjectAssignees } from "@/hooks/use-project-assignees";
 import { EntityPickerPopover } from "@/components/shared/entity-picker-popover";
+import { TaskContextEntries } from "@/components/task/task-context-entries";
 import { ENTITY_TYPE_COLORS } from "@/lib/utils/entity-colors";
 import { cn } from "@/lib/utils";
 import { PRIORITY_DISPLAY_SHORT, STATUS_CONFIG } from "@/types";
@@ -605,6 +606,9 @@ export default function TaskDetailPage() {
               </button>
             )}
           </div>
+
+          {/* Context & Findings */}
+          <TaskContextEntries taskId={taskId} />
 
           {/* Due Date - inline on mobile only (desktop uses sidebar) */}
           <div className="mb-8 md:hidden">
