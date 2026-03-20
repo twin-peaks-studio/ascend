@@ -24,7 +24,7 @@ import { workspaceTaskKeys } from "@/hooks/use-workspace-tasks";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import type { ProjectStatus, Project } from "@/types";
-import type { CreateProjectInput, UpdateProjectInput, CreateTaskInput } from "@/lib/validation";
+import type { CreateProjectInput, UpdateProjectInput, CreateTaskInput, UpdateTaskInput } from "@/lib/validation";
 
 type WorkspaceTab = "projects" | "tasks" | "captures" | "products" | "entities";
 
@@ -91,7 +91,7 @@ function WorkspaceContent() {
   }, [deleteWorkspace, workspaceId, router]);
 
   const handleCreateTask = useCallback(
-    async (data: CreateTaskInput) => {
+    async (data: CreateTaskInput | UpdateTaskInput) => {
       await createTask(data);
       queryClient.invalidateQueries({ queryKey: workspaceTaskKeys.list(workspaceId) });
     },
