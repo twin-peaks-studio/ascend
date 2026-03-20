@@ -138,7 +138,7 @@ export default function FocusViewPage() {
                 </div>
               )}
 
-              {task.priority !== "none" && (
+              {priorityConfig && (
                 <div className="flex items-center gap-1 text-xs text-muted-foreground">
                   <Flag
                     className={cn("h-3.5 w-3.5", priorityConfig.color)}
