@@ -10,28 +10,24 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-
-export interface ContextEntry {
-  id: string;
-  content: string;
-  created_at: string;
-  updated_at: string;
-}
+import type { TaskContextEntry } from "@/types/database";
 
 interface ContextEntryCardProps {
-  entry: ContextEntry;
-  onUpdate: (id: string, content: string) => void;
-  onDelete: (id: string) => void;
+  entry: TaskContextEntry;
+  taskId: string;
+  onUpdate: (id: string, taskId: string, content: string) => Promise<boolean>;
+  onDelete: (id: string, taskId: string) => Promise<boolean>;
+  mutating: boolean;
 }
 
-export function ContextEntryCard({ entry, onUpdate, onDelete }: ContextEntryCardProps) {
+export function ContextEntryCard({ entry, taskId, onUpdate, onDelete, mutating }: ContextEntryCardProps) {
   const [editing, setEditing] = useState(false);
   const [editContent, setEditContent] = useState(entry.content);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!editContent.trim()) return;
-    onUpdate(entry.id, editContent.trim());
-    setEditing(false);
+    const success = await onUpdate(entry.id, taskId, editContent.trim());
+    if (success) setEditing(false);
   };
 
   return (
@@ -55,7 +51,7 @@ export function ContextEntryCard({ entry, onUpdate, onDelete }: ContextEntryCard
             >
               Cancel
             </Button>
-            <Button size="sm" onClick={handleSave} disabled={!editContent.trim()}>
+            <Button size="sm" onClick={handleSave} disabled={!editContent.trim() || mutating}>
               Save
             </Button>
           </div>
@@ -76,7 +72,7 @@ export function ContextEntryCard({ entry, onUpdate, onDelete }: ContextEntryCard
                   Edit
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  onClick={() => onDelete(entry.id)}
+                  onClick={() => onDelete(entry.id, taskId)}
                   className="text-destructive focus:text-destructive"
                 >
                   <Trash2 className="h-3.5 w-3.5 mr-2" />

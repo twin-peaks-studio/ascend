@@ -11,12 +11,11 @@ import {
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { ContextEntryCard, type ContextEntry } from "./context-entry-card";
-
-/**
- * Local-state prototype for task context entries.
- * No database calls — entries live in React state only.
- */
+import { ContextEntryCard } from "./context-entry-card";
+import {
+  useTaskContextEntries,
+  useTaskContextEntryMutations,
+} from "@/hooks/use-task-context-entries";
 
 interface TaskContextEntriesProps {
   taskId: string;
@@ -31,38 +30,29 @@ export function TaskContextEntries({
   alwaysExpanded = false,
   hideFocusLink = false,
 }: TaskContextEntriesProps) {
-  const [entries, setEntries] = useState<ContextEntry[]>([]);
+  const { entries, loading: entriesLoading } = useTaskContextEntries(taskId);
+  const { createEntry, updateEntry, deleteEntry, loading: mutating } =
+    useTaskContextEntryMutations();
+
   const [expanded, setExpanded] = useState(alwaysExpanded);
   const [showNewEntry, setShowNewEntry] = useState(false);
   const [newContent, setNewContent] = useState("");
 
-  const handleAdd = useCallback(() => {
+  const handleAdd = useCallback(async () => {
     if (!newContent.trim()) return;
-    const now = new Date().toISOString();
-    const entry: ContextEntry = {
-      id: crypto.randomUUID(),
-      content: newContent.trim(),
-      created_at: now,
-      updated_at: now,
-    };
-    setEntries((prev) => [entry, ...prev]);
-    setNewContent("");
-    setShowNewEntry(false);
-  }, [newContent]);
-
-  const handleUpdate = useCallback((id: string, content: string) => {
-    setEntries((prev) =>
-      prev.map((e) =>
-        e.id === id ? { ...e, content, updated_at: new Date().toISOString() } : e
-      )
-    );
-  }, []);
-
-  const handleDelete = useCallback((id: string) => {
-    setEntries((prev) => prev.filter((e) => e.id !== id));
-  }, []);
+    const result = await createEntry(taskId, newContent);
+    if (result) {
+      setNewContent("");
+      setShowNewEntry(false);
+    }
+  }, [newContent, taskId, createEntry]);
 
   const isExpanded = alwaysExpanded || expanded;
+
+  // Auto-expand when entries exist
+  if (entries.length > 0 && !expanded && !alwaysExpanded) {
+    setExpanded(true);
+  }
 
   return (
     <div className="mb-8">
@@ -169,7 +159,7 @@ export function TaskContextEntries({
                   <Button
                     size="sm"
                     onClick={handleAdd}
-                    disabled={!newContent.trim()}
+                    disabled={!newContent.trim() || mutating}
                   >
                     Add Entry
                   </Button>
@@ -178,8 +168,14 @@ export function TaskContextEntries({
             </div>
           )}
 
-          {/* Entries list */}
-          {entries.length === 0 && !showNewEntry ? (
+          {/* Loading state */}
+          {entriesLoading ? (
+            <div className="space-y-2">
+              {[1, 2].map((i) => (
+                <div key={i} className="h-20 rounded-lg bg-muted animate-pulse" />
+              ))}
+            </div>
+          ) : entries.length === 0 && !showNewEntry ? (
             <div className="rounded-lg border border-dashed p-6 text-center">
               <FileText className="h-8 w-8 mx-auto text-muted-foreground/50 mb-2" />
               <p className="text-sm text-muted-foreground mb-3">
@@ -202,8 +198,10 @@ export function TaskContextEntries({
               <ContextEntryCard
                 key={entry.id}
                 entry={entry}
-                onUpdate={handleUpdate}
-                onDelete={handleDelete}
+                taskId={taskId}
+                onUpdate={updateEntry}
+                onDelete={deleteEntry}
+                mutating={mutating}
               />
             ))
           )}
