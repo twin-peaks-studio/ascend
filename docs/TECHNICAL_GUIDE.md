@@ -2545,7 +2545,7 @@ syncMentions() diffs against entity_mentions table → inserts new, deletes remo
 
 ### AI Memory Refresh Architecture
 
-The Memory tab on entity detail pages allows users to synthesize an AI memory document from three data sources. This is the core of the "PM brain" — turning scattered knowledge into structured, queryable understanding.
+The Memory tab on entity detail pages allows users to synthesize an AI memory document from four data sources. This is the core of the "PM brain" — turning scattered knowledge into structured, queryable understanding.
 
 #### Database columns
 - `entities.ai_memory` (text, nullable) — The synthesized memory document (markdown-formatted)
@@ -2561,31 +2561,47 @@ Server-side (authenticated + rate-limited):
   1. Fetch entity.foundational_context
   2. Fetch entity_context_entries (journal) ordered by created_at DESC
   3. Fetch entity_mentions → resolve source_id to notes.content (HTML → plain text)
-  4. Build system prompt (entity type + name specific) + user prompt (all 3 sources)
-  5. Call Claude Sonnet (max_tokens: 4096, timeout: 120s)
-  6. Store result in entities.ai_memory + entities.memory_refreshed_at
+  4. Fetch task_entities → tasks (title, status, description) + task_context_entries
+  5. Compute source hash (SHA-256) — skip if unchanged and not forced
+  6. Build system prompt (entity type + name specific) + user prompt (all 4 sources)
+  7. Call Claude Sonnet (max_tokens: 4096, timeout: 120s)
+  8. Store result in entities.ai_memory + entities.memory_refreshed_at + memory_source_hash
     ↓
-Client receives { aiMemory, refreshedAt, sources }
+Client receives { aiMemory, refreshedAt, skipped, sources }
     ↓
 useMemoryRefresh hook updates React Query cache (entityKeys.detail) optimistically
     ↓
 Memory tab renders structured markdown (## headings, - bullets)
 ```
 
+#### Linked tasks data gathering (step 4)
+
+The API fetches linked tasks efficiently:
+1. Query `task_entities` for all `task_id` values linked to the entity
+2. Batch-fetch task details (`id, title, status, description`) from `tasks`
+3. Batch-fetch all `task_context_entries` for those task IDs in one query
+4. Group context entries by `task_id` in memory (Map), then assemble `LinkedTaskData[]`
+
+This avoids N+1 queries — only 3 DB calls regardless of task count.
+
+#### Source hash includes task data
+
+The SHA-256 hash includes linked tasks sorted by ID. For each task: `id + title + status + description + context entries (sorted by created_at)`. Adding a context entry, changing task status, or updating a description all change the hash, triggering a real refresh on next click.
+
 #### Key files
 - `src/app/api/ai/memory-refresh/route.ts` — Server route: auth, data gathering, Claude API call, DB update. Uses shared `aiExtraction` rate limit bucket (5 req/min). HTML→plain text conversion via `htmlToPlainText()`.
-- `src/hooks/use-memory-refresh.ts` — Client hook: `useMemoryRefresh(entityId)` returns `{ refresh, refreshing, error }`. Updates entity cache optimistically on success.
+- `src/hooks/use-memory-refresh.ts` — Client hook: `useMemoryRefresh(entityId)` returns `{ refresh, refreshing, error }`. Updates entity cache optimistically on success. Toast includes linked task count.
 - `src/app/entities/[id]/page.tsx` — Memory tab UI: Generate/Refresh button, loading states, markdown-like rendering of sections.
 
 #### Prompt structure
-- **System prompt** is entity-type and name-specific. Instructs Claude to produce structured sections: Key Facts, Recent Decisions, Open Questions, Stakeholder Notes, Status & Progress, Action Items. Sections with no content are skipped.
-- **User prompt** concatenates three labeled sections: `=== FOUNDATIONAL CONTEXT ===`, `=== JOURNAL ENTRIES (N) ===` (with dates), `=== MENTIONED IN N DOCUMENT(S) ===` (with source type + title).
+- **System prompt** is entity-type and name-specific. Instructs Claude to produce structured sections: Key Facts, Recent Decisions, Open Questions, Stakeholder Notes, Status & Progress, Action Items. Sections with no content are skipped. Linked tasks are described as a 4th input type with guidance on how completed tasks inform progress and in-progress tasks inform action items.
+- **User prompt** concatenates four labeled sections: `=== FOUNDATIONAL CONTEXT ===`, `=== JOURNAL ENTRIES (N) ===` (with dates), `=== MENTIONED IN N DOCUMENT(S) ===` (with source type + title), `=== LINKED TASKS (N) ===` (with status, description, context entries with dates).
 
 #### Constraints
 - Memory is user-triggered (not automatic). No background refresh jobs.
 - Shares the `aiExtraction` rate limit bucket — 5 requests per minute per user.
 - Journal entries and mentions are sent newest-first. Large entities with many mentions may approach token limits; the 4096 max_tokens output cap keeps responses focused.
-- HTML from notes/captures is converted to plain text server-side to reduce token usage and avoid confusing the AI with markup.
+- HTML from notes/captures and task descriptions is converted to plain text server-side to reduce token usage and avoid confusing the AI with markup.
 - The `ai_memory` field is plain text with markdown-style formatting (## headings, - bullets). The client renders this with simple string splitting, not a full markdown parser.
 
 ---

@@ -26,6 +26,7 @@ interface RefreshResult {
     foundationalContext: boolean;
     journalEntries: number;
     mentions: number;
+    linkedTasks: number;
   };
 }
 
@@ -76,6 +77,7 @@ export function useMemoryRefresh(entityId: string | null) {
         if (data.sources.foundationalContext) sources.push("foundational context");
         if (data.sources.journalEntries > 0) sources.push(`${data.sources.journalEntries} journal entries`);
         if (data.sources.mentions > 0) sources.push(`${data.sources.mentions} mentions`);
+        if (data.sources.linkedTasks > 0) sources.push(`${data.sources.linkedTasks} linked tasks`);
 
         toast.success(`Memory refreshed from ${sources.join(", ")}`);
       }

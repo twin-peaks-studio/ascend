@@ -186,9 +186,9 @@ Key files:
 
 ### AI Memory Refresh (Phase 4)
 
-The Memory tab on entity detail pages synthesizes knowledge from three sources into a structured AI memory document. Users click "Generate Memory" (or "Refresh") to trigger on-demand synthesis.
+The Memory tab on entity detail pages synthesizes knowledge from four sources into a structured AI memory document. Users click "Generate Memory" (or "Refresh") to trigger on-demand synthesis.
 
-**Data sources:** `entity.foundational_context` + `entity_context_entries` (journal) + `entity_mentions` → resolved `notes.content` (HTML → plain text).
+**Data sources:** `entity.foundational_context` + `entity_context_entries` (journal) + `entity_mentions` → resolved `notes.content` (HTML → plain text) + linked tasks via `task_entities` (title, status, description, and `task_context_entries`).
 
 **Architecture:** `POST /api/ai/memory-refresh` (server-side, authenticated, rate-limited via `aiExtraction` bucket). Calls Claude Sonnet with structured system prompt. Stores result in `entities.ai_memory` + `entities.memory_refreshed_at`. Client hook (`useMemoryRefresh`) updates React Query cache optimistically.
 
@@ -198,7 +198,7 @@ The Memory tab on entity detail pages synthesizes knowledge from three sources i
 
 **Memory Guidance (Phase 4.5A):** `memory_guidance` text field on `entities` — persistent user corrections injected as high-priority overrides in the system prompt. Editable from the Memory tab UI. Guidance changes are included in the source hash, so updating guidance ensures the next refresh runs.
 
-**Source Change Detection (Phase 4.5B):** `memory_source_hash` (SHA-256) on `entities` — computed from all source material (foundational context + journal entries sorted by `created_at` + mentioned content sorted by title + memory guidance). Stored after each successful refresh. On next refresh, if the hash matches and `entity.ai_memory` exists, the API returns `skipped: true` without calling Claude. The hook shows an info toast. Pass `{ force: true }` to bypass the hash check.
+**Source Change Detection (Phase 4.5B):** `memory_source_hash` (SHA-256) on `entities` — computed from all source material (foundational context + journal entries sorted by `created_at` + mentioned content sorted by title + memory guidance + linked tasks sorted by ID with their context entries). Stored after each successful refresh. On next refresh, if the hash matches and `entity.ai_memory` exists, the API returns `skipped: true` without calling Claude. The hook shows an info toast. Pass `{ force: true }` to bypass the hash check.
 
 Key files:
 - `src/app/api/ai/memory-refresh/route.ts` — API route (auth, data gathering, hash check, guidance injection, Claude call, DB update)
