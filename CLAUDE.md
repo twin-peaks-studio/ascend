@@ -102,6 +102,22 @@ Key files:
 - `src/app/forms/[slug]/layout.tsx` — standalone layout (no Sidebar/AppShell)
 - `src/components/forms/public/tracker-view.tsx` — standalone tracker UI (NOT reusing KanbanBoard/TaskListItem)
 
+### Task Context Entries & Focus View
+
+Task context entries are timestamped freeform knowledge entries scoped to a task, used for recording research notes, decisions, and discoveries. They mirror the entity context entries (journal) pattern.
+
+**Database:** `task_context_entries` table with `task_id` FK → `tasks(id)`, RLS scoped through `project_members`. Migration: `20260320_task_context_entries.sql`.
+
+**Hook:** `use-task-context-entries.ts` — `useTaskContextEntries(taskId)` for fetching, `useTaskContextEntryMutations()` for CRUD with optimistic cache updates via `setQueryData`. Query key: `["task-context-entries", taskId]`.
+
+**Components:**
+- `src/components/task/context-entry-card.tsx` — View/edit card with dropdown menu
+- `src/components/task/task-context-entries.tsx` — Collapsible section (auto-expands when entries exist), Focus link, add form with Cmd+Enter shortcut
+
+**Focus View:** `/tasks/[id]/focus` — split-pane layout: description (left), context entries (right), timer + task metadata in top bar. Uses `AppShell`, reuses `TimerButton`.
+
+**Integration:** `TaskContextEntries` is rendered on the task detail page between description and mobile due date sections.
+
 ### Workspaces & Captures (Memory Layer MVP 1)
 
 Workspaces (`src/contexts/workspace-context.tsx`) provide workspace isolation. Every project belongs to a workspace via `workspace_id`. The `WorkspaceProvider` wraps the app inside `AppShell` and persists the active workspace in localStorage (`active-workspace-id`).

@@ -45,6 +45,7 @@ import {
   Keyboard,
   Hash,
   Link2,
+  Focus,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -67,6 +68,26 @@ interface ChangelogEntry {
 }
 
 const changelog: ChangelogEntry[] = [
+  {
+    date: "March 21, 2026",
+    version: "0.27.0",
+    title: "Context & Findings + Focus View",
+    description: "Record research notes, decisions, and discoveries directly on tasks with a new Context & Findings section, and use Focus View for distraction-free deep work.",
+    features: [
+      {
+        icon: FileText,
+        title: "Context & Findings",
+        description: "A new collapsible section on every task detail page for recording timestamped research notes, decisions, and findings as you work. Entries persist across sessions and support editing and deletion.",
+        tag: "new",
+      },
+      {
+        icon: Focus,
+        title: "Focus View",
+        description: "A dedicated split-pane view for deep work — description on the left, context entries on the right, with the timer always visible in the top bar. Access it from the Focus button in the Context & Findings section.",
+        tag: "new",
+      },
+    ],
+  },
   {
     date: "March 19, 2026",
     version: "0.26.1",

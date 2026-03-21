@@ -2738,4 +2738,47 @@ Key file: `src/app/api/ai/memory-refresh/route.ts` (system prompt, line 56)
 
 Phases 4.7 (Entity-Linked Task Extraction) and 4.8 (Entity Display on Task Views) are documented in `docs/initiatives/ENTITY_MEMORY_IMPLEMENTATION.md`.
 
+### Task Context Entries & Focus View
+
+#### Overview
+
+Task context entries provide timestamped freeform knowledge entries scoped to a task. They mirror the `entity_context_entries` (journal) pattern — same table structure, same hook pattern, same UI card component style.
+
+#### Key files
+- `supabase/migrations/20260320_task_context_entries.sql` — Table, index, RLS policies
+- `src/types/database.ts` — `TaskContextEntry`, `TaskContextEntryInsert`, `TaskContextEntryUpdate`
+- `src/hooks/use-task-context-entries.ts` — `useTaskContextEntries(taskId)`, `useTaskContextEntryMutations()`
+- `src/components/task/context-entry-card.tsx` — View/edit card with dropdown menu (edit/delete)
+- `src/components/task/task-context-entries.tsx` — Collapsible section with add form, entry list, Focus link
+- `src/app/tasks/[id]/page.tsx` — Integration point (between description and mobile due date)
+- `src/app/tasks/[id]/focus/page.tsx` — Split-pane focus view
+
+#### Data flow
+
+1. `useTaskContextEntries(taskId)` fetches from `task_context_entries` ordered by `created_at DESC`
+2. CRUD mutations use `setQueryData` for optimistic cache updates (no `invalidateQueries`)
+3. Query key: `["task-context-entries", taskId]`
+4. The `TaskContextEntries` component is self-contained — it calls the hooks internally and only needs a `taskId` prop
+
+#### RLS
+
+Policies scope through `tasks.project_id → project_members.user_id = auth.uid()`, also allowing `tasks.created_by = auth.uid()` for task creators. Same pattern as the sections migration.
+
+#### Focus View architecture
+
+`/tasks/[id]/focus` is a standalone page that reuses:
+- `TimerButton` from `src/components/time/timer-button.tsx` — timer in top bar
+- `RichTextEditor` / `MarkdownRenderer` — description editing in left pane
+- `TaskContextEntries` component — right pane (rendered with `alwaysExpanded` and `hideFocusLink` props)
+
+The focus view uses `useTask` and `useTaskMutations` for description edits. It does NOT duplicate task detail page logic — it's a minimal layout wrapper.
+
+#### Constraints
+
+- `TaskContextEntries` auto-expands when entries exist (same pattern as attachments)
+- The component accepts `alwaysExpanded` (no collapse toggle, for focus view) and `hideFocusLink` (avoid circular link in focus view)
+- Entries are plain text, not rich HTML — uses `<Textarea>` not `RichTextEditor`
+
+---
+
 *Last updated: March 2026*
