@@ -2561,9 +2561,11 @@ Server-side (authenticated + rate-limited):
   1. Fetch entity.foundational_context
   2. Fetch entity_context_entries (journal) ordered by created_at DESC
   3. Fetch entity_mentions → resolve source_id to notes.content (HTML → plain text)
-  4. Fetch task_entities → tasks (title, status, description) + task_context_entries
-  5. Compute source hash (SHA-256) — skip if unchanged and not forced
-  6. Build system prompt (entity type + name specific) + user prompt (all 4 sources)
+  4. Fetch task_entities → tasks (title, status, description, due_date, priority) + task_context_entries
+  5. Filter tasks: exclude completed tasks without context entries (routine noise)
+  5b. Categorize tasks: flag urgent priority + overdue due dates
+  6. Compute source hash (SHA-256) — skip if unchanged and not forced
+  7. Build entity-type-aware system prompt + user prompt (summary + notable tasks only)
   7. Call Claude Sonnet (max_tokens: 4096, timeout: 120s)
   8. Store result in entities.ai_memory + entities.memory_refreshed_at + memory_source_hash
     ↓
@@ -2578,7 +2580,7 @@ Memory tab renders structured markdown (## headings, - bullets)
 
 The API fetches linked tasks efficiently:
 1. Query `task_entities` for all `task_id` values linked to the entity
-2. Batch-fetch task details (`id, title, status, description`) from `tasks`
+2. Batch-fetch task details (`id, title, status, description, due_date, priority`) from `tasks`
 3. Batch-fetch all `task_context_entries` for those task IDs in one query
 4. Group context entries by `task_id` in memory (Map), then assemble `LinkedTaskData[]`
 
@@ -2586,7 +2588,7 @@ This avoids N+1 queries — only 3 DB calls regardless of task count.
 
 #### Source hash includes task data
 
-The SHA-256 hash includes linked tasks sorted by ID. For each task: `id + title + status + description + context entries (sorted by created_at)`. Adding a context entry, changing task status, or updating a description all change the hash, triggering a real refresh on next click.
+The SHA-256 hash includes linked tasks sorted by ID. For each task: `id + title + status + description + due_date + priority + context entries (sorted by created_at)`. Adding a context entry, changing task status, updating a description, changing priority, or modifying a due date all change the hash, triggering a real refresh on next click.
 
 #### Key files
 - `src/app/api/ai/memory-refresh/route.ts` — Server route: auth, data gathering, Claude API call, DB update. Uses shared `aiExtraction` rate limit bucket (5 req/min). HTML→plain text conversion via `htmlToPlainText()`.
@@ -2594,8 +2596,8 @@ The SHA-256 hash includes linked tasks sorted by ID. For each task: `id + title 
 - `src/app/entities/[id]/page.tsx` — Memory tab UI: Generate/Refresh button, loading states, markdown-like rendering of sections.
 
 #### Prompt structure
-- **System prompt** is entity-type and name-specific. Instructs Claude to produce structured sections: Key Facts, Recent Decisions, Open Questions, Stakeholder Notes, Status & Progress, Action Items. Sections with no content are skipped. Linked tasks are described as a 4th input type with guidance on how completed tasks inform progress and in-progress tasks inform action items.
-- **User prompt** concatenates four labeled sections: `=== FOUNDATIONAL CONTEXT ===`, `=== JOURNAL ENTRIES (N) ===` (with dates), `=== MENTIONED IN N DOCUMENT(S) ===` (with source type + title), `=== LINKED TASKS (N) ===` (with status, description, context entries with dates).
+- **System prompt** is entity-type-aware via `getEntityTypeGuidance()`. Products get strategic briefing framing, initiatives get progress report framing, stakeholders get relationship brief framing (second person: "You committed to..."). All types use the same six fixed sections: Needs Attention, Summary, Current State (no length cap), Recent Decisions & Context, Open Work, Key Risks. The prompt includes a "so what" test instruction and explicitly forbids inventing additional sections.
+- **User prompt** concatenates four labeled sections: `=== FOUNDATIONAL CONTEXT ===`, `=== JOURNAL ENTRIES (N) ===` (with dates), `=== MENTIONED IN N DOCUMENT(S) ===` (with source type + title), `=== LINKED TASKS ===` (summary counts + urgency flags + detailed data for notable tasks only). Task filtering via `categorizeLinkedTasks()` excludes completed tasks without context entries and flags urgent/overdue items with `⚠` markers.
 
 #### Constraints
 - Memory is user-triggered (not automatic). No background refresh jobs.

@@ -194,7 +194,13 @@ The Memory tab on entity detail pages synthesizes knowledge from four sources in
 
 **Memory is user-triggered, not automatic.** No background jobs or auto-refresh. The user decides when to synthesize.
 
-**Output format:** The `ai_memory` field contains plain text with markdown-style headings (`## Key Facts`, `## Recent Decisions`, etc.) and bullet points (`- `). The Memory tab UI renders these with simple string splitting — no full markdown parser.
+**Output format:** The `ai_memory` field contains plain text with markdown-style headings and bullet points (`- `). The Memory tab UI renders these with simple string splitting — no full markdown parser. The six fixed sections (in order) are: `## Needs Attention`, `## Summary`, `## Current State`, `## Recent Decisions & Context`, `## Open Work`, `## Key Risks`. Sections without content are omitted entirely. The prompt explicitly forbids inventing additional sections.
+
+**Entity-type-aware prompts:** The system prompt adapts based on `entity_type`: products get a strategic briefing framing, initiatives get a progress report framing, and stakeholders get a relationship brief framing (with second-person voice: "You committed to..."). The six-section structure is consistent across all types — only the guidance within each section varies.
+
+**Task filtering for relevance:** Completed tasks without context entries are excluded from the prompt entirely (routine noise). The remaining tasks are presented as a summary (counts by status) plus detailed data only for notable tasks (in-progress, to-do, done-with-context). Urgent-priority and overdue tasks are flagged with `⚠` markers in the prompt. The task query fetches `due_date` and `priority` in addition to core fields.
+
+**"So what" test:** The system prompt instructs Claude to apply this filter to every piece of information: "If a PM removed this line, would they miss something important for their next decision or conversation?" This is a top-level instruction that governs all sections.
 
 **Memory Guidance (Phase 4.5A):** `memory_guidance` text field on `entities` — persistent user corrections injected as high-priority overrides in the system prompt. Editable from the Memory tab UI. Guidance changes are included in the source hash, so updating guidance ensures the next refresh runs.
 

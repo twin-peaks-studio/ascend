@@ -949,8 +949,9 @@ const sections: WikiSection[] = [
         heading: "AI Memory Refresh",
         paragraphs: [
           "The Memory tab on each entity detail page lets you generate a synthesized knowledge document using AI. Click 'Generate Memory' (or 'Refresh' if memory already exists) to start the process.",
-          "The AI reads three sources: (1) Foundational Context — permanent truths you wrote on the Overview tab, (2) Journal Entries — timestamped knowledge from the Journal tab, and (3) Mentions — content from every note and capture that references this entity via #mention.",
-          "The output is a structured document with sections: Key Facts, Recent Decisions, Open Questions, Stakeholder Notes, Status & Progress, and Action Items. Only sections with relevant content appear.",
+          "The AI reads four sources: (1) Foundational Context — permanent truths you wrote on the Overview tab, (2) Journal Entries — timestamped knowledge from the Journal tab, (3) Mentions — content from every note and capture that references this entity via #mention, and (4) Linked Tasks — tasks connected to this entity with their status, due dates, priority, and context entries.",
+          "The output uses a consistent structure across all entity types: Needs Attention (urgent/overdue items — only shown when relevant), Summary (what this entity is), Current State (detailed view of what's happening now), Recent Decisions & Context (from journal entries), Open Work (task progress narrative), and Key Risks (synthesized from all sources). Sections without content are omitted.",
+          "The AI adapts its focus based on entity type: products get a strategic briefing, initiatives get a progress report, and stakeholders get a relationship brief. Completed tasks without context entries are automatically filtered out as routine noise, keeping the memory focused on what matters.",
         ],
       },
       {

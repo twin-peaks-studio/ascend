@@ -36,6 +36,8 @@ interface LinkedTaskData {
   title: string;
   status: string;
   description: string | null;
+  due_date: string | null;
+  priority: string;
   contextEntries: Array<{ content: string; created_at: string }>;
 }
 
@@ -59,47 +61,108 @@ interface MemoryRefreshErrorResponse {
 
 type MemoryRefreshResponse = MemoryRefreshSuccessResponse | MemoryRefreshErrorResponse;
 
+function getEntityTypeGuidance(entityType: string, entityName: string): string {
+  switch (entityType) {
+    case "product":
+      return `
+You are writing a product briefing for a product manager about "${entityName}".
+
+**Entity-specific guidance for the "Current State" section:**
+Focus on strategic positioning, market context, feature-level momentum, adoption trends, competitive shifts, technical debt, and customer feedback themes. Think about what a PM needs to know before a leadership meeting about this product.
+
+**Entity-specific guidance for the "Open Work" section:**
+Summarize at the feature level, not the task level. "Payment integration is in progress" — not "Added stripe_customer_id column to organizations table." A task only deserves a mention if it represents a strategic blocker or milestone.
+
+**Entity-specific guidance for the "Key Risks" section:**
+Focus on strategic, competitive, and technical risks. Unresolved compliance issues, market threats, architectural debt, customer churn signals.`;
+
+    case "initiative":
+      return `
+You are writing a progress report for a product manager about the initiative "${entityName}".
+
+**Entity-specific guidance for the "Current State" section:**
+Focus on progress toward the goal. What phase of execution is this in? What's been completed recently? Where is velocity strong or weak? Are there dependency chains at risk? If there's a deadline (from foundational context or journal), assess whether current pace will meet it.
+
+**Entity-specific guidance for the "Open Work" section:**
+Frame tasks as progress indicators. "5 of 12 tasks complete, 3 in progress, blocked on X" is useful. Translate task state into a narrative about momentum — are we accelerating, stalled, or blocked?
+
+**Entity-specific guidance for the "Key Risks" section:**
+Focus on timeline risk, blockers, dependency chains, and resource gaps. If tasks have been in-progress for a long time with no updates, flag that as a velocity risk. If to-do tasks have no assignee, flag that as a planning gap.`;
+
+    case "stakeholder":
+      return `
+You are writing a relationship brief for a product manager about the stakeholder "${entityName}". This should read like preparation notes before a meeting with this person.
+
+**Entity-specific guidance for the "Current State" section:**
+Focus on the relationship: recent interactions, how the relationship is trending, what conversations are open, what they've asked for that hasn't been addressed, and any commitments made (by either side). If journal entries show a shift in sentiment or tone, note it.
+
+**Entity-specific guidance for the "Open Work" section:**
+Frame tasks as commitments and dependencies: what is this stakeholder waiting on? What was promised and by when? If a promised delivery date has passed and the task isn't done, call that out explicitly.
+
+**Entity-specific guidance for the "Key Risks" section:**
+Focus on relationship risk: undelivered promises, missed deadlines on commitments, signs of frustration or disengagement in journal entries, tasks the stakeholder is blocking.`;
+
+    default:
+      return `
+You are writing a briefing for a product manager about the ${entityType} "${entityName}".
+
+**Entity-specific guidance for the "Current State" section:**
+Provide a comprehensive picture of what's happening with this ${entityType} right now.
+
+**Entity-specific guidance for the "Open Work" section:**
+Summarize task status as a narrative, focusing on what matters to a PM.
+
+**Entity-specific guidance for the "Key Risks" section:**
+Surface risks, blockers, and unresolved issues.`;
+  }
+}
+
 function buildSystemPrompt(entityType: string, entityName: string, memoryGuidance: string | null): string {
-  let prompt = `You are a product management intelligence system. Your job is to synthesize information about a specific ${entityType} called "${entityName}" into a clear, structured memory document.
+  const entityGuidance = getEntityTypeGuidance(entityType, entityName);
+
+  let prompt = `You are a product management intelligence system. Your job is to synthesize information about a specific ${entityType} called "${entityName}" into a structured memory document that helps a product manager make decisions.
+${entityGuidance}
 
 You will receive four types of input:
 1. **Foundational Context** — Permanent truths that the user has written about this ${entityType}. These are always correct and should be preserved verbatim or near-verbatim.
 2. **Journal Entries** — Timestamped knowledge dumps. These may contain evolving opinions, decisions, updates, and observations.
 3. **Mentioned Content** — Excerpts from notes and captures where this ${entityType} was mentioned via #hashtag. These documents often discuss MULTIPLE entities/topics in a single note. Use the Foundational Context to understand what topics, features, codenames, and concepts belong to "${entityName}", then extract ONLY the parts relevant to this ${entityType} — strictly ignore everything else.
-4. **Linked Tasks** — Tasks explicitly connected to this ${entityType}. Each includes a title, current status (to do, in progress, or done), optional description, and context entries (timestamped research notes and findings recorded while working on the task). Completed tasks inform what has been accomplished; in-progress tasks show current work; context entries contain detailed research, decisions, and discoveries.
+4. **Linked Tasks** — Tasks connected to this ${entityType}. You will receive a TASK SUMMARY (counts by status, urgency flags) and TASK DETAILS (only for in-progress, urgent, overdue, or recently completed tasks with context). Completed tasks without context entries have been pre-filtered out — they were routine work that doesn't inform the PM.
+
+**Critical: The "so what" test.** Before including ANY piece of information, ask: "If a product manager removed this line, would they miss something important for their next decision or conversation?" If the answer is no, cut it. Implementation details, routine task completions, and resolved issues that don't change the strategic picture should be omitted.
 
 **Critical: Topic boundary detection.** Notes frequently switch between topics. Pay close attention to language that signals a topic change — phrases like "separate from this", "unrelated to this", "on another note", "switching topics", "also", "moving on", or the introduction of a different #entity tag. When you encounter such a boundary, everything after it belongs to a DIFFERENT topic and must NOT be attributed to "${entityName}" unless it explicitly references "${entityName}" again. Conversely, if a later paragraph returns to discussing "${entityName}" (by name, abbreviation, or concepts from the Foundational Context), include that content.
 
 Content may reference "${entityName}" indirectly using internal terminology, abbreviations, or feature names described in the Foundational Context.
 
-Produce a structured memory document with these sections (skip any section that has no relevant content):
+Produce a structured memory document using EXACTLY these six sections in this order. Omit a section entirely if it has no relevant content — do NOT include it with "None" or "N/A". Do NOT add any sections beyond these six.
 
-## Key Facts
-Bullet points of confirmed, current facts about ${entityName}.
+## Needs Attention
+Urgent, overdue, or blocked items that require immediate PM action. Items here should have a clear reason for urgency (overdue due date, blocked dependency, stale in-progress work, undelivered commitment). If nothing qualifies, omit this section entirely.
 
-## Recent Decisions
-Decisions that have been made, with dates if available.
+## Summary
+What this ${entityType} IS — a stable orientation paragraph (2-4 sentences). This should be relatively consistent across refreshes unless foundational facts change. Distill the foundational context into a concise overview.
 
-## Open Questions
-Unresolved questions, risks, or things that need answers.
+## Current State
+What's happening NOW. This section has no length limit — be as detailed as the source material warrants. If there are six important things happening, cover all six. If there's one, say one. Depth should match activity level. Synthesize across all sources (journal, mentions, tasks, context entries) to build a complete picture.
 
-## Stakeholder Notes
-Key people involved and their positions/opinions (if any stakeholder info exists).
+## Recent Decisions & Context
+Decisions, observations, and key context from journal entries, typically from the last 2-4 weeks. Use dates. Bulleted list.
 
-## Status & Progress
-Current state of work, blockers, momentum. Incorporate task status and context entries to give an accurate picture of what's done, what's in flight, and what's blocked.
+## Open Work
+A narrative summary of task state — NOT a task list. State the ratio (e.g., "8 of 14 tasks complete") then describe only the in-progress, blocked, or notable items. Frame work in terms a PM cares about, not implementation details.
 
-## Action Items
-Outstanding tasks or next steps. Reference linked tasks that are not yet complete.
+## Key Risks
+Synthesized risks from all sources. Connect dots across sources — e.g., if a journal entry flags a concern AND related tasks are stalled, connect those facts. If no risks exist, omit this section.
 
 Rules:
-- Be concise. Each bullet should be 1-2 sentences max.
 - Use dates when available (from journal entry timestamps or task context entry timestamps).
 - If information conflicts across sources, note the conflict and which source is newer.
 - Do NOT invent information. Only synthesize what's in the provided sources.
-- Do NOT include content about other entities/products that happen to appear in the same document. A note may mention "${entityName}" in one paragraph and a completely different product in the next — only the "${entityName}" paragraphs belong in this memory.
+- Do NOT include content about other entities/products that happen to appear in the same document.
 - Do NOT include meta-commentary about your process. Just output the memory document.
-- Write in third person (e.g., "The team decided..." not "You decided...").`;
+- Do NOT add sections beyond the six defined above. No "Future Considerations", "Opportunities", "Action Items", or any other invented headings.
+- Write in second person for stakeholders ("You committed to...") and third person for products and initiatives ("The team decided...").`;
 
   if (memoryGuidance?.trim()) {
     prompt += `
@@ -111,6 +174,60 @@ ${memoryGuidance.trim()}`;
   }
 
   return prompt;
+}
+
+/**
+ * Filter and categorize linked tasks for the memory prompt.
+ * - Completed tasks without context entries are excluded (routine noise)
+ * - Remaining tasks are split into "notable" (detailed) and "completed" (summary only)
+ * - Urgent/overdue tasks are flagged
+ */
+function categorizeLinkedTasks(linkedTasks: LinkedTaskData[]): {
+  totalCount: number;
+  doneCount: number;
+  inProgressCount: number;
+  todoCount: number;
+  urgentTasks: LinkedTaskData[];
+  overdueTasks: LinkedTaskData[];
+  notableTasks: LinkedTaskData[]; // in-progress, to-do, or done-with-context
+  filteredOutCount: number;
+} {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const doneCount = linkedTasks.filter((t) => t.status === "done").length;
+  const inProgressCount = linkedTasks.filter((t) => t.status === "in-progress").length;
+  const todoCount = linkedTasks.filter((t) => t.status === "todo").length;
+
+  // Filter: keep in-progress, to-do, and done-with-context-entries
+  const notableTasks = linkedTasks.filter(
+    (t) => t.status !== "done" || t.contextEntries.length > 0
+  );
+  const filteredOutCount = linkedTasks.length - notableTasks.length;
+
+  // Flag urgent priority tasks (not done)
+  const urgentTasks = notableTasks.filter(
+    (t) => t.priority === "urgent" && t.status !== "done"
+  );
+
+  // Flag overdue tasks (due_date < today AND not done)
+  const overdueTasks = notableTasks.filter((t) => {
+    if (!t.due_date || t.status === "done") return false;
+    const dueDate = new Date(t.due_date);
+    dueDate.setHours(0, 0, 0, 0);
+    return dueDate < today;
+  });
+
+  return {
+    totalCount: linkedTasks.length,
+    doneCount,
+    inProgressCount,
+    todoCount,
+    urgentTasks,
+    overdueTasks,
+    notableTasks,
+    filteredOutCount,
+  };
 }
 
 function buildUserPrompt(
@@ -149,39 +266,82 @@ function buildUserPrompt(
     parts.push(`=== MENTIONED IN ${mentionedContent.length} DOCUMENT(S) ===\n${mentionsText}`);
   }
 
-  // 4. Linked tasks
+  // 4. Linked tasks — summarized with urgency signals
   if (linkedTasks.length > 0) {
+    const cats = categorizeLinkedTasks(linkedTasks);
+
     const statusLabel: Record<string, string> = {
       "todo": "To Do",
       "in-progress": "In Progress",
       "done": "Done",
     };
 
-    const tasksText = linkedTasks
-      .map((t) => {
-        const lines: string[] = [];
-        lines.push(`[${statusLabel[t.status] || t.status}] ${t.title}`);
+    // Task summary header
+    const summaryLines: string[] = [];
+    summaryLines.push(`Total: ${cats.totalCount} tasks — ${cats.doneCount} done, ${cats.inProgressCount} in progress, ${cats.todoCount} to do`);
+    if (cats.filteredOutCount > 0) {
+      summaryLines.push(`(${cats.filteredOutCount} completed tasks with no context entries were filtered out as routine completions)`);
+    }
 
-        if (t.description?.trim()) {
-          lines.push(`Description: ${htmlToPlainText(t.description)}`);
-        }
+    // Urgency flags
+    if (cats.urgentTasks.length > 0) {
+      summaryLines.push(`\n⚠ URGENT PRIORITY (${cats.urgentTasks.length}): ${cats.urgentTasks.map((t) => `"${t.title}"`).join(", ")}`);
+    }
+    if (cats.overdueTasks.length > 0) {
+      const overdueDetails = cats.overdueTasks.map((t) => {
+        const dueDate = new Date(t.due_date!).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+        return `"${t.title}" (due ${dueDate})`;
+      });
+      summaryLines.push(`⚠ OVERDUE (${cats.overdueTasks.length}): ${overdueDetails.join(", ")}`);
+    }
 
-        if (t.contextEntries.length > 0) {
-          lines.push(`Context & Findings (${t.contextEntries.length}):`);
-          for (const ce of t.contextEntries) {
-            const date = new Date(ce.created_at).toLocaleDateString("en-US", {
-              month: "short",
-              day: "numeric",
-              year: "numeric",
-            });
-            lines.push(`  - [${date}] ${ce.content}`);
+    // Detailed task data (only notable tasks)
+    let taskDetails = "";
+    if (cats.notableTasks.length > 0) {
+      const detailsText = cats.notableTasks
+        .map((t) => {
+          const lines: string[] = [];
+          const flags: string[] = [];
+          if (t.priority === "urgent") flags.push("URGENT");
+          if (t.due_date) {
+            const dueDate = new Date(t.due_date);
+            dueDate.setHours(0, 0, 0, 0);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const dueDateStr = dueDate.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+            if (dueDate < today && t.status !== "done") {
+              flags.push(`OVERDUE — due ${dueDateStr}`);
+            } else {
+              flags.push(`due ${dueDateStr}`);
+            }
           }
-        }
 
-        return lines.join("\n");
-      })
-      .join("\n\n---\n\n");
-    parts.push(`=== LINKED TASKS (${linkedTasks.length}) ===\n${tasksText}`);
+          const flagStr = flags.length > 0 ? ` [${flags.join(", ")}]` : "";
+          lines.push(`[${statusLabel[t.status] || t.status}] ${t.title}${flagStr}`);
+
+          if (t.description?.trim()) {
+            lines.push(`Description: ${htmlToPlainText(t.description)}`);
+          }
+
+          if (t.contextEntries.length > 0) {
+            lines.push(`Context & Findings (${t.contextEntries.length}):`);
+            for (const ce of t.contextEntries) {
+              const date = new Date(ce.created_at).toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+              });
+              lines.push(`  - [${date}] ${ce.content}`);
+            }
+          }
+
+          return lines.join("\n");
+        })
+        .join("\n\n---\n\n");
+      taskDetails = `\n\nDetailed task data (${cats.notableTasks.length} notable tasks):\n${detailsText}`;
+    }
+
+    parts.push(`=== LINKED TASKS ===\n${summaryLines.join("\n")}${taskDetails}`);
   }
 
   if (parts.length === 0) {
@@ -227,6 +387,8 @@ function computeSourceHash(
     hash.update(t.title);
     hash.update(t.status);
     hash.update(t.description ?? "");
+    hash.update(t.due_date ?? "");
+    hash.update(t.priority);
     // Sort context entries by created_at for determinism
     const sortedCE = [...t.contextEntries].sort((a, b) => a.created_at.localeCompare(b.created_at));
     for (const ce of sortedCE) {
@@ -379,10 +541,10 @@ export async function POST(
     if (taskEntityLinks && taskEntityLinks.length > 0) {
       const taskIds = taskEntityLinks.map((te: { task_id: string }) => te.task_id);
 
-      // Fetch task details
+      // Fetch task details (including due_date and priority for urgency detection)
       const { data: tasks } = await supabase
         .from("tasks")
-        .select("id, title, status, description")
+        .select("id, title, status, description, due_date, priority")
         .in("id", taskIds);
 
       if (tasks && tasks.length > 0) {
@@ -403,11 +565,13 @@ export async function POST(
           }
         }
 
-        linkedTasks = tasks.map((t: { id: string; title: string; status: string; description: string | null }) => ({
+        linkedTasks = tasks.map((t: { id: string; title: string; status: string; description: string | null; due_date: string | null; priority: string }) => ({
           id: t.id,
           title: t.title,
           status: t.status,
           description: t.description,
+          due_date: t.due_date,
+          priority: t.priority,
           contextEntries: entriesByTask.get(t.id) || [],
         }));
       }

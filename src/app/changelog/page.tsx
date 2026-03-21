@@ -70,6 +70,26 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: "March 21, 2026",
+    version: "0.27.1",
+    title: "Smarter AI Memory",
+    description: "AI memory refresh now produces entity-type-aware briefings with consistent structure, urgency detection, and noise filtering — designed for product managers.",
+    features: [
+      {
+        icon: Brain,
+        title: "Entity-Type-Aware Memory",
+        description: "Memory refresh now adapts to entity type: products get strategic briefings, initiatives get progress reports, and stakeholders get relationship briefs. Each uses the same consistent six-section structure.",
+        tag: "improved",
+      },
+      {
+        icon: Filter,
+        title: "Smart Task Filtering",
+        description: "Completed tasks without context entries are automatically filtered out as routine noise. Urgent and overdue tasks are flagged prominently in the Needs Attention section.",
+        tag: "improved",
+      },
+    ],
+  },
+  {
+    date: "March 21, 2026",
     version: "0.27.0",
     title: "Context & Findings + Focus View",
     description: "Record research notes, decisions, and discoveries directly on tasks with a new Context & Findings section, and use Focus View for distraction-free deep work.",
