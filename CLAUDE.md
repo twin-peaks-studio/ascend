@@ -102,6 +102,22 @@ Key files:
 - `src/app/forms/[slug]/layout.tsx` — standalone layout (no Sidebar/AppShell)
 - `src/components/forms/public/tracker-view.tsx` — standalone tracker UI (NOT reusing KanbanBoard/TaskListItem)
 
+### Task Context Entries & Focus View
+
+Task context entries are timestamped freeform knowledge entries scoped to a task, used for recording research notes, decisions, and discoveries. They mirror the entity context entries (journal) pattern.
+
+**Database:** `task_context_entries` table with `task_id` FK → `tasks(id)`, RLS scoped through `project_members`. Migration: `20260320_task_context_entries.sql`.
+
+**Hook:** `use-task-context-entries.ts` — `useTaskContextEntries(taskId)` for fetching, `useTaskContextEntryMutations()` for CRUD with optimistic cache updates via `setQueryData`. Query key: `["task-context-entries", taskId]`.
+
+**Components:**
+- `src/components/task/context-entry-card.tsx` — View/edit card with dropdown menu
+- `src/components/task/task-context-entries.tsx` — Collapsible section (auto-expands when entries exist), Focus link, add form with Cmd+Enter shortcut
+
+**Focus View:** `/tasks/[id]/focus` — split-pane layout: description (left), context entries (right), timer + task metadata in top bar. Uses `AppShell`, reuses `TimerButton`.
+
+**Integration:** `TaskContextEntries` is rendered on the task detail page between description and mobile due date sections.
+
 ### Workspaces & Captures (Memory Layer MVP 1)
 
 Workspaces (`src/contexts/workspace-context.tsx`) provide workspace isolation. Every project belongs to a workspace via `workspace_id`. The `WorkspaceProvider` wraps the app inside `AppShell` and persists the active workspace in localStorage (`active-workspace-id`).
@@ -170,19 +186,25 @@ Key files:
 
 ### AI Memory Refresh (Phase 4)
 
-The Memory tab on entity detail pages synthesizes knowledge from three sources into a structured AI memory document. Users click "Generate Memory" (or "Refresh") to trigger on-demand synthesis.
+The Memory tab on entity detail pages synthesizes knowledge from four sources into a structured AI memory document. Users click "Generate Memory" (or "Refresh") to trigger on-demand synthesis.
 
-**Data sources:** `entity.foundational_context` + `entity_context_entries` (journal) + `entity_mentions` → resolved `notes.content` (HTML → plain text).
+**Data sources:** `entity.foundational_context` + `entity_context_entries` (journal) + `entity_mentions` → resolved `notes.content` (HTML → plain text) + linked tasks via `task_entities` (title, status, description, and `task_context_entries`).
 
 **Architecture:** `POST /api/ai/memory-refresh` (server-side, authenticated, rate-limited via `aiExtraction` bucket). Calls Claude Sonnet with structured system prompt. Stores result in `entities.ai_memory` + `entities.memory_refreshed_at`. Client hook (`useMemoryRefresh`) updates React Query cache optimistically.
 
 **Memory is user-triggered, not automatic.** No background jobs or auto-refresh. The user decides when to synthesize.
 
-**Output format:** The `ai_memory` field contains plain text with markdown-style headings (`## Key Facts`, `## Recent Decisions`, etc.) and bullet points (`- `). The Memory tab UI renders these with simple string splitting — no full markdown parser.
+**Output format:** The `ai_memory` field contains plain text with markdown-style headings and bullet points (`- `). The Memory tab UI renders these with simple string splitting — no full markdown parser. The six fixed sections (in order) are: `## Needs Attention`, `## Summary`, `## Current State`, `## Recent Decisions & Context`, `## Open Work`, `## Key Risks`. Sections without content are omitted entirely. The prompt explicitly forbids inventing additional sections.
+
+**Entity-type-aware prompts:** The system prompt adapts based on `entity_type`: products get a strategic briefing framing, initiatives get a progress report framing, and stakeholders get a relationship brief framing (with second-person voice: "You committed to..."). The six-section structure is consistent across all types — only the guidance within each section varies.
+
+**Task filtering for relevance:** Completed tasks without context entries are excluded from the prompt entirely (routine noise). The remaining tasks are presented as a summary (counts by status) plus detailed data only for notable tasks (in-progress, to-do, done-with-context). Urgent-priority and overdue tasks are flagged with `⚠` markers in the prompt. The task query fetches `due_date` and `priority` in addition to core fields.
+
+**"So what" test:** The system prompt instructs Claude to apply this filter to every piece of information: "If a PM removed this line, would they miss something important for their next decision or conversation?" This is a top-level instruction that governs all sections.
 
 **Memory Guidance (Phase 4.5A):** `memory_guidance` text field on `entities` — persistent user corrections injected as high-priority overrides in the system prompt. Editable from the Memory tab UI. Guidance changes are included in the source hash, so updating guidance ensures the next refresh runs.
 
-**Source Change Detection (Phase 4.5B):** `memory_source_hash` (SHA-256) on `entities` — computed from all source material (foundational context + journal entries sorted by `created_at` + mentioned content sorted by title + memory guidance). Stored after each successful refresh. On next refresh, if the hash matches and `entity.ai_memory` exists, the API returns `skipped: true` without calling Claude. The hook shows an info toast. Pass `{ force: true }` to bypass the hash check.
+**Source Change Detection (Phase 4.5B):** `memory_source_hash` (SHA-256) on `entities` — computed from all source material (foundational context + journal entries sorted by `created_at` + mentioned content sorted by title + memory guidance + linked tasks sorted by ID with their context entries). Stored after each successful refresh. On next refresh, if the hash matches and `entity.ai_memory` exists, the API returns `skipped: true` without calling Claude. The hook shows an info toast. Pass `{ force: true }` to bypass the hash check.
 
 Key files:
 - `src/app/api/ai/memory-refresh/route.ts` — API route (auth, data gathering, hash check, guidance injection, Claude call, DB update)

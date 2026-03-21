@@ -226,6 +226,46 @@ const sections: WikiSection[] = [
     ],
   },
   {
+    id: "context-findings",
+    icon: FileText,
+    title: "Context & Findings",
+    description: "Record research notes, decisions, and discoveries directly on tasks.",
+    content: [
+      {
+        heading: "Overview",
+        paragraphs: [
+          "The Context & Findings section appears on every task detail page, between the description and attachments. Use it to record timestamped research notes, decisions, and discoveries as you work on a task.",
+          "Entries are saved to the database and persist across sessions. They appear in reverse chronological order — newest first.",
+        ],
+      },
+      {
+        heading: "Adding an Entry",
+        list: [
+          "Open any task and expand the Context & Findings section.",
+          "Click the \"+ Add\" button (or \"Add your first entry\" if there are no entries yet).",
+          "Type your note in the text area. Use Cmd+Enter (or Ctrl+Enter) to save quickly, or click \"Add Entry\".",
+          "Press Escape to cancel without saving.",
+        ],
+      },
+      {
+        heading: "Editing and Deleting",
+        paragraphs: [
+          "Each entry has a three-dot menu with Edit and Delete options. When editing, you can modify the content and click Save, or Cancel to discard changes. Edited entries show an \"(edited)\" indicator next to the timestamp.",
+        ],
+      },
+      {
+        heading: "Focus View",
+        paragraphs: [
+          "For deep work sessions, click the \"Focus\" button in the Context & Findings header. This opens a dedicated split-pane view with the task description on the left and context entries on the right. The timer is always visible in the top bar so you can track time while researching.",
+          "Focus View is available at /tasks/[id]/focus. Use the \"Back\" button to return to the full task detail page.",
+        ],
+      },
+      {
+        tip: "The Context & Findings section auto-expands when a task has existing entries, so you'll always see them at a glance.",
+      },
+    ],
+  },
+  {
     id: "today",
     icon: CalendarDays,
     title: "Today",
@@ -909,8 +949,9 @@ const sections: WikiSection[] = [
         heading: "AI Memory Refresh",
         paragraphs: [
           "The Memory tab on each entity detail page lets you generate a synthesized knowledge document using AI. Click 'Generate Memory' (or 'Refresh' if memory already exists) to start the process.",
-          "The AI reads three sources: (1) Foundational Context — permanent truths you wrote on the Overview tab, (2) Journal Entries — timestamped knowledge from the Journal tab, and (3) Mentions — content from every note and capture that references this entity via #mention.",
-          "The output is a structured document with sections: Key Facts, Recent Decisions, Open Questions, Stakeholder Notes, Status & Progress, and Action Items. Only sections with relevant content appear.",
+          "The AI reads four sources: (1) Foundational Context — permanent truths you wrote on the Overview tab, (2) Journal Entries — timestamped knowledge from the Journal tab, (3) Mentions — content from every note and capture that references this entity via #mention, and (4) Linked Tasks — tasks connected to this entity with their status, due dates, priority, and context entries.",
+          "The output uses a consistent structure across all entity types: Needs Attention (urgent/overdue items — only shown when relevant), Summary (what this entity is), Current State (detailed view of what's happening now), Recent Decisions & Context (from journal entries), Open Work (task progress narrative), and Key Risks (synthesized from all sources). Sections without content are omitted.",
+          "The AI adapts its focus based on entity type: products get a strategic briefing, initiatives get a progress report, and stakeholders get a relationship brief. Completed tasks without context entries are automatically filtered out as routine noise, keeping the memory focused on what matters.",
         ],
       },
       {

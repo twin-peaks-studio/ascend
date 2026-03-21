@@ -1100,6 +1100,48 @@ export type Database = {
           }
         ];
       };
+      task_context_entries: {
+        Row: {
+          id: string;
+          task_id: string;
+          content: string;
+          created_by: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          task_id: string;
+          content: string;
+          created_by: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          task_id?: string;
+          content?: string;
+          created_by?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "task_context_entries_task_id_fkey";
+            columns: ["task_id"];
+            isOneToOne: false;
+            referencedRelation: "tasks";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "task_context_entries_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
@@ -1204,6 +1246,10 @@ export type EntityMentionInsert = InsertTables<"entity_mentions">;
 export type EntityContextEntry = Tables<"entity_context_entries">;
 export type EntityContextEntryInsert = InsertTables<"entity_context_entries">;
 export type EntityContextEntryUpdate = UpdateTables<"entity_context_entries">;
+
+export type TaskContextEntry = Tables<"task_context_entries">;
+export type TaskContextEntryInsert = InsertTables<"task_context_entries">;
+export type TaskContextEntryUpdate = UpdateTables<"task_context_entries">;
 
 export type EntityType = "product" | "initiative" | "stakeholder";
 export type EntityLinkType = "initiative_product" | "stakeholder_product" | "stakeholder_initiative";

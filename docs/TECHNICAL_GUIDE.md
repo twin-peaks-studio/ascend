@@ -2545,7 +2545,7 @@ syncMentions() diffs against entity_mentions table → inserts new, deletes remo
 
 ### AI Memory Refresh Architecture
 
-The Memory tab on entity detail pages allows users to synthesize an AI memory document from three data sources. This is the core of the "PM brain" — turning scattered knowledge into structured, queryable understanding.
+The Memory tab on entity detail pages allows users to synthesize an AI memory document from four data sources. This is the core of the "PM brain" — turning scattered knowledge into structured, queryable understanding.
 
 #### Database columns
 - `entities.ai_memory` (text, nullable) — The synthesized memory document (markdown-formatted)
@@ -2561,31 +2561,49 @@ Server-side (authenticated + rate-limited):
   1. Fetch entity.foundational_context
   2. Fetch entity_context_entries (journal) ordered by created_at DESC
   3. Fetch entity_mentions → resolve source_id to notes.content (HTML → plain text)
-  4. Build system prompt (entity type + name specific) + user prompt (all 3 sources)
-  5. Call Claude Sonnet (max_tokens: 4096, timeout: 120s)
-  6. Store result in entities.ai_memory + entities.memory_refreshed_at
+  4. Fetch task_entities → tasks (title, status, description, due_date, priority) + task_context_entries
+  5. Filter tasks: exclude completed tasks without context entries (routine noise)
+  5b. Categorize tasks: flag urgent priority + overdue due dates
+  6. Compute source hash (SHA-256) — skip if unchanged and not forced
+  7. Build entity-type-aware system prompt + user prompt (summary + notable tasks only)
+  7. Call Claude Sonnet (max_tokens: 4096, timeout: 120s)
+  8. Store result in entities.ai_memory + entities.memory_refreshed_at + memory_source_hash
     ↓
-Client receives { aiMemory, refreshedAt, sources }
+Client receives { aiMemory, refreshedAt, skipped, sources }
     ↓
 useMemoryRefresh hook updates React Query cache (entityKeys.detail) optimistically
     ↓
 Memory tab renders structured markdown (## headings, - bullets)
 ```
 
+#### Linked tasks data gathering (step 4)
+
+The API fetches linked tasks efficiently:
+1. Query `task_entities` for all `task_id` values linked to the entity
+2. Batch-fetch task details (`id, title, status, description, due_date, priority`) from `tasks`
+3. Batch-fetch all `task_context_entries` for those task IDs in one query
+4. Group context entries by `task_id` in memory (Map), then assemble `LinkedTaskData[]`
+
+This avoids N+1 queries — only 3 DB calls regardless of task count.
+
+#### Source hash includes task data
+
+The SHA-256 hash includes linked tasks sorted by ID. For each task: `id + title + status + description + due_date + priority + context entries (sorted by created_at)`. Adding a context entry, changing task status, updating a description, changing priority, or modifying a due date all change the hash, triggering a real refresh on next click.
+
 #### Key files
 - `src/app/api/ai/memory-refresh/route.ts` — Server route: auth, data gathering, Claude API call, DB update. Uses shared `aiExtraction` rate limit bucket (5 req/min). HTML→plain text conversion via `htmlToPlainText()`.
-- `src/hooks/use-memory-refresh.ts` — Client hook: `useMemoryRefresh(entityId)` returns `{ refresh, refreshing, error }`. Updates entity cache optimistically on success.
+- `src/hooks/use-memory-refresh.ts` — Client hook: `useMemoryRefresh(entityId)` returns `{ refresh, refreshing, error }`. Updates entity cache optimistically on success. Toast includes linked task count.
 - `src/app/entities/[id]/page.tsx` — Memory tab UI: Generate/Refresh button, loading states, markdown-like rendering of sections.
 
 #### Prompt structure
-- **System prompt** is entity-type and name-specific. Instructs Claude to produce structured sections: Key Facts, Recent Decisions, Open Questions, Stakeholder Notes, Status & Progress, Action Items. Sections with no content are skipped.
-- **User prompt** concatenates three labeled sections: `=== FOUNDATIONAL CONTEXT ===`, `=== JOURNAL ENTRIES (N) ===` (with dates), `=== MENTIONED IN N DOCUMENT(S) ===` (with source type + title).
+- **System prompt** is entity-type-aware via `getEntityTypeGuidance()`. Products get strategic briefing framing, initiatives get progress report framing, stakeholders get relationship brief framing (second person: "You committed to..."). All types use the same six fixed sections: Needs Attention, Summary, Current State (no length cap), Recent Decisions & Context, Open Work, Key Risks. The prompt includes a "so what" test instruction and explicitly forbids inventing additional sections.
+- **User prompt** concatenates four labeled sections: `=== FOUNDATIONAL CONTEXT ===`, `=== JOURNAL ENTRIES (N) ===` (with dates), `=== MENTIONED IN N DOCUMENT(S) ===` (with source type + title), `=== LINKED TASKS ===` (summary counts + urgency flags + detailed data for notable tasks only). Task filtering via `categorizeLinkedTasks()` excludes completed tasks without context entries and flags urgent/overdue items with `⚠` markers.
 
 #### Constraints
 - Memory is user-triggered (not automatic). No background refresh jobs.
 - Shares the `aiExtraction` rate limit bucket — 5 requests per minute per user.
 - Journal entries and mentions are sent newest-first. Large entities with many mentions may approach token limits; the 4096 max_tokens output cap keeps responses focused.
-- HTML from notes/captures is converted to plain text server-side to reduce token usage and avoid confusing the AI with markup.
+- HTML from notes/captures and task descriptions is converted to plain text server-side to reduce token usage and avoid confusing the AI with markup.
 - The `ai_memory` field is plain text with markdown-style formatting (## headings, - bullets). The client renders this with simple string splitting, not a full markdown parser.
 
 ---
@@ -2737,5 +2755,48 @@ No schema changes. No new API fields. The foundational context was already sent 
 Key file: `src/app/api/ai/memory-refresh/route.ts` (system prompt, line 56)
 
 Phases 4.7 (Entity-Linked Task Extraction) and 4.8 (Entity Display on Task Views) are documented in `docs/initiatives/ENTITY_MEMORY_IMPLEMENTATION.md`.
+
+### Task Context Entries & Focus View
+
+#### Overview
+
+Task context entries provide timestamped freeform knowledge entries scoped to a task. They mirror the `entity_context_entries` (journal) pattern — same table structure, same hook pattern, same UI card component style.
+
+#### Key files
+- `supabase/migrations/20260320_task_context_entries.sql` — Table, index, RLS policies
+- `src/types/database.ts` — `TaskContextEntry`, `TaskContextEntryInsert`, `TaskContextEntryUpdate`
+- `src/hooks/use-task-context-entries.ts` — `useTaskContextEntries(taskId)`, `useTaskContextEntryMutations()`
+- `src/components/task/context-entry-card.tsx` — View/edit card with dropdown menu (edit/delete)
+- `src/components/task/task-context-entries.tsx` — Collapsible section with add form, entry list, Focus link
+- `src/app/tasks/[id]/page.tsx` — Integration point (between description and mobile due date)
+- `src/app/tasks/[id]/focus/page.tsx` — Split-pane focus view
+
+#### Data flow
+
+1. `useTaskContextEntries(taskId)` fetches from `task_context_entries` ordered by `created_at DESC`
+2. CRUD mutations use `setQueryData` for optimistic cache updates (no `invalidateQueries`)
+3. Query key: `["task-context-entries", taskId]`
+4. The `TaskContextEntries` component is self-contained — it calls the hooks internally and only needs a `taskId` prop
+
+#### RLS
+
+Policies scope through `tasks.project_id → project_members.user_id = auth.uid()`, also allowing `tasks.created_by = auth.uid()` for task creators. Same pattern as the sections migration.
+
+#### Focus View architecture
+
+`/tasks/[id]/focus` is a standalone page that reuses:
+- `TimerButton` from `src/components/time/timer-button.tsx` — timer in top bar
+- `RichTextEditor` / `MarkdownRenderer` — description editing in left pane
+- `TaskContextEntries` component — right pane (rendered with `alwaysExpanded` and `hideFocusLink` props)
+
+The focus view uses `useTask` and `useTaskMutations` for description edits. It does NOT duplicate task detail page logic — it's a minimal layout wrapper.
+
+#### Constraints
+
+- `TaskContextEntries` auto-expands when entries exist (same pattern as attachments)
+- The component accepts `alwaysExpanded` (no collapse toggle, for focus view) and `hideFocusLink` (avoid circular link in focus view)
+- Entries are plain text, not rich HTML — uses `<Textarea>` not `RichTextEditor`
+
+---
 
 *Last updated: March 2026*
