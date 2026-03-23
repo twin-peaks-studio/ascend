@@ -167,8 +167,8 @@ CREATE POLICY "Project members can delete feedback forms"
 -- INSERT/UPDATE are service-role only (no change needed)
 -- ============================================================
 
-DROP POLICY IF EXISTS "Project members can view submissions" ON public.feedback_submissions;
-CREATE POLICY "Project members can view submissions"
+DROP POLICY IF EXISTS "Project members can view feedback submissions" ON public.feedback_submissions;
+CREATE POLICY "Project members can view feedback submissions"
   ON public.feedback_submissions FOR SELECT
   USING (
     EXISTS (
@@ -191,8 +191,8 @@ CREATE POLICY "Project members can view submissions"
     )
   );
 
-DROP POLICY IF EXISTS "Project members can delete submissions" ON public.feedback_submissions;
-CREATE POLICY "Project members can delete submissions"
+DROP POLICY IF EXISTS "Project members can delete feedback submissions" ON public.feedback_submissions;
+CREATE POLICY "Project members can delete feedback submissions"
   ON public.feedback_submissions FOR DELETE
   USING (
     EXISTS (
