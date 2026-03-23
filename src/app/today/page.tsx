@@ -97,10 +97,27 @@ export default function TodayPage() {
     [updateTask]
   );
 
+  // Build a set of task IDs that are already scheduled (appear in week day groups).
+  // This ensures suggestions disappear reactively when a task gets a due date
+  // via any path (task detail, drag-and-drop, etc.), not just the suggestions panel.
+  const scheduledTaskIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const group of weekDayGroups) {
+      for (const pg of group.projectGroups) {
+        for (const task of pg.tasks) {
+          ids.add(task.id);
+        }
+      }
+    }
+    return ids;
+  }, [weekDayGroups]);
+
   const visibleSuggestions = useMemo(() => {
     if (!weeklySummary?.suggestions) return [];
-    return weeklySummary.suggestions.filter((s) => !dismissedSuggestionIds.has(s.id));
-  }, [weeklySummary, dismissedSuggestionIds]);
+    return weeklySummary.suggestions.filter(
+      (s) => !dismissedSuggestionIds.has(s.id) && !scheduledTaskIds.has(s.id)
+    );
+  }, [weeklySummary, dismissedSuggestionIds, scheduledTaskIds]);
 
   // Derive workspace for weekly summary (default to active workspace)
   const effectiveSummaryWorkspaceId = summaryWorkspaceId || activeWorkspace?.id || workspaces[0]?.id || "";
