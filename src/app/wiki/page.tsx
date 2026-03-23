@@ -296,6 +296,15 @@ const sections: WikiSection[] = [
         ],
       },
       {
+        heading: "Filtering Tasks",
+        paragraphs: [
+          "The filter bar in the header has two filters that work in both Today and Week views.",
+          "Status filter — Click the Status button to show only tasks with a specific status: To Do, In Progress, or Done. You can select multiple statuses at once. Leave all unchecked to show tasks of any status. The button turns blue when a filter is active.",
+          "Workspace filter — If you have more than one workspace, a Workspace filter button also appears. Select one or more workspaces to limit the view to tasks from projects in those workspaces.",
+        ],
+        tip: "Filters compose — you can have both a Status and a Workspace filter active at the same time. Clear each one independently using the 'Clear filter' option in its dropdown.",
+      },
+      {
         heading: "AI Weekly Focus Summary",
         paragraphs: [
           "In Week view, click 'Generate Focus' to generate an AI summary answering 'What should I focus on this week?'. The summary is synthesized from the existing AI memory of all entities in your workspace — it does not trigger new memory refreshes.",
@@ -303,6 +312,15 @@ const sections: WikiSection[] = [
           "If you have multiple workspaces, a workspace selector appears next to the Generate Focus button so you can choose which workspace's entities to include.",
         ],
         tip: "For best results, make sure your entity memories are up to date before generating a weekly summary. Open each entity's Memory tab and click Refresh to regenerate memories from latest journal entries, notes, and tasks.",
+      },
+      {
+        heading: "Suggested This Week",
+        paragraphs: [
+          "When you generate a weekly focus, Claude also reviews all unscheduled tasks (no due date) that are linked to entities in your workspace. Based on this week's priorities from the entity memories, it surfaces the tasks most worth tackling now in a 'Suggested This Week' panel above the Overdue section.",
+          "Each suggested task shows the task title, its project, and two actions on hover: a calendar icon to schedule it for a specific day, and an × to dismiss it as not relevant this week.",
+          "Scheduling a suggestion gives the task a due date and moves it into the appropriate day group automatically — the suggestion row disappears. Dismissing a suggestion hides it for the current session. Both actions clear when you generate a new focus.",
+        ],
+        tip: "Suggestions only appear when entity memories exist for your workspace. If the panel is empty, either there are no unscheduled entity-linked tasks or none were considered relevant to this week's priorities.",
       },
       {
         heading: "Adding a New Task",

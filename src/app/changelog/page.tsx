@@ -70,6 +70,26 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: "March 23, 2026",
+    version: "0.28.1",
+    title: "Suggested Tasks & Status Filter",
+    description: "The weekly view now surfaces entity-linked unscheduled tasks you should consider this week, and a new Status filter lets you focus on To Do, In Progress, or Done tasks across both views.",
+    features: [
+      {
+        icon: Sparkles,
+        title: "Suggested This Week",
+        description: "When you generate a weekly focus, Claude reviews all unscheduled tasks linked to your workspace entities and surfaces the ones most relevant to this week's priorities. Each suggestion shows the task title and project, with a reschedule button to schedule it and an × to dismiss it. Suggestions disappear automatically once the task is given a due date.",
+        tag: "new",
+      },
+      {
+        icon: Filter,
+        title: "Status Filter on Today & Week",
+        description: "A new Status filter button in the Today page header lets you narrow the view to tasks with a specific status — To Do, In Progress, or Done. Supports multi-select and composes with the existing Workspace filter. Active filters are highlighted in the button.",
+        tag: "new",
+      },
+    ],
+  },
+  {
+    date: "March 23, 2026",
     version: "0.28.0",
     title: "Weekly Task View + AI Focus Summary",
     description: "The Today page now supports a weekly task view with an AI-generated focus summary that synthesizes entity memories to answer 'what should I focus on this week?'",
