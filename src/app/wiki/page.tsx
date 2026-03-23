@@ -678,19 +678,28 @@ const sections: WikiSection[] = [
     id: "collaboration",
     icon: Users,
     title: "Team Collaboration",
-    description: "Invite team members, assign work, and collaborate on projects.",
+    description: "Invite team members to a workspace or project, assign work, and collaborate in real time.",
     content: [
       {
-        heading: "Inviting Members",
+        heading: "Inviting Members to a Workspace",
         paragraphs: [
-          "Open a project's properties panel and click the invite button next to the member count. Send email invitations to bring team members into your project.",
+          "Open a workspace detail page and click the Members button in the header. The member management dialog shows everyone currently in the workspace with their role badge (Owner, Admin, or Member). To invite someone new, enter their email address and click Invite — this is only available to workspace owners.",
+          "When you invite someone to a workspace they are automatically added to every existing project in that workspace. When a new project is created, all current workspace members are added to it automatically. Removing someone from a workspace removes them from all projects in it too.",
+        ],
+        tip: "Workspace-level inviting is the recommended way to onboard a new teammate. One invite gives them access to everything in the workspace — no need to add them project by project.",
+      },
+      {
+        heading: "Inviting Members to a Project",
+        paragraphs: [
+          "You can also invite directly at the project level. Open the project's properties panel and click the invite button next to the member count. This is useful for adding an external collaborator to one specific project without giving them access to the whole workspace.",
         ],
       },
       {
         heading: "Roles",
         list: [
-          "Owner — Full control over the project including settings, member management, and deletion",
-          "Member — Can view the project, create and manage tasks, write notes, and track time",
+          "Owner — Full control over the workspace or project including settings, member management, and deletion",
+          "Admin — Can manage members and settings but cannot delete the workspace",
+          "Member — Can view, create and manage tasks, write notes, and track time",
         ],
       },
       {

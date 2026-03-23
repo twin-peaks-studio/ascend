@@ -9,6 +9,7 @@ import {
   Sun,
   Moon,
 } from "lucide-react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { AscendLogo } from "@/components/ascend-logo";
 import { AuthDialog } from "@/components/auth";
@@ -79,6 +80,18 @@ export function LandingPage() {
               </span>
             </div>
             <div className="flex items-center gap-2">
+              <Link
+                href="/wiki"
+                className="hidden sm:inline-flex items-center px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Docs
+              </Link>
+              <Link
+                href="/changelog"
+                className="hidden sm:inline-flex items-center px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Changelog
+              </Link>
               {mounted && (
                 <Button
                   variant="ghost"

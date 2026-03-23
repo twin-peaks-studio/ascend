@@ -70,6 +70,32 @@ interface ChangelogEntry {
 const changelog: ChangelogEntry[] = [
   {
     date: "March 23, 2026",
+    version: "0.29.0",
+    title: "Workspace Member Management",
+    description: "Invite people to a workspace directly — they automatically get access to all projects in that workspace, with roles and permissions managed at the workspace level.",
+    features: [
+      {
+        icon: Users,
+        title: "Workspace Invite Dialog",
+        description: "A new Members button on the workspace detail page opens a member management dialog. See all current members with their role badges (Owner, Admin, Member), invite new members by email, and remove members. Email invites are restricted to workspace owners.",
+        tag: "new",
+      },
+      {
+        icon: Combine,
+        title: "Automatic Project Sync",
+        description: "Inviting someone to a workspace automatically adds them to every project in that workspace. Creating a new project automatically includes all current workspace members. Removing a workspace member removes them from all projects in that workspace too.",
+        tag: "new",
+      },
+      {
+        icon: Shield,
+        title: "Workspace-Level Access Control",
+        description: "Database access policies now recognise workspace membership as a valid access path. Workspace members can access all project data — tasks, notes, comments, sections, and feedback forms — without needing to be added to each project individually.",
+        tag: "improved",
+      },
+    ],
+  },
+  {
+    date: "March 23, 2026",
     version: "0.28.1",
     title: "Suggested Tasks & Status Filter",
     description: "The weekly view now surfaces entity-linked unscheduled tasks you should consider this week, and a new Status filter lets you focus on To Do, In Progress, or Done tasks across both views.",
