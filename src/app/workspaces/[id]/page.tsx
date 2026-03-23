@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Plus, Briefcase, Brain, Trash2, FolderKanban, BookOpen, Package, Network, CheckSquare } from "lucide-react";
+import { Plus, Briefcase, Brain, Trash2, FolderKanban, BookOpen, Package, Network, CheckSquare, Users } from "lucide-react";
 import { AppShell, Header } from "@/components/layout";
 import { ProjectCard, ProjectDialog } from "@/components/project";
 import { TaskDialog } from "@/components/task";
@@ -20,6 +20,7 @@ import { WorkspaceCapturesTab } from "@/components/workspace/workspace-captures-
 import { WorkspaceProductsTab } from "@/components/workspace/workspace-products-tab";
 import { WorkspaceEntitiesTab } from "@/components/workspace/workspace-entities-tab";
 import { WorkspaceTasksTab } from "@/components/workspace/workspace-tasks-tab";
+import { WorkspaceInviteMemberDialog } from "@/components/workspace/workspace-invite-member-dialog";
 import { workspaceTaskKeys } from "@/hooks/use-workspace-tasks";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
@@ -57,6 +58,7 @@ function WorkspaceContent() {
   const [showTaskDialog, setShowTaskDialog] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [deleteWsConfirm, setDeleteWsConfirm] = useState(false);
+  const [showMembersDialog, setShowMembersDialog] = useState(false);
   const [statusFilter, setStatusFilter] = useState<ProjectStatus | "all">("all");
 
   const isIntelligence = workspace?.type === "intelligence";
@@ -149,6 +151,15 @@ function WorkspaceContent() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={() => setShowMembersDialog(true)}
+            >
+              <Users className="h-4 w-4" />
+              Members
+            </Button>
             <Button
               variant="outline"
               size="sm"
@@ -309,6 +320,16 @@ function WorkspaceContent() {
         title="Delete Workspace"
         description="This will permanently delete this workspace and all its projects. This cannot be undone."
       />
+
+      {/* Workspace Members Dialog */}
+      {workspace && (
+        <WorkspaceInviteMemberDialog
+          open={showMembersDialog}
+          onOpenChange={setShowMembersDialog}
+          workspaceId={workspaceId}
+          workspaceCreatorId={workspace.created_by}
+        />
+      )}
     </>
   );
 }
