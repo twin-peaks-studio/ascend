@@ -135,7 +135,7 @@ You will receive four types of input:
 
 Content may reference "${entityName}" indirectly using internal terminology, abbreviations, or feature names described in the Foundational Context.
 
-Produce a structured memory document using EXACTLY these six sections in this order. Omit a section entirely if it has no relevant content — do NOT include it with "None" or "N/A". Do NOT add any sections beyond these six.
+Produce a structured memory document using EXACTLY these seven sections in this order. Omit a section entirely if it has no relevant content — do NOT include it with "None" or "N/A". Do NOT add any sections beyond these seven.
 
 ## Needs Attention
 Urgent, overdue, or blocked items that require immediate PM action. Items here should have a clear reason for urgency (overdue due date, blocked dependency, stale in-progress work, undelivered commitment). If nothing qualifies, omit this section entirely.
@@ -155,13 +155,16 @@ A narrative summary of task state — NOT a task list. State the ratio (e.g., "8
 ## Key Risks
 Synthesized risks from all sources. Connect dots across sources — e.g., if a journal entry flags a concern AND related tasks are stalled, connect those facts. If no risks exist, omit this section.
 
+## Week Ahead
+What the PM should specifically focus on or act on in the next 7 days for this ${entityType}. Concrete and actionable — not a restatement of Open Work. Examples: a decision that needs to be made, a stakeholder conversation to have, a blocker to clear, a deadline arriving this week. Omit this section if there is nothing genuinely time-sensitive in the next 7 days.
+
 Rules:
 - Use dates when available (from journal entry timestamps or task context entry timestamps).
 - If information conflicts across sources, note the conflict and which source is newer.
 - Do NOT invent information. Only synthesize what's in the provided sources.
 - Do NOT include content about other entities/products that happen to appear in the same document.
 - Do NOT include meta-commentary about your process. Just output the memory document.
-- Do NOT add sections beyond the six defined above. No "Future Considerations", "Opportunities", "Action Items", or any other invented headings.
+- Do NOT add sections beyond the seven defined above. No "Future Considerations", "Opportunities", "Action Items", or any other invented headings.
 - Write in second person for stakeholders ("You committed to...") and third person for products and initiatives ("The team decided...").`;
 
   if (memoryGuidance?.trim()) {
