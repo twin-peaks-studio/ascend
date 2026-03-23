@@ -83,12 +83,14 @@ const sections: WikiSection[] = [
       {
         heading: "Quick Start Workflow",
         list: [
-          "Create a project to organize related work (e.g., \"Website Redesign\")",
-          "Add tasks to your project with priorities and due dates",
+          "Create a workspace to group your projects and team (standard or intelligence type)",
+          "Create a project inside the workspace to organize related work (e.g., \"Website Redesign\")",
+          "Add tasks to your project with priorities, due dates, and assignees",
           "Use the Kanban board to drag tasks through To Do, In Progress, and Done",
-          "Invite team members to collaborate on projects",
+          "Invite team members to the workspace — they're automatically added to all projects",
+          "Write meeting notes and use AI to extract action items directly from the text",
+          "Use the Today and Week views to stay on top of what's due",
           "Track time on tasks to understand where effort goes",
-          "Write meeting notes and use AI to extract action items",
         ],
       },
       {
@@ -153,7 +155,7 @@ const sections: WikiSection[] = [
         list: [
           "Kanban Board — Drag-and-drop cards between To Do, In Progress, and Done columns. Great for visual workflow management.",
           "List View — A compact, Todoist-style list with checkboxes for quick status toggling. Shows priority indicators and due dates inline.",
-          "Product Labels — If a task's project is linked to a product (via the entity system), a purple product badge appears on the task row or card. This is visible on all surfaces: global tasks, project tasks, kanban boards, the Today page, and note/capture task lists.",
+          "Entity Badges — Tasks linked to entities show colored pills on every surface (global tasks, project tasks, kanban, Today page, note task lists): purple for products, amber for initiatives, green for stakeholders.",
         ],
         image: {
           src: "/wiki/tasks-board.png",
@@ -214,6 +216,7 @@ const sections: WikiSection[] = [
         heading: "Task Actions",
         list: [
           "Click a task to open its dedicated detail page (/tasks/[id])",
+          "Cmd/Ctrl + Click a task to open it in a new browser tab",
           "Toggle status with the checkbox in list view",
           "Drag and drop to reorder in Kanban view",
           "Delete a task from the detail page (with confirmation)",
@@ -269,7 +272,7 @@ const sections: WikiSection[] = [
     id: "today",
     icon: CalendarDays,
     title: "Today & Week",
-    description: "A focused view of tasks due today, this week, and your AI-generated weekly focus.",
+    description: "A focused view of tasks due today or this week, with AI-generated day estimates, weekly focus summaries, and suggested tasks.",
     content: [
       {
         heading: "Overview",
@@ -350,6 +353,91 @@ const sections: WikiSection[] = [
         heading: "Empty State",
         paragraphs: [
           "When you have no tasks in the selected view, a friendly empty state message is shown. In Today view: 'You're all caught up!' In Week view: 'Nothing due this week!'",
+        ],
+      },
+    ],
+  },
+  {
+    id: "ai-features",
+    icon: Brain,
+    title: "AI Features",
+    description: "Claude AI is woven throughout Ascend — from creating tasks by chat to extracting action items from notes, estimating your day, generating weekly focus summaries, and synthesizing structured memory for every product, initiative, and stakeholder you track.",
+    content: [
+      {
+        heading: "Create with AI",
+        paragraphs: [
+          "Click 'Create with AI' in the left sidebar to open a full-screen chat interface powered by Claude. Describe what you want to work on in plain language — the AI figures out the rest.",
+        ],
+        list: [
+          "Simple tasks — Type 'Call dentist tomorrow' and the AI immediately proposes a structured task card ready to approve",
+          "Complex goals — Type 'Prepare for the quarterly review' and the AI asks one focused question at a time to understand what tasks are needed",
+          "Project context — If you're on a project page when you open the modal, tasks are automatically linked to that project",
+          "Editable cards — Before any task is created, you see editable cards where you can adjust the title, priority, and due date",
+          "Multiple tasks — The AI can propose several related tasks at once; select the ones you want and deselect the rest",
+          "Approval-gated — Nothing is saved until you click 'Create tasks'",
+        ],
+        tip: "The AI caps at 5 conversation turns. If you haven't reached a proposal by then, it will make reasonable assumptions and propose tasks based on what it knows so far.",
+      },
+      {
+        heading: "AI Task Extraction (from Notes)",
+        paragraphs: [
+          "Open any note or capture and click 'Extract Tasks with AI'. Claude reads the note content and pulls out every action item — useful after meetings, brainstorming sessions, or any document where decisions and next steps are mixed with discussion.",
+        ],
+        list: [
+          "Each extracted task shows a confidence score so you can gauge extraction quality",
+          "Edit title, priority, due date, and entity links before creating",
+          "Duplicate prevention — the AI checks existing project tasks and skips items that are already there",
+          "Priority inference — urgency language like 'ASAP', 'critical', or 'blocking' results in higher priorities",
+          "Date detection — dates and deadlines mentioned in the text are captured as due dates",
+          "Entity linking — Claude suggests which products, initiatives, or stakeholders each task relates to; review and adjust in the dialog before creating",
+          "All created tasks are automatically linked back to the source note",
+        ],
+      },
+      {
+        heading: "AI Day Estimation (Today view)",
+        paragraphs: [
+          "In Today view, click 'Estimate My Day' in the header. Claude reviews every task due today and returns a realistic time estimate for each one, plus an overall Day Summary showing total estimated time, how many hours remain in your working day, and a completion likelihood percentage.",
+          "The Day Summary banner uses colour coding: green (≥70% likely to complete), amber (40–70%), and red (<40%). Collapse the banner to save space while keeping estimates visible on each row.",
+          "After estimates run, a refresh icon appears on each task row so you can re-estimate a single task — useful after editing a task's scope mid-day.",
+        ],
+        tip: "Estimates are generated fresh each time you click 'Estimate My Day'. Re-running replaces all previous estimates.",
+      },
+      {
+        heading: "Weekly Focus Summary (Week view)",
+        paragraphs: [
+          "In Week view, click 'Generate Focus'. Claude reads the AI memory of every entity in your workspace and synthesises a strategic briefing answering 'What should I focus on this week?'",
+          "The summary has three sections: This Week's Focus (a 3–5 sentence paragraph identifying the top 2–3 areas), Priority Actions (5–8 specific actionable bullets tied to entities), and Watch Closely (3–5 items to monitor that could escalate). Sections without meaningful content are omitted.",
+          "The summary persists in your browser session — navigating away and back does not clear it. Click 'Refresh Focus' to regenerate.",
+        ],
+        tip: "For best results, keep entity memories up to date. Open each entity's Memory tab and click Refresh before generating your weekly summary.",
+      },
+      {
+        heading: "Suggested This Week",
+        paragraphs: [
+          "When you generate a weekly focus, Claude also reviews all unscheduled tasks linked to workspace entities and surfaces the ones most relevant to this week's priorities. These appear in a 'Suggested This Week' panel in Week view.",
+          "Each suggestion shows the task title and project. Hover to reveal two actions: a calendar icon to schedule it for a specific day, and an × to dismiss it as not relevant. Scheduling a task moves it into the correct day group automatically.",
+        ],
+      },
+      {
+        heading: "Entity Memory Refresh",
+        paragraphs: [
+          "Every entity (product, initiative, or stakeholder) has a Memory tab. Click 'Generate Memory' (or 'Refresh') to have Claude synthesise everything known about that entity into a structured memory document.",
+          "Claude reads four sources: Foundational Context (permanent facts from the Overview tab), Journal entries (timestamped knowledge from the Journal tab), #Mentions (content from every note and capture that references this entity), and Linked Tasks (tasks connected to this entity including their status, priority, due date, and context entries).",
+          "The output is a structured document with seven possible sections: Needs Attention, Summary, Current State, Recent Decisions & Context, Open Work, Key Risks, and Week Ahead. Sections without meaningful content are omitted. The style adapts by entity type — products get a strategic briefing, initiatives get a progress report, and stakeholders get a relationship brief.",
+        ],
+        tip: "Memory is user-triggered, not automatic. Refresh when you've added new journal entries, linked new tasks, or written notes that mention this entity.",
+      },
+      {
+        heading: "Memory Guidance",
+        paragraphs: [
+          "On the Memory tab, there is a Memory Guidance field below the generated memory. Use it to write persistent corrections or instructions that override how Claude generates the memory — for example: 'Always list the top three blockers first' or 'Ignore mentions of the legacy API — that project is cancelled'.",
+          "Guidance is injected as a high-priority instruction every time the memory is refreshed, so corrections stick without needing to re-enter them.",
+        ],
+      },
+      {
+        heading: "Smart Refresh Detection",
+        paragraphs: [
+          "Ascend tracks a fingerprint of all the source material used in the last memory refresh. If nothing has changed since the last refresh, clicking Refresh returns an instant 'Already up to date' message instead of calling the AI again. Pass 'Force refresh' to bypass this and regenerate regardless.",
         ],
       },
     ],
@@ -580,68 +668,6 @@ const sections: WikiSection[] = [
       },
       {
         tip: "Click on a task name in the time report to jump directly to that task's details.",
-      },
-    ],
-  },
-  {
-    id: "ai-features",
-    icon: Brain,
-    title: "AI Features",
-    description:
-      "Leverage Claude AI to create tasks conversationally and extract them from notes.",
-    content: [
-      {
-        heading: "Create with AI (Beta)",
-        paragraphs: [
-          "Click 'Create with AI' in the left sidebar to open a full-screen chat interface powered by Claude AI. Describe what you want to work on in plain language — the AI figures out the rest.",
-        ],
-        list: [
-          "Simple tasks — Type 'Call dentist tomorrow' and the AI immediately proposes a structured task card ready to approve",
-          "Complex goals — Type 'Prepare for the quarterly review' and the AI asks one focused question at a time to understand what tasks are needed",
-          "Project context — If you're on a project page when you open the modal, tasks are automatically linked to that project",
-          "Editable cards — Before any task is created, you see editable cards where you can adjust the title, priority, and due date",
-          "Multiple tasks — The AI can propose several related tasks at once; select the ones you want and deselect the rest",
-          "Approval-gated — Nothing is saved until you click 'Create tasks'",
-        ],
-      },
-      {
-        tip: "The AI caps at 5 conversation turns. If you haven't reached a proposal by then, it will make reasonable assumptions and propose tasks based on what it knows so far.",
-      },
-      {
-        heading: "AI Task Extraction",
-        paragraphs: [
-          "Ascend integrates with Claude AI (Sonnet) to intelligently extract tasks from your notes. This is particularly useful after meetings or brainstorming sessions where action items are mixed with discussion notes.",
-        ],
-      },
-      {
-        heading: "How It Works",
-        list: [
-          "Open any note and click \"Extract Tasks with AI\"",
-          "The AI processes your note content, considering the project context and existing tasks",
-          "A review dialog appears showing each extracted task with its inferred priority and optional due date",
-          "Each task includes a confidence score (0-1) so you can gauge extraction quality",
-          "Edit, remove, or approve tasks before they're created",
-          "Approved tasks are bulk-created and automatically linked to the source note",
-        ],
-        image: {
-          src: "/wiki/ai-extraction.png",
-          alt: "AI task extraction review dialog showing extracted tasks with priorities and confidence scores",
-          caption: "The AI extraction review dialog with extracted tasks, confidence scores, priorities, and suggested due dates",
-        },
-      },
-      {
-        heading: "Smart Features",
-        list: [
-          "Source Attribution — Each task description includes an \"Original Content:\" section with the verbatim excerpt from your note that the task was derived from",
-          "Duplicate Prevention — The AI checks existing project tasks to avoid creating duplicates",
-          "Context Awareness — Considers the project name and description for better extraction",
-          "Priority Inference — Urgency language like \"ASAP\", \"critical\", or \"blocking\" results in higher priorities",
-          "Date Detection — Dates and deadlines mentioned in text are captured as due dates",
-          "Completed Item Filtering — Items described as already done are skipped",
-        ],
-      },
-      {
-        tip: "The AI extraction has a 15-second timeout and handles rate limiting gracefully. If the API is busy, you'll see a helpful message to try again.",
       },
     ],
   },
@@ -991,7 +1017,7 @@ const sections: WikiSection[] = [
         paragraphs: [
           "The Memory tab on each entity detail page lets you generate a synthesized knowledge document using AI. Click 'Generate Memory' (or 'Refresh' if memory already exists) to start the process.",
           "The AI reads four sources: (1) Foundational Context — permanent truths you wrote on the Overview tab, (2) Journal Entries — timestamped knowledge from the Journal tab, (3) Mentions — content from every note and capture that references this entity via #mention, and (4) Linked Tasks — tasks connected to this entity with their status, due dates, priority, and context entries.",
-          "The output uses a consistent structure across all entity types: Needs Attention (urgent/overdue items — only shown when relevant), Summary (what this entity is), Current State (detailed view of what's happening now), Recent Decisions & Context (from journal entries), Open Work (task progress narrative), and Key Risks (synthesized from all sources). Sections without content are omitted.",
+          "The output uses a consistent structure across all entity types: Needs Attention (urgent/overdue items — only shown when relevant), Summary (what this entity is), Current State (detailed view of what's happening now), Recent Decisions & Context (from journal entries), Open Work (task progress narrative), Key Risks (synthesized from all sources), and Week Ahead (time-sensitive actions for the next 7 days). Sections without content are omitted.",
           "The AI adapts its focus based on entity type: products get a strategic briefing, initiatives get a progress report, and stakeholders get a relationship brief. Completed tasks without context entries are automatically filtered out as routine noise, keeping the memory focused on what matters.",
         ],
       },
@@ -1056,10 +1082,12 @@ const sections: WikiSection[] = [
       {
         heading: "Available Shortcuts",
         list: [
-          "Cmd/Ctrl + K — Open global search or quick create task",
+          "Cmd/Ctrl + K — Open global search",
           "Cmd/Ctrl + P — Quick create project (from Dashboard)",
+          "Cmd/Ctrl + 7 — Quick create task in workspace view",
           "Cmd/Ctrl + / — Show keyboard shortcuts dialog",
           "? — Show keyboard shortcuts dialog (alternative)",
+          "Cmd/Ctrl + Enter — Save a context entry or note (in text fields)",
           "Escape — Close any open dialog or cancel current action",
         ],
       },
