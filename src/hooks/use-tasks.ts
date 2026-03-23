@@ -46,23 +46,42 @@ export const taskKeys = {
 async function fetchTasksForUser(userId: string): Promise<TaskWithProject[]> {
   const supabase = getClient();
 
-  // First get project IDs where user is creator or member
-  const memberResult = await withTimeout(
-    supabase.from("project_members").select("project_id").eq("user_id", userId),
+  // Get workspace IDs where user is a member
+  const wsMemberResult = await withTimeout(
+    supabase.from("workspace_members").select("workspace_id").eq("user_id", userId),
     TIMEOUTS.DATA_QUERY,
-    "Fetching member projects timed out"
+    "Fetching workspace memberships timed out"
   );
 
-  if (memberResult.error) {
-    logger.error("Error fetching member projects", {
+  if (wsMemberResult.error) {
+    logger.error("Error fetching workspace memberships", {
       userId,
-      error: memberResult.error
+      error: wsMemberResult.error
     });
   }
 
-  const memberProjectIds = memberResult.data?.map((m: { project_id: string }) => m.project_id) || [];
+  const workspaceIds = wsMemberResult.data?.map((m: { workspace_id: string }) => m.workspace_id) || [];
 
-  // Get projects created by user
+  // Get project IDs from those workspaces
+  let wsProjectIds: string[] = [];
+  if (workspaceIds.length > 0) {
+    const wsProjectsResult = await withTimeout(
+      supabase.from("projects").select("id").in("workspace_id", workspaceIds),
+      TIMEOUTS.DATA_QUERY,
+      "Fetching workspace projects timed out"
+    );
+
+    if (wsProjectsResult.error) {
+      logger.error("Error fetching workspace projects", {
+        userId,
+        error: wsProjectsResult.error
+      });
+    }
+
+    wsProjectIds = wsProjectsResult.data?.map((p: { id: string }) => p.id) || [];
+  }
+
+  // Also get projects created by user (may not be in a workspace)
   const ownedResult = await withTimeout(
     supabase.from("projects").select("id").eq("created_by", userId),
     TIMEOUTS.DATA_QUERY,
@@ -80,7 +99,7 @@ async function fetchTasksForUser(userId: string): Promise<TaskWithProject[]> {
 
   // Combine all project IDs user has access to
   const accessibleProjectIds = [
-    ...new Set([...memberProjectIds, ...ownedProjectIds]),
+    ...new Set([...wsProjectIds, ...ownedProjectIds]),
   ];
 
   // Build the query

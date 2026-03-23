@@ -4,8 +4,9 @@
  * Project Assignees Hook
  *
  * Returns the list of profiles that can be assigned to tasks in a project.
- * - If no project is selected, returns only the current user
- * - If a project is selected, returns the current user plus all project members
+ * - If no project is selected and no workspaceId given, returns only the current user
+ * - If a project is selected, returns all workspace members (via project's workspace_id)
+ * - If workspaceId is given directly, returns all workspace members
  */
 
 import { useCallback, useEffect, useState, useMemo } from "react";
@@ -15,52 +16,80 @@ import { useAuth } from "@/hooks/use-auth";
 import type { Profile } from "@/types/database";
 
 /**
- * Hook to get assignable profiles for a project
+ * Hook to get assignable profiles for a project (via workspace membership)
  * @param projectId - The project ID, or null for no project
  * @param allProfiles - All profiles from useProfiles() for fallback
+ * @param workspaceId - Optional workspace ID (used when projectId is null)
  * @returns Filtered list of profiles that can be assigned
  */
-export function useProjectAssignees(projectId: string | null, allProfiles: Profile[]) {
+export function useProjectAssignees(projectId: string | null, allProfiles: Profile[], workspaceId?: string | null) {
   const { user } = useAuth();
-  const [projectMemberIds, setProjectMemberIds] = useState<Set<string>>(new Set());
+  const [memberIds, setMemberIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
 
   const supabase = createClient();
 
-  const fetchProjectMembers = useCallback(async () => {
-    if (!projectId) {
-      setProjectMemberIds(new Set());
+  const fetchWorkspaceMembers = useCallback(async () => {
+    if (!projectId && !workspaceId) {
+      setMemberIds(new Set());
       return;
     }
 
     try {
       setLoading(true);
 
-      // Fetch all member user IDs for this project
-      const { data, error } = await supabase
-        .from("project_members")
-        .select("user_id")
-        .eq("project_id", projectId);
+      let wsId = workspaceId;
 
-      if (error) {
-        logger.error("Error fetching project members", {
-          projectId,
-          error
-        });
-        setProjectMemberIds(new Set());
+      // If we have a projectId but no workspaceId, look it up from the project
+      if (projectId && !wsId) {
+        const { data: project, error: projectError } = await supabase
+          .from("projects")
+          .select("workspace_id")
+          .eq("id", projectId)
+          .single();
+
+        if (projectError || !project?.workspace_id) {
+          logger.error("Error fetching project workspace_id", {
+            projectId,
+            error: projectError
+          });
+          setMemberIds(new Set());
+          return;
+        }
+        wsId = project.workspace_id;
+      }
+
+      if (!wsId) {
+        setMemberIds(new Set());
         return;
       }
 
-      const memberIds = new Set<string>(data?.map((m) => m.user_id) || []);
-      setProjectMemberIds(memberIds);
+      // Fetch all workspace member user IDs
+      const { data, error } = await supabase
+        .from("workspace_members")
+        .select("user_id")
+        .eq("workspace_id", wsId);
+
+      if (error) {
+        logger.error("Error fetching workspace members for assignees", {
+          workspaceId: wsId,
+          projectId,
+          error
+        });
+        setMemberIds(new Set());
+        return;
+      }
+
+      const ids = new Set<string>(data?.map((m) => m.user_id) || []);
+      setMemberIds(ids);
     } finally {
       setLoading(false);
     }
-  }, [supabase, projectId]);
+  }, [supabase, projectId, workspaceId]);
 
   useEffect(() => {
-    fetchProjectMembers();
-  }, [fetchProjectMembers]);
+    fetchWorkspaceMembers();
+  }, [fetchWorkspaceMembers]);
 
   // Compute assignable profiles
   const assignableProfiles = useMemo(() => {
@@ -72,10 +101,10 @@ export function useProjectAssignees(projectId: string | null, allProfiles: Profi
       return currentUserProfile ? [currentUserProfile] : [];
     }
 
-    // If project selected, return current user + all project members
-    // Filter profiles to only include project members
+    // If project selected, return current user + all workspace members
+    // Filter profiles to only include workspace members
     const filteredProfiles = allProfiles.filter(
-      (p) => p.id === user.id || projectMemberIds.has(p.id)
+      (p) => p.id === user.id || memberIds.has(p.id)
     );
 
     // Sort by display name, but put current user first
@@ -86,7 +115,7 @@ export function useProjectAssignees(projectId: string | null, allProfiles: Profi
       const nameB = b.display_name || b.email || "";
       return nameA.localeCompare(nameB);
     });
-  }, [user, projectId, allProfiles, projectMemberIds]);
+  }, [user, projectId, allProfiles, memberIds]);
 
   // Check if a specific user can be assigned (useful for validation)
   const canAssign = useCallback(
@@ -99,16 +128,16 @@ export function useProjectAssignees(projectId: string | null, allProfiles: Profi
 
   // Check if project has shared members (more than just the current user)
   const hasSharedMembers = useMemo(() => {
-    if (!user || !projectId) return false;
-    return projectMemberIds.size > 1 || (projectMemberIds.size === 1 && !projectMemberIds.has(user.id));
-  }, [user, projectId, projectMemberIds]);
+    if (!user || (!projectId && !workspaceId)) return false;
+    return memberIds.size > 1 || (memberIds.size === 1 && !memberIds.has(user.id));
+  }, [user, projectId, workspaceId, memberIds]);
 
   return {
     assignableProfiles,
     loading,
     canAssign,
     hasSharedMembers,
-    refetch: fetchProjectMembers,
+    refetch: fetchWorkspaceMembers,
   };
 }
 

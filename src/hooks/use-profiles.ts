@@ -28,33 +28,23 @@ export const profileKeys = {
 };
 
 /**
- * Fetch profiles of users who are members of the current user's projects
+ * Fetch profiles of users who are members of the current user's workspaces
  * This is scalable - only fetches relevant profiles, not the entire user base
  */
 async function fetchTeamProfiles(userId: string): Promise<Profile[]> {
   const supabase = getClient();
 
-  // Step 1: Get all project IDs the current user has access to
-  // (projects they own + projects they're a member of)
-  const ownedProjectsResult = await withTimeout(
-    supabase.from("projects").select("id").eq("created_by", userId),
+  // Step 1: Get all workspace IDs the current user is a member of
+  const wsMembershipsResult = await withTimeout(
+    supabase.from("workspace_members").select("workspace_id").eq("user_id", userId),
     TIMEOUTS.DATA_QUERY,
-    "Fetching owned projects timed out"
+    "Fetching workspace memberships timed out"
   );
 
-  const memberProjectsResult = await withTimeout(
-    supabase.from("project_members").select("project_id").eq("user_id", userId),
-    TIMEOUTS.DATA_QUERY,
-    "Fetching member projects timed out"
-  );
+  const workspaceIds = wsMembershipsResult.data?.map((m: { workspace_id: string }) => m.workspace_id) || [];
 
-  const ownedProjectIds = ownedProjectsResult.data?.map((p: { id: string }) => p.id) || [];
-  const memberProjectIds = memberProjectsResult.data?.map((m: { project_id: string }) => m.project_id) || [];
-
-  const allProjectIds = [...new Set([...ownedProjectIds, ...memberProjectIds])];
-
-  if (allProjectIds.length === 0) {
-    // User has no projects - just return their own profile
+  if (workspaceIds.length === 0) {
+    // User has no workspaces - just return their own profile
     const selfResult = await withTimeout(
       supabase.from("profiles").select("*").eq("id", userId).single(),
       TIMEOUTS.DATA_QUERY,
@@ -63,31 +53,20 @@ async function fetchTeamProfiles(userId: string): Promise<Profile[]> {
     return selfResult.data ? [selfResult.data as Profile] : [];
   }
 
-  // Step 2: Get all user IDs who are members of these projects
-  const projectMembersResult = await withTimeout(
+  // Step 2: Get all user IDs who are members of these workspaces
+  const wsMembersResult = await withTimeout(
     supabase
-      .from("project_members")
+      .from("workspace_members")
       .select("user_id")
-      .in("project_id", allProjectIds),
+      .in("workspace_id", workspaceIds),
     TIMEOUTS.DATA_QUERY,
-    "Fetching project members timed out"
+    "Fetching workspace members timed out"
   );
 
-  // Also include project creators
-  const projectCreatorsResult = await withTimeout(
-    supabase
-      .from("projects")
-      .select("created_by")
-      .in("id", allProjectIds),
-    TIMEOUTS.DATA_QUERY,
-    "Fetching project creators timed out"
-  );
-
-  const memberUserIds = projectMembersResult.data?.map((m: { user_id: string }) => m.user_id) || [];
-  const creatorUserIds = projectCreatorsResult.data?.map((p: { created_by: string }) => p.created_by) || [];
+  const memberUserIds = wsMembersResult.data?.map((m: { user_id: string }) => m.user_id) || [];
 
   // Combine and dedupe, always include current user
-  const allUserIds = [...new Set([userId, ...memberUserIds, ...creatorUserIds])];
+  const allUserIds = [...new Set([userId, ...memberUserIds])];
 
   // Step 3: Fetch profiles for these users only
   const profilesResult = await withTimeout(
@@ -104,7 +83,7 @@ async function fetchTeamProfiles(userId: string): Promise<Profile[]> {
     logger.error("Error fetching team profiles", {
       userId,
       userIdCount: allUserIds.length,
-      projectCount: allProjectIds.length,
+      workspaceCount: workspaceIds.length,
       error: profilesResult.error
     });
     throw profilesResult.error;
@@ -134,10 +113,10 @@ async function fetchProfileById(profileId: string): Promise<Profile> {
 }
 
 /**
- * Hook to fetch profiles of team members (users in your projects)
+ * Hook to fetch profiles of team members (users in your workspaces)
  *
  * This is scalable - only fetches profiles of users who are members
- * of projects you have access to, not the entire user database.
+ * of workspaces you belong to, not the entire user database.
  */
 export function useProfiles() {
   const { user } = useAuth();

@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Loader2, Send } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { useProjectMembers } from "@/hooks/use-project-members";
+import { useWorkspaceMembers } from "@/hooks/use-workspace-members";
+import { getClient } from "@/lib/supabase/client-manager";
 import { getInitials } from "@/lib/profile-utils";
 import { cn } from "@/lib/utils";
 import type { CommentInsert, Profile } from "@/types";
@@ -21,6 +22,8 @@ interface CommentFormProps {
   projectId?: string | null;
   /** Project ID used to look up members for @mentions. Separate from projectId (which is the comment's parent). */
   mentionProjectId?: string | null;
+  /** Workspace ID for @mention member lookup. Takes precedence over mentionProjectId. */
+  workspaceId?: string | null;
   onSubmit: (input: CommentInsert, mentions: MentionedUser[]) => Promise<void>;
   isSubmitting?: boolean;
 }
@@ -29,6 +32,7 @@ export function CommentForm({
   taskId,
   projectId,
   mentionProjectId,
+  workspaceId,
   onSubmit,
   isSubmitting = false,
 }: CommentFormProps) {
@@ -44,8 +48,31 @@ export function CommentForm({
   const [selectedMentionIndex, setSelectedMentionIndex] = useState(0);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Fetch project members for mentions
-  const { members } = useProjectMembers(mentionProjectId ?? null);
+  // Resolve workspace ID from project when not provided directly
+  const [resolvedWorkspaceId, setResolvedWorkspaceId] = useState<string | null>(workspaceId ?? null);
+  useEffect(() => {
+    if (workspaceId) {
+      setResolvedWorkspaceId(workspaceId);
+      return;
+    }
+    if (!mentionProjectId) {
+      setResolvedWorkspaceId(null);
+      return;
+    }
+    // Look up workspace_id from the project
+    const supabase = getClient();
+    supabase
+      .from("projects")
+      .select("workspace_id")
+      .eq("id", mentionProjectId)
+      .single()
+      .then(({ data }: { data: { workspace_id: string } | null }) => {
+        setResolvedWorkspaceId(data?.workspace_id ?? null);
+      });
+  }, [workspaceId, mentionProjectId]);
+
+  // Fetch workspace members for mentions
+  const { members } = useWorkspaceMembers(resolvedWorkspaceId);
 
   // Filter members based on mention query (exclude self)
   const filteredMembers = members.filter((member) => {
@@ -117,8 +144,8 @@ export function CommentForm({
     const cursorPos = e.target.selectionStart;
     setContent(value);
 
-    // Only enable mentions if we have a project context with members
-    if (!mentionProjectId || members.length === 0) return;
+    // Only enable mentions if we have a workspace/project context with members
+    if ((!mentionProjectId && !workspaceId) || members.length === 0) return;
 
     // Look backwards from cursor for an @ that starts a mention
     const textBeforeCursor = value.slice(0, cursorPos);
@@ -158,7 +185,7 @@ export function CommentForm({
     setMentions([]);
   };
 
-  const hasMentionSupport = !!mentionProjectId && members.length > 1;
+  const hasMentionSupport = !!(mentionProjectId || workspaceId) && members.length > 1;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
