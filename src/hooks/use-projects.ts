@@ -254,7 +254,7 @@ export function useProjectMutations() {
 
         const project = data as Project;
 
-        // Also add the creator as an owner member
+        // Add the creator as an owner member
         await withTimeout(
           supabase.from("project_members").insert({
             project_id: project.id,
@@ -265,6 +265,27 @@ export function useProjectMutations() {
           }),
           TIMEOUTS.MUTATION
         );
+
+        // Add all other workspace members to this project
+        if (validated.workspace_id) {
+          const { data: wsMembers } = await supabase
+            .from("workspace_members")
+            .select("user_id")
+            .eq("workspace_id", validated.workspace_id)
+            .neq("user_id", user.id);
+
+          if (wsMembers && wsMembers.length > 0) {
+            const memberRows = wsMembers.map((wm) => ({
+              project_id: project.id,
+              user_id: wm.user_id,
+              role: "member" as const,
+              invited_by: user.id,
+              accepted_at: new Date().toISOString(),
+            }));
+
+            await supabase.from("project_members").insert(memberRows);
+          }
+        }
 
         // Invalidate projects list to refetch
         queryClient.invalidateQueries({ queryKey: projectKeys.lists() });

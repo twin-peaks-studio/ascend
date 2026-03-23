@@ -152,7 +152,7 @@ export function useWorkspaceMemberMutations() {
           };
         }
 
-        // Add as member
+        // Add as workspace member
         const { error: insertError } = await supabase
           .from("workspace_members")
           .insert({
@@ -163,6 +163,34 @@ export function useWorkspaceMemberMutations() {
           });
 
         if (insertError) throw insertError;
+
+        // Also add them to all existing projects in this workspace
+        const { data: workspaceProjects } = await supabase
+          .from("projects")
+          .select("id")
+          .eq("workspace_id", workspaceId);
+
+        if (workspaceProjects && workspaceProjects.length > 0) {
+          const projectMemberRows = workspaceProjects.map((p) => ({
+            project_id: p.id,
+            user_id: profile.id,
+            role: "member" as const,
+            invited_by: user.id,
+            accepted_at: new Date().toISOString(),
+          }));
+
+          const { error: pmError } = await supabase
+            .from("project_members")
+            .insert(projectMemberRows);
+
+          if (pmError) {
+            logger.error("Error syncing project members for workspace invite", {
+              workspaceId,
+              userId: profile.id,
+              error: pmError,
+            });
+          }
+        }
 
         queryClient.invalidateQueries({
           queryKey: workspaceMemberKeys.list(workspaceId),
@@ -199,12 +227,36 @@ export function useWorkspaceMemberMutations() {
         setLoading(true);
         const supabase = getClient();
 
+        // Look up the user_id before deleting the workspace member row
+        const { data: memberRow } = await supabase
+          .from("workspace_members")
+          .select("user_id")
+          .eq("id", memberId)
+          .single();
+
         const { error } = await supabase
           .from("workspace_members")
           .delete()
           .eq("id", memberId);
 
         if (error) throw error;
+
+        // Also remove them from all projects in this workspace
+        if (memberRow) {
+          const { data: workspaceProjects } = await supabase
+            .from("projects")
+            .select("id")
+            .eq("workspace_id", workspaceId);
+
+          if (workspaceProjects && workspaceProjects.length > 0) {
+            const projectIds = workspaceProjects.map((p) => p.id);
+            await supabase
+              .from("project_members")
+              .delete()
+              .eq("user_id", memberRow.user_id)
+              .in("project_id", projectIds);
+          }
+        }
 
         queryClient.invalidateQueries({
           queryKey: workspaceMemberKeys.list(workspaceId),
