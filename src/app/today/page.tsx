@@ -44,7 +44,7 @@ export default function TodayPage() {
   const [viewMode, setViewMode] = useState<ViewMode>("today");
 
   const { groups: todayGroups, totalCount: todayCount, overdueCount: todayOverdueCount, loading: todayLoading } = useTodayTasks();
-  const { groups: weekGroups, totalCount: weekCount, overdueCount: weekOverdueCount, loading: weekLoading } = useWeekTasks();
+  const { dayGroups: weekDayGroups, totalCount: weekCount, overdueCount: weekOverdueCount, loading: weekLoading } = useWeekTasks();
 
   const { updateTask, createTask, loading: mutationLoading } = useTaskMutations();
   const { projects } = useProjects();
@@ -95,24 +95,29 @@ export default function TodayPage() {
       .filter((g) => g.tasks.length > 0);
   }, [todayGroups, workspaceProjectIds]);
 
-  const filteredWeekGroups = useMemo(() => {
-    if (!workspaceProjectIds) return weekGroups;
-    return weekGroups
-      .filter((g) => g.projectId && workspaceProjectIds.has(g.projectId))
-      .map((g) => ({ ...g, tasks: g.tasks.filter((t) => t.project_id && workspaceProjectIds.has(t.project_id)) }))
-      .filter((g) => g.tasks.length > 0);
-  }, [weekGroups, workspaceProjectIds]);
+  const filteredWeekDayGroups = useMemo(() => {
+    if (!workspaceProjectIds) return weekDayGroups;
+    return weekDayGroups
+      .map((dayGroup) => {
+        const filteredProjectGroups = dayGroup.projectGroups
+          .filter((pg) => pg.projectId === null || workspaceProjectIds.has(pg.projectId))
+          .map((pg) => ({ ...pg, tasks: pg.tasks.filter((t) => !t.project_id || workspaceProjectIds.has(t.project_id)) }))
+          .filter((pg) => pg.tasks.length > 0);
+        const totalCount = filteredProjectGroups.reduce((s, pg) => s + pg.tasks.length, 0);
+        return { ...dayGroup, projectGroups: filteredProjectGroups, totalCount };
+      })
+      .filter((dayGroup) => dayGroup.totalCount > 0);
+  }, [weekDayGroups, workspaceProjectIds]);
 
-  const activeGroups = viewMode === "today" ? filteredTodayGroups : filteredWeekGroups;
   const activeTotalCount = viewMode === "today"
     ? filteredTodayGroups.flatMap((g) => g.tasks).length
-    : filteredWeekGroups.flatMap((g) => g.tasks).length;
+    : filteredWeekDayGroups.reduce((s, dg) => s + dg.totalCount, 0);
   const activeOverdueCount = viewMode === "today"
     ? filteredTodayGroups.flatMap((g) => g.tasks).filter((t) => t.status !== "done" && t.due_date && isOverdue(t.due_date)).length
-    : filteredWeekGroups.flatMap((g) => g.tasks).filter((t) => t.status !== "done" && t.due_date && isOverdue(t.due_date)).length;
+    : filteredWeekDayGroups.find((dg) => dg.isOverdue)?.totalCount ?? 0;
   const loading = viewMode === "today" ? todayLoading : weekLoading;
 
-  const allActiveTasks = activeGroups.flatMap((g) => g.tasks);
+  const allTodayTasks = filteredTodayGroups.flatMap((g) => g.tasks);
 
   const handleStatusToggle = useCallback(
     async (task: TaskWithProject) => {
@@ -231,7 +236,7 @@ export default function TodayPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => estimateAll(allActiveTasks)}
+                  onClick={() => estimateAll(allTodayTasks)}
                   disabled={estimating}
                   className="gap-2"
                 >
@@ -292,29 +297,21 @@ export default function TodayPage() {
             </div>
           )}
 
-          {/* Task groups */}
-          {!loading &&
-            activeGroups.map((group) => (
+          {/* Today view — grouped by project */}
+          {!loading && viewMode === "today" &&
+            filteredTodayGroups.map((group) => (
               <div key={group.projectId ?? "__no_project__"} className="mb-6">
-                {/* Group header */}
                 <div className="flex items-center gap-2 mb-2 px-1">
                   {group.projectColor ? (
-                    <span
-                      className="h-2.5 w-2.5 rounded-full shrink-0"
-                      style={{ backgroundColor: group.projectColor }}
-                    />
+                    <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: group.projectColor }} />
                   ) : (
                     <span className="h-2.5 w-2.5 rounded-full bg-muted-foreground/40 shrink-0" />
                   )}
                   <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
                     {group.projectName}
                   </span>
-                  <span className="text-xs text-muted-foreground">
-                    {group.tasks.length}
-                  </span>
+                  <span className="text-xs text-muted-foreground">{group.tasks.length}</span>
                 </div>
-
-                {/* Task list */}
                 <div className="rounded-lg border bg-card">
                   {group.tasks.map((task) => (
                     <TodayTaskRow
@@ -326,8 +323,72 @@ export default function TodayPage() {
                       onReschedule={(date) => handleReschedule(task, date)}
                       onTaskClick={handleTaskClick}
                       onReestimate={() => estimateOne(task)}
-                      showReestimate={hasEstimates && viewMode === "today"}
+                      showReestimate={hasEstimates}
                     />
+                  ))}
+                </div>
+              </div>
+            ))}
+
+          {/* Week view — grouped by day, then by project within each day */}
+          {!loading && viewMode === "week" &&
+            filteredWeekDayGroups.map((dayGroup) => (
+              <div key={dayGroup.dateKey} className="mb-8">
+                {/* Day header */}
+                <div className="flex items-center gap-2 mb-3">
+                  <h2
+                    className={cn(
+                      "text-sm font-semibold",
+                      dayGroup.isOverdue
+                        ? "text-red-600 dark:text-red-400"
+                        : dayGroup.isToday
+                        ? "text-primary"
+                        : "text-foreground"
+                    )}
+                  >
+                    {dayGroup.label}
+                  </h2>
+                  <span className="text-xs text-muted-foreground">{dayGroup.totalCount}</span>
+                  {dayGroup.isToday && (
+                    <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
+                      Today
+                    </span>
+                  )}
+                </div>
+
+                {/* Project subgroups */}
+                <div className="space-y-3">
+                  {dayGroup.projectGroups.map((pg) => (
+                    <div key={pg.projectId ?? "__no_project__"}>
+                      {/* Project label — only show if there's more than one project group */}
+                      {dayGroup.projectGroups.length > 1 && (
+                        <div className="flex items-center gap-2 mb-1.5 px-1">
+                          {pg.projectColor ? (
+                            <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: pg.projectColor }} />
+                          ) : (
+                            <span className="h-2 w-2 rounded-full bg-muted-foreground/40 shrink-0" />
+                          )}
+                          <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
+                            {pg.projectName}
+                          </span>
+                        </div>
+                      )}
+                      <div className="rounded-lg border bg-card">
+                        {pg.tasks.map((task) => (
+                          <TodayTaskRow
+                            key={task.id}
+                            task={task}
+                            estimate={undefined}
+                            isEstimating={false}
+                            onStatusToggle={handleStatusToggle}
+                            onReschedule={(date) => handleReschedule(task, date)}
+                            onTaskClick={handleTaskClick}
+                            onReestimate={() => {}}
+                            showReestimate={false}
+                          />
+                        ))}
+                      </div>
+                    </div>
                   ))}
                 </div>
               </div>
