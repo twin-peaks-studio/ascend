@@ -6,6 +6,9 @@
  * Reads existing ai_memory from all entities in a workspace and synthesizes
  * a weekly focus summary answering: "What should I focus on this week?"
  *
+ * Also surfaces unscheduled tasks that are tagged to entities in the workspace
+ * and likely relevant to this week's priorities.
+ *
  * Does NOT trigger new memory refreshes — relies on previously generated ai_memory.
  */
 
@@ -26,10 +29,19 @@ interface WeeklySummaryRequest {
   workspaceId: string;
 }
 
+export interface SuggestedTask {
+  id: string;
+  title: string;
+  projectId: string | null;
+  projectName: string | null;
+  projectColor: string | null;
+}
+
 interface WeeklySummarySuccessResponse {
   success: true;
   summary: string;
   entityCount: number;
+  suggestions: SuggestedTask[];
 }
 
 interface WeeklySummaryErrorResponse {
@@ -63,10 +75,30 @@ Rules:
 - Do NOT repeat information across sections.
 - Do NOT invent information — only synthesize from the provided entity memories.
 - If entity memories are stale or empty, acknowledge this briefly in the focus paragraph.
-- Keep the entire output under 400 words.`;
+- Keep the summary sections under 400 words.
+
+After your summary, you will also receive a list of UNSCHEDULED TASKS — tasks with no due date that are linked to entities in this workspace. Review them against the entity memories and this week's priorities. On the very last line of your response, output exactly:
+
+SUGGESTED_TASKS: id1,id2,id3
+
+Where the IDs are the task IDs you consider relevant to this week's priorities. If no tasks are relevant, output:
+
+SUGGESTED_TASKS: none
+
+This line must always be present and must always be the last line.`;
+
+interface CandidateTask {
+  id: string;
+  title: string;
+  description: string | null;
+  project_id: string | null;
+  entityNames: string[];
+}
 
 function buildUserPrompt(
-  entities: Array<{ name: string; entity_type: string; ai_memory: string | null; memory_refreshed_at: string | null }>
+  entities: Array<{ name: string; entity_type: string; ai_memory: string | null; memory_refreshed_at: string | null }>,
+  candidateTasks: CandidateTask[],
+  projectNameById: Map<string, string>
 ): string {
   const parts: string[] = [];
 
@@ -98,7 +130,41 @@ function buildUserPrompt(
     }
   }
 
+  if (candidateTasks.length > 0) {
+    const taskLines = candidateTasks.map((t) => {
+      const projectName = t.project_id ? (projectNameById.get(t.project_id) ?? "Unknown Project") : "No Project";
+      const entityList = t.entityNames.length > 0 ? t.entityNames.join(", ") : "none";
+      const desc = t.description ? ` — ${t.description.slice(0, 120).replace(/\n/g, " ")}` : "";
+      return `[${t.id}] "${t.title}"${desc} (project: ${projectName}, entities: ${entityList})`;
+    });
+    parts.push(`=== UNSCHEDULED TASKS (${candidateTasks.length}) ===\n${taskLines.join("\n")}`);
+  } else {
+    parts.push(`=== UNSCHEDULED TASKS ===\nNone found.`);
+  }
+
   return parts.join("\n\n");
+}
+
+/**
+ * Parse Claude's response into summary text and suggested task IDs.
+ * Claude is instructed to always end with a "SUGGESTED_TASKS: ..." line.
+ */
+function parseResponse(text: string): { summary: string; suggestedTaskIds: string[] } {
+  const lines = text.split("\n");
+  const lastLine = lines[lines.length - 1].trim();
+
+  if (lastLine.startsWith("SUGGESTED_TASKS:")) {
+    const raw = lastLine.replace("SUGGESTED_TASKS:", "").trim();
+    const summary = lines.slice(0, lines.length - 1).join("\n").trim();
+    const suggestedTaskIds =
+      raw === "none" || raw === ""
+        ? []
+        : raw.split(",").map((s) => s.trim()).filter(Boolean);
+    return { summary, suggestedTaskIds };
+  }
+
+  // Fallback: Claude didn't append the line — return full text as summary, no suggestions
+  return { summary: text.trim(), suggestedTaskIds: [] };
 }
 
 export async function POST(
@@ -136,7 +202,7 @@ export async function POST(
       );
     }
 
-    // 4. Verify user has access to this workspace
+    // 4. Verify workspace access
     const { data: membership } = await supabase
       .from("workspace_members")
       .select("workspace_id")
@@ -184,7 +250,81 @@ export async function POST(
       );
     }
 
-    // 6. Check API key
+    // 6. Fetch unscheduled tasks linked to entities in this workspace
+    const entityIds = entities.map((e: { id: string }) => e.id);
+
+    const { data: taskEntityLinks } = await supabase
+      .from("task_entities")
+      .select("task_id, entity_id")
+      .in("entity_id", entityIds);
+
+    let candidateTasks: CandidateTask[] = [];
+    const projectNameById = new Map<string, string>();
+    const projectColorById = new Map<string, string>();
+
+    if (taskEntityLinks && taskEntityLinks.length > 0) {
+      // Unique task IDs
+      const candidateTaskIds = [...new Set(
+        (taskEntityLinks as Array<{ task_id: string; entity_id: string }>).map((te) => te.task_id)
+      )];
+
+      // Fetch unscheduled, non-done tasks
+      const { data: rawTasks } = await supabase
+        .from("tasks")
+        .select("id, title, description, project_id")
+        .in("id", candidateTaskIds)
+        .is("due_date", null)
+        .neq("status", "done");
+
+      if (rawTasks && rawTasks.length > 0) {
+        // Build task → entity names map
+        const entityNameById = new Map(
+          (entities as Array<{ id: string; name: string }>).map((e) => [e.id, e.name])
+        );
+        const taskToEntityNames = new Map<string, string[]>();
+        for (const te of taskEntityLinks as Array<{ task_id: string; entity_id: string }>) {
+          const entityName = entityNameById.get(te.entity_id);
+          if (entityName) {
+            const existing = taskToEntityNames.get(te.task_id) ?? [];
+            if (!existing.includes(entityName)) existing.push(entityName);
+            taskToEntityNames.set(te.task_id, existing);
+          }
+        }
+
+        // Fetch project info for these tasks
+        const projectIds = [
+          ...new Set(
+            (rawTasks as Array<{ project_id: string | null }>)
+              .map((t) => t.project_id)
+              .filter(Boolean) as string[]
+          ),
+        ];
+
+        if (projectIds.length > 0) {
+          const { data: projects } = await supabase
+            .from("projects")
+            .select("id, title, color")
+            .in("id", projectIds);
+
+          if (projects) {
+            for (const p of projects as Array<{ id: string; title: string; color: string | null }>) {
+              projectNameById.set(p.id, p.title);
+              if (p.color) projectColorById.set(p.id, p.color);
+            }
+          }
+        }
+
+        candidateTasks = (rawTasks as Array<{ id: string; title: string; description: string | null; project_id: string | null }>).map((t) => ({
+          id: t.id,
+          title: t.title,
+          description: t.description,
+          project_id: t.project_id,
+          entityNames: taskToEntityNames.get(t.id) ?? [],
+        }));
+      }
+    }
+
+    // 7. Check API key
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) {
       return NextResponse.json(
@@ -193,8 +333,8 @@ export async function POST(
       );
     }
 
-    // 7. Call Claude
-    const userPrompt = buildUserPrompt(entities);
+    // 8. Call Claude
+    const userPrompt = buildUserPrompt(entities, candidateTasks, projectNameById);
 
     const aiResponse = await withTimeoutAndAbort(
       async (signal) => {
@@ -207,7 +347,7 @@ export async function POST(
           },
           body: JSON.stringify({
             model: CLAUDE_MODEL,
-            max_tokens: 1024,
+            max_tokens: 1536,
             system: SYSTEM_PROMPT,
             messages: [{ role: "user", content: userPrompt }],
           }),
@@ -243,17 +383,38 @@ export async function POST(
       );
     }
 
+    // 9. Parse summary + suggested task IDs
+    const { summary, suggestedTaskIds } = parseResponse(contentBlock.text);
+
+    // 10. Enrich suggested task IDs with full task details for the client
+    const suggestions: SuggestedTask[] = suggestedTaskIds
+      .map((id) => {
+        const task = candidateTasks.find((t) => t.id === id);
+        if (!task) return null;
+        return {
+          id: task.id,
+          title: task.title,
+          projectId: task.project_id,
+          projectName: task.project_id ? (projectNameById.get(task.project_id) ?? null) : null,
+          projectColor: task.project_id ? (projectColorById.get(task.project_id) ?? null) : null,
+        };
+      })
+      .filter((s): s is SuggestedTask => s !== null);
+
     logger.info("Weekly summary generated", {
       feature: "ai-weekly-summary",
       workspaceId,
       entityCount: entities.length,
+      candidateTaskCount: candidateTasks.length,
+      suggestionCount: suggestions.length,
       userId: user.id,
     });
 
     return NextResponse.json({
       success: true,
-      summary: contentBlock.text.trim(),
+      summary,
       entityCount: entities.length,
+      suggestions,
     });
   } catch (error) {
     logger.error("Weekly summary error", { feature: "ai-weekly-summary", error });

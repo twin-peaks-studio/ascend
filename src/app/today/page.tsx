@@ -12,6 +12,7 @@ import {
   Rocket,
   User,
   Brain,
+  X,
 } from "lucide-react";
 import { ENTITY_TYPE_COLORS } from "@/lib/utils/entity-colors";
 import { useRouter } from "next/navigation";
@@ -22,7 +23,7 @@ import { useTodayTasks } from "@/hooks/use-today-tasks";
 import { useWeekTasks } from "@/hooks/use-week-tasks";
 import { useTaskMutations } from "@/hooks/use-tasks";
 import { useTaskEstimation, formatEstimate } from "@/hooks/use-task-estimation";
-import { useWeeklySummary } from "@/hooks/use-weekly-summary";
+import { useWeeklySummary, type SuggestedTask } from "@/hooks/use-weekly-summary";
 import { QuickAddTask } from "@/components/task";
 import { ReschedulePopover } from "@/components/today/reschedule-popover";
 import { DaySummaryBanner } from "@/components/today/day-summary-banner";
@@ -82,6 +83,24 @@ export default function TodayPage() {
   } = useTaskEstimation();
 
   const { summary: weeklySummary, isLoading: summaryLoading, error: summaryError, generate: generateSummary } = useWeeklySummary();
+  const [dismissedSuggestionIds, setDismissedSuggestionIds] = useState<Set<string>>(new Set());
+
+  const handleDismissSuggestion = useCallback((id: string) => {
+    setDismissedSuggestionIds((prev) => new Set(prev).add(id));
+  }, []);
+
+  const handleScheduleSuggestion = useCallback(
+    async (task: SuggestedTask, newDate: Date) => {
+      await updateTask(task.id, { due_date: newDate.toISOString() });
+      setDismissedSuggestionIds((prev) => new Set(prev).add(task.id));
+    },
+    [updateTask]
+  );
+
+  const visibleSuggestions = useMemo(() => {
+    if (!weeklySummary?.suggestions) return [];
+    return weeklySummary.suggestions.filter((s) => !dismissedSuggestionIds.has(s.id));
+  }, [weeklySummary, dismissedSuggestionIds]);
 
   // Derive workspace for weekly summary (default to active workspace)
   const effectiveSummaryWorkspaceId = summaryWorkspaceId || activeWorkspace?.id || workspaces[0]?.id || "";
@@ -302,6 +321,29 @@ export default function TodayPage() {
                   ? "No tasks due today. Enjoy your day!"
                   : "No tasks scheduled for this week."}
               </p>
+            </div>
+          )}
+
+          {/* Suggested tasks (week view, when focus generated) */}
+          {!loading && viewMode === "week" && visibleSuggestions.length > 0 && (
+            <div className="mb-8">
+              <div className="flex items-center gap-2 mb-3">
+                <h2 className="text-sm font-semibold text-amber-600 dark:text-amber-400">
+                  Suggested This Week
+                </h2>
+                <span className="text-xs text-muted-foreground">{visibleSuggestions.length}</span>
+              </div>
+              <div className="rounded-lg border bg-card">
+                {visibleSuggestions.map((suggestion) => (
+                  <SuggestionRow
+                    key={suggestion.id}
+                    suggestion={suggestion}
+                    onSchedule={(date) => handleScheduleSuggestion(suggestion, date)}
+                    onDismiss={() => handleDismissSuggestion(suggestion.id)}
+                    onTaskClick={() => router.push(`/tasks/${suggestion.id}`)}
+                  />
+                ))}
+              </div>
             </div>
           )}
 
@@ -590,6 +632,63 @@ function TodayTaskRow({
         {!isCompleted && (
           <ReschedulePopover onReschedule={onReschedule} />
         )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Suggestion Row ───────────────────────────────────────────────────────────
+
+interface SuggestionRowProps {
+  suggestion: SuggestedTask;
+  onSchedule: (date: Date) => void;
+  onDismiss: () => void;
+  onTaskClick: () => void;
+}
+
+function SuggestionRow({ suggestion, onSchedule, onDismiss, onTaskClick }: SuggestionRowProps) {
+  return (
+    <div
+      onClick={(e) => {
+        if (e.metaKey || e.ctrlKey) {
+          window.open(`/tasks/${suggestion.id}`, "_blank");
+          return;
+        }
+        onTaskClick();
+      }}
+      className="group flex items-center gap-3 py-3 px-3 border-b border-border/40 last:border-0 cursor-pointer hover:bg-muted/30 transition-colors"
+    >
+      {/* Unscheduled indicator */}
+      <span className="shrink-0 h-5 w-5 rounded-full border-2 border-dashed border-amber-400 dark:border-amber-500" />
+
+      {/* Title + project */}
+      <div className="flex-1 min-w-0">
+        <span className="text-sm">{suggestion.title}</span>
+        {suggestion.projectName && (
+          <div className="flex items-center gap-1.5 mt-0.5">
+            {suggestion.projectColor ? (
+              <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: suggestion.projectColor }} />
+            ) : (
+              <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/40 shrink-0" />
+            )}
+            <span className="text-[11px] text-muted-foreground">{suggestion.projectName}</span>
+          </div>
+        )}
+      </div>
+
+      {/* Actions — visible on hover */}
+      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <ReschedulePopover onReschedule={onSchedule} />
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onDismiss();
+          }}
+          className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          title="Not relevant this week"
+        >
+          <X className="h-3.5 w-3.5" />
+        </button>
       </div>
     </div>
   );

@@ -1,10 +1,14 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import type { SuggestedTask } from "@/app/api/ai/weekly-summary/route";
+
+export type { SuggestedTask };
 
 export interface WeeklySummary {
   summary: string;
   entityCount: number;
+  suggestions: SuggestedTask[];
 }
 
 const SESSION_KEY = "today-weekly-summary";
@@ -26,7 +30,7 @@ function writeToSession(value: WeeklySummary | null) {
       sessionStorage.removeItem(SESSION_KEY);
     }
   } catch {
-    // sessionStorage unavailable (e.g. SSR) — ignore
+    // sessionStorage unavailable (SSR) — ignore
   }
 }
 
@@ -53,7 +57,11 @@ export function useWeeklySummary() {
         throw new Error(data.error?.message || "Failed to generate summary");
       }
 
-      const result: WeeklySummary = { summary: data.summary, entityCount: data.entityCount };
+      const result: WeeklySummary = {
+        summary: data.summary,
+        entityCount: data.entityCount,
+        suggestions: data.suggestions ?? [],
+      };
       setSummary(result);
       writeToSession(result);
     } catch (err) {
