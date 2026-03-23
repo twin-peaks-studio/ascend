@@ -171,23 +171,29 @@ DROP POLICY IF EXISTS "Project members can view feedback submissions" ON public.
 CREATE POLICY "Project members can view feedback submissions"
   ON public.feedback_submissions FOR SELECT
   USING (
+    -- Branch 1: project creator (original)
     EXISTS (
-      SELECT 1 FROM public.feedback_forms ff
-      JOIN public.projects p ON p.id = ff.project_id
-      WHERE ff.id = feedback_submissions.form_id
-      AND (
-        p.created_by = auth.uid()
-        OR EXISTS (
-          SELECT 1 FROM public.project_members
-          WHERE project_members.project_id = p.id
-          AND project_members.user_id = auth.uid()
-        )
-        OR EXISTS (
-          SELECT 1 FROM public.workspace_members wm
-          WHERE wm.workspace_id = p.workspace_id
-          AND wm.user_id = auth.uid()
-        )
-      )
+      SELECT 1 FROM public.feedback_forms
+      JOIN public.projects ON projects.id = feedback_forms.project_id
+      WHERE feedback_forms.id = feedback_submissions.form_id
+      AND projects.created_by = auth.uid()
+    )
+    OR
+    -- Branch 2: project member (original)
+    EXISTS (
+      SELECT 1 FROM public.feedback_forms
+      JOIN public.project_members ON project_members.project_id = feedback_forms.project_id
+      WHERE feedback_forms.id = feedback_submissions.form_id
+      AND project_members.user_id = auth.uid()
+    )
+    OR
+    -- Branch 3: workspace member (new)
+    EXISTS (
+      SELECT 1 FROM public.feedback_forms
+      JOIN public.projects ON projects.id = feedback_forms.project_id
+      JOIN public.workspace_members ON workspace_members.workspace_id = projects.workspace_id
+      WHERE feedback_forms.id = feedback_submissions.form_id
+      AND workspace_members.user_id = auth.uid()
     )
   );
 
@@ -195,23 +201,29 @@ DROP POLICY IF EXISTS "Project members can delete feedback submissions" ON publi
 CREATE POLICY "Project members can delete feedback submissions"
   ON public.feedback_submissions FOR DELETE
   USING (
+    -- Branch 1: project creator (original)
     EXISTS (
-      SELECT 1 FROM public.feedback_forms ff
-      JOIN public.projects p ON p.id = ff.project_id
-      WHERE ff.id = feedback_submissions.form_id
-      AND (
-        p.created_by = auth.uid()
-        OR EXISTS (
-          SELECT 1 FROM public.project_members
-          WHERE project_members.project_id = p.id
-          AND project_members.user_id = auth.uid()
-        )
-        OR EXISTS (
-          SELECT 1 FROM public.workspace_members wm
-          WHERE wm.workspace_id = p.workspace_id
-          AND wm.user_id = auth.uid()
-        )
-      )
+      SELECT 1 FROM public.feedback_forms
+      JOIN public.projects ON projects.id = feedback_forms.project_id
+      WHERE feedback_forms.id = feedback_submissions.form_id
+      AND projects.created_by = auth.uid()
+    )
+    OR
+    -- Branch 2: project member (original)
+    EXISTS (
+      SELECT 1 FROM public.feedback_forms
+      JOIN public.project_members ON project_members.project_id = feedback_forms.project_id
+      WHERE feedback_forms.id = feedback_submissions.form_id
+      AND project_members.user_id = auth.uid()
+    )
+    OR
+    -- Branch 3: workspace member (new)
+    EXISTS (
+      SELECT 1 FROM public.feedback_forms
+      JOIN public.projects ON projects.id = feedback_forms.project_id
+      JOIN public.workspace_members ON workspace_members.workspace_id = projects.workspace_id
+      WHERE feedback_forms.id = feedback_submissions.form_id
+      AND workspace_members.user_id = auth.uid()
     )
   );
 
