@@ -164,9 +164,9 @@ export default function TodayPage() {
       <div className="flex flex-col min-h-full">
         {/* Header */}
         <div className="sticky top-0 z-10 bg-background border-b">
-          <div className="max-w-2xl mx-auto px-4 py-4 flex items-center justify-between">
+          <div className="max-w-2xl mx-auto px-4 pt-4 pb-3 space-y-2">
+            {/* Row 1: toggle + date + counts */}
             <div className="flex items-center gap-3">
-              {/* Today / Week toggle */}
               <div className="flex items-center rounded-md border bg-muted p-0.5 text-sm">
                 <button
                   onClick={() => setViewMode("today")}
@@ -192,12 +192,10 @@ export default function TodayPage() {
                 </button>
               </div>
 
-              {/* Date label */}
               <span className="text-sm text-muted-foreground">
                 {viewMode === "today" ? todayLabel : weekLabel}
               </span>
 
-              {/* Task count */}
               {activeTotalCount > 0 && (
                 <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs font-medium">
                   {activeTotalCount}
@@ -210,6 +208,7 @@ export default function TodayPage() {
               )}
             </div>
 
+            {/* Row 2: filters + actions */}
             <div className="flex items-center gap-2">
               {workspaces.length > 1 && (
                 <WorkspaceFilter
@@ -219,7 +218,6 @@ export default function TodayPage() {
                 />
               )}
 
-              {/* Weekly summary button — only in week view */}
               {viewMode === "week" && (
                 <WeeklySummaryButton
                   workspaces={workspaces}
@@ -231,7 +229,6 @@ export default function TodayPage() {
                 />
               )}
 
-              {/* Estimate My Day button — only in today view */}
               {viewMode === "today" && activeTotalCount > 0 && (
                 <Button
                   variant="outline"
