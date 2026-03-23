@@ -69,6 +69,32 @@ interface ChangelogEntry {
 
 const changelog: ChangelogEntry[] = [
   {
+    date: "March 23, 2026",
+    version: "0.28.0",
+    title: "Weekly Task View + AI Focus Summary",
+    description: "The Today page now supports a weekly task view with an AI-generated focus summary that synthesizes entity memories to answer 'what should I focus on this week?'",
+    features: [
+      {
+        icon: CalendarDays,
+        title: "Today / Week Toggle",
+        description: "Switch between Today (tasks due today or overdue) and Week (all tasks due this Mon–Sun) using the new toggle in the Today page header.",
+        tag: "new",
+      },
+      {
+        icon: Brain,
+        title: "Weekly Focus Summary",
+        description: "In Week view, generate a strategic weekly focus summary from your workspace's entity memories. Surfaces priority actions, watch items, and your top focus areas — answering 'what should I focus on this week?'",
+        tag: "new",
+      },
+      {
+        icon: Focus,
+        title: "Week Ahead in Entity Memory",
+        description: "Entity memory now includes a 'Week Ahead' section highlighting time-sensitive actions for the next 7 days — decisions to make, conversations to have, and deadlines arriving soon.",
+        tag: "improved",
+      },
+    ],
+  },
+  {
     date: "March 21, 2026",
     version: "0.27.1",
     title: "Smarter AI Memory",

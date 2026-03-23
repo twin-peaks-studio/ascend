@@ -268,19 +268,25 @@ const sections: WikiSection[] = [
   {
     id: "today",
     icon: CalendarDays,
-    title: "Today",
-    description: "A focused daily view of everything due today and overdue.",
+    title: "Today & Week",
+    description: "A focused view of tasks due today, this week, and your AI-generated weekly focus.",
     content: [
       {
         heading: "Overview",
         paragraphs: [
-          "The Today page (/today) shows every task that is due today or overdue (and not yet completed), grouped by project. It's designed to give you a single, distraction-free view of exactly what needs your attention right now.",
+          "The Today page (/today) has two views toggled in the header: Today and Week. Today shows every task due today or overdue (not yet completed). Week shows all tasks due within the current Monday–Sunday week, including overdue tasks. Both views group tasks by project.",
+        ],
+      },
+      {
+        heading: "Switching Views",
+        paragraphs: [
+          "Use the Today / Week segmented toggle in the page header to switch views. The date range shown (e.g. 'Mar 17 – Mar 23') updates to reflect the selected view. Task counts and overdue badges in the header update accordingly.",
         ],
       },
       {
         heading: "Task Grouping",
         paragraphs: [
-          "Tasks are automatically grouped by their parent project. Each group shows a colored dot matching the project color, the project name, and a count of tasks in that group. Tasks without a project appear in a 'No Project' group at the bottom. Within each group, overdue tasks are listed first, then tasks are sorted by priority.",
+          "Tasks are automatically grouped by their parent project. Each group shows a colored dot matching the project color, the project name, and a count of tasks in that group. Tasks without a project appear in a 'No Project' group at the bottom. Within each group, overdue tasks are listed first, then tasks are sorted by due date and priority.",
         ],
       },
       {
@@ -290,34 +296,42 @@ const sections: WikiSection[] = [
         ],
       },
       {
+        heading: "AI Weekly Focus Summary",
+        paragraphs: [
+          "In Week view, click 'Generate Focus' to generate an AI summary answering 'What should I focus on this week?'. The summary is synthesized from the existing AI memory of all entities in your workspace — it does not trigger new memory refreshes.",
+          "The Weekly Focus banner appears at the top of the content area and shows three sections: This Week's Focus (a strategic paragraph identifying the top 2–3 areas), Priority Actions (specific actionable bullets tied to entities), and Watch Closely (items to monitor that could escalate).",
+          "If you have multiple workspaces, a workspace selector appears next to the Generate Focus button so you can choose which workspace's entities to include.",
+        ],
+        tip: "For best results, make sure your entity memories are up to date before generating a weekly summary. Open each entity's Memory tab and click Refresh to regenerate memories from latest journal entries, notes, and tasks.",
+      },
+      {
         heading: "Adding a New Task",
         paragraphs: [
           "On mobile, tap the blue + button in the bottom-right corner to open the quick-add drawer. Enter a task name, optionally set a due date (defaults to today), priority, assignee, and project, then tap the send button to create it.",
-          "Tasks created with today's date will appear in the Today view immediately. Tasks created without a due date will not appear on Today — set a due date if you want them here.",
+          "Tasks created with today's date will appear in the Today view immediately. Tasks created without a due date will not appear on Today or Week — set a due date if you want them here.",
         ],
         tip: "Set the due date to today when creating a task from the Today page if you want it to show up in this view right away.",
       },
       {
         heading: "Quick Actions on Each Task",
         list: [
-          "Status circle — Click to mark the task done. It disappears from the Today view immediately.",
-          "Reschedule — Click the calendar icon to open the reschedule popover. Choose Tomorrow, This Weekend (Saturday), or Next Week (Monday +7 days), or pick a custom date. Rescheduled tasks disappear from Today once their new date is no longer today.",
+          "Status circle — Click to mark the task done. It disappears from the view immediately.",
+          "Reschedule — Click the calendar icon to open the reschedule popover. Choose Tomorrow, This Weekend (Saturday), or Next Week (Monday +7 days), or pick a custom date.",
           "Open task — Click anywhere on the row to navigate to the full task detail page.",
-          "Re-estimate — After AI estimates have been run, a refresh icon appears on each row to re-run estimation for just that one task.",
+          "Re-estimate — In Today view, after AI estimates have been run, a refresh icon appears on each row to re-run estimation for just that one task.",
         ],
       },
       {
-        heading: "AI Day Estimation",
+        heading: "AI Day Estimation (Today view only)",
         paragraphs: [
-          "Click 'Estimate My Day' in the header to send all of today's tasks to Claude for time estimation. Claude returns a realistic time estimate for each task and an overall Day Summary showing: total estimated time, how many hours remain in your day, and a completion likelihood percentage.",
-          "The Day Summary banner uses color coding: green (≥70% likely to complete), amber (40–70%), and red (<40%). The banner can be collapsed to save space. Individual task estimates appear as small badges (e.g., '~30m', '~1.5h') on each row.",
+          "In Today view, click 'Estimate My Day' in the header to send all of today's tasks to Claude for time estimation. Claude returns a realistic time estimate for each task and an overall Day Summary showing: total estimated time, how many hours remain in your day, and a completion likelihood percentage.",
+          "The Day Summary banner uses color coding: green (≥70% likely to complete), amber (40–70%), and red (<40%). The banner can be collapsed to save space.",
         ],
-        tip: "Estimates are conservative by design — Claude accounts for context-switching overhead when you have many tasks. Re-running estimation with 'Re-estimate' on an individual task re-sends just that task to get a fresh estimate.",
       },
       {
         heading: "Empty State",
         paragraphs: [
-          "When you have no tasks due today or overdue, the page shows a 'You're all caught up!' message. Enjoy the moment.",
+          "When you have no tasks in the selected view, a friendly empty state message is shown. In Today view: 'You're all caught up!' In Week view: 'Nothing due this week!'",
         ],
       },
     ],

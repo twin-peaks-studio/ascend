@@ -194,7 +194,7 @@ The Memory tab on entity detail pages synthesizes knowledge from four sources in
 
 **Memory is user-triggered, not automatic.** No background jobs or auto-refresh. The user decides when to synthesize.
 
-**Output format:** The `ai_memory` field contains plain text with markdown-style headings and bullet points (`- `). The Memory tab UI renders these with simple string splitting — no full markdown parser. The six fixed sections (in order) are: `## Needs Attention`, `## Summary`, `## Current State`, `## Recent Decisions & Context`, `## Open Work`, `## Key Risks`. Sections without content are omitted entirely. The prompt explicitly forbids inventing additional sections.
+**Output format:** The `ai_memory` field contains plain text with markdown-style headings and bullet points (`- `). The Memory tab UI renders these with simple string splitting — no full markdown parser. The seven fixed sections (in order) are: `## Needs Attention`, `## Summary`, `## Current State`, `## Recent Decisions & Context`, `## Open Work`, `## Key Risks`, `## Week Ahead`. Sections without content are omitted entirely. The prompt explicitly forbids inventing additional sections.
 
 **Entity-type-aware prompts:** The system prompt adapts based on `entity_type`: products get a strategic briefing framing, initiatives get a progress report framing, and stakeholders get a relationship brief framing (with second-person voice: "You committed to..."). The six-section structure is consistent across all types — only the guidance within each section varies.
 
