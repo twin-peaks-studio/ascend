@@ -233,6 +233,7 @@ Task view preferences are persisted in localStorage so they survive page navigat
 - `tasks-assignee-filter` / `project-tasks-assignee-filter` — selected assignee filter IDs
 - `tasks-show-completed` / `project-tasks-show-completed` — whether completed (done) tasks are visible
 - `active-workspace-id` — currently selected workspace ID (used by `WorkspaceProvider`)
+- `today-view-mode` — last selected view on the Today page (`"today"` or `"week"`); weekly summary is stored separately in `sessionStorage` under `today-weekly-summary`
 
 When adding new filterable state to task pages, follow this pattern: initialize with a `useState` lazy initializer that reads from localStorage, and persist on every change via a `useCallback` handler.
 

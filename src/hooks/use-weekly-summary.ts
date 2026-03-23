@@ -7,8 +7,31 @@ export interface WeeklySummary {
   entityCount: number;
 }
 
+const SESSION_KEY = "today-weekly-summary";
+
+function readFromSession(): WeeklySummary | null {
+  try {
+    const raw = sessionStorage.getItem(SESSION_KEY);
+    return raw ? (JSON.parse(raw) as WeeklySummary) : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeToSession(value: WeeklySummary | null) {
+  try {
+    if (value) {
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify(value));
+    } else {
+      sessionStorage.removeItem(SESSION_KEY);
+    }
+  } catch {
+    // sessionStorage unavailable (e.g. SSR) — ignore
+  }
+}
+
 export function useWeeklySummary() {
-  const [summary, setSummary] = useState<WeeklySummary | null>(null);
+  const [summary, setSummary] = useState<WeeklySummary | null>(() => readFromSession());
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,7 +53,9 @@ export function useWeeklySummary() {
         throw new Error(data.error?.message || "Failed to generate summary");
       }
 
-      setSummary({ summary: data.summary, entityCount: data.entityCount });
+      const result: WeeklySummary = { summary: data.summary, entityCount: data.entityCount };
+      setSummary(result);
+      writeToSession(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to generate weekly summary");
     } finally {
@@ -41,6 +66,7 @@ export function useWeeklySummary() {
   const clear = useCallback(() => {
     setSummary(null);
     setError(null);
+    writeToSession(null);
   }, []);
 
   return { summary, isLoading, error, generate, clear };

@@ -41,7 +41,18 @@ type ViewMode = "today" | "week";
 
 export default function TodayPage() {
   const router = useRouter();
-  const [viewMode, setViewMode] = useState<ViewMode>("today");
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    try {
+      return (localStorage.getItem("today-view-mode") as ViewMode) ?? "today";
+    } catch {
+      return "today";
+    }
+  });
+
+  const handleViewModeChange = useCallback((mode: ViewMode) => {
+    setViewMode(mode);
+    try { localStorage.setItem("today-view-mode", mode); } catch { /* ignore */ }
+  }, []);
 
   const { groups: todayGroups, totalCount: todayCount, overdueCount: todayOverdueCount, loading: todayLoading } = useTodayTasks();
   const { dayGroups: weekDayGroups, totalCount: weekCount, overdueCount: weekOverdueCount, loading: weekLoading } = useWeekTasks();
@@ -169,7 +180,7 @@ export default function TodayPage() {
             <div className="flex items-center gap-3">
               <div className="flex items-center rounded-md border bg-muted p-0.5 text-sm">
                 <button
-                  onClick={() => setViewMode("today")}
+                  onClick={() => handleViewModeChange("today")}
                   className={cn(
                     "px-3 py-1 rounded-sm transition-colors font-medium",
                     viewMode === "today"
@@ -180,7 +191,7 @@ export default function TodayPage() {
                   Today
                 </button>
                 <button
-                  onClick={() => setViewMode("week")}
+                  onClick={() => handleViewModeChange("week")}
                   className={cn(
                     "px-3 py-1 rounded-sm transition-colors font-medium",
                     viewMode === "week"
