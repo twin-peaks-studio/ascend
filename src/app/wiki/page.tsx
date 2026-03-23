@@ -296,6 +296,15 @@ const sections: WikiSection[] = [
         ],
       },
       {
+        heading: "Filtering Tasks",
+        paragraphs: [
+          "The filter bar in the header has two filters that work in both Today and Week views.",
+          "Status filter — Click the Status button to show only tasks with a specific status: To Do, In Progress, or Done. You can select multiple statuses at once. Leave all unchecked to show tasks of any status. The button turns blue when a filter is active.",
+          "Workspace filter — If you have more than one workspace, a Workspace filter button also appears. Select one or more workspaces to limit the view to tasks from projects in those workspaces.",
+        ],
+        tip: "Filters compose — you can have both a Status and a Workspace filter active at the same time. Clear each one independently using the 'Clear filter' option in its dropdown.",
+      },
+      {
         heading: "AI Weekly Focus Summary",
         paragraphs: [
           "In Week view, click 'Generate Focus' to generate an AI summary answering 'What should I focus on this week?'. The summary is synthesized from the existing AI memory of all entities in your workspace — it does not trigger new memory refreshes.",
@@ -303,6 +312,15 @@ const sections: WikiSection[] = [
           "If you have multiple workspaces, a workspace selector appears next to the Generate Focus button so you can choose which workspace's entities to include.",
         ],
         tip: "For best results, make sure your entity memories are up to date before generating a weekly summary. Open each entity's Memory tab and click Refresh to regenerate memories from latest journal entries, notes, and tasks.",
+      },
+      {
+        heading: "Suggested This Week",
+        paragraphs: [
+          "When you generate a weekly focus, Claude also reviews all unscheduled tasks (no due date) that are linked to entities in your workspace. Based on this week's priorities from the entity memories, it surfaces the tasks most worth tackling now in a 'Suggested This Week' panel above the Overdue section.",
+          "Each suggested task shows the task title, its project, and two actions on hover: a calendar icon to schedule it for a specific day, and an × to dismiss it as not relevant this week.",
+          "Scheduling a suggestion gives the task a due date and moves it into the appropriate day group automatically — the suggestion row disappears. Dismissing a suggestion hides it for the current session. Both actions clear when you generate a new focus.",
+        ],
+        tip: "Suggestions only appear when entity memories exist for your workspace. If the panel is empty, either there are no unscheduled entity-linked tasks or none were considered relevant to this week's priorities.",
       },
       {
         heading: "Adding a New Task",
@@ -660,19 +678,28 @@ const sections: WikiSection[] = [
     id: "collaboration",
     icon: Users,
     title: "Team Collaboration",
-    description: "Invite team members, assign work, and collaborate on projects.",
+    description: "Invite team members to a workspace or project, assign work, and collaborate in real time.",
     content: [
       {
-        heading: "Inviting Members",
+        heading: "Inviting Members to a Workspace",
         paragraphs: [
-          "Open a project's properties panel and click the invite button next to the member count. Send email invitations to bring team members into your project.",
+          "Open a workspace detail page and click the Members button in the header. The member management dialog shows everyone currently in the workspace with their role badge (Owner, Admin, or Member). To invite someone new, enter their email address and click Invite — this is only available to workspace owners.",
+          "When you invite someone to a workspace they are automatically added to every existing project in that workspace. When a new project is created, all current workspace members are added to it automatically. Removing someone from a workspace removes them from all projects in it too.",
+        ],
+        tip: "Workspace-level inviting is the recommended way to onboard a new teammate. One invite gives them access to everything in the workspace — no need to add them project by project.",
+      },
+      {
+        heading: "Inviting Members to a Project",
+        paragraphs: [
+          "You can also invite directly at the project level. Open the project's properties panel and click the invite button next to the member count. This is useful for adding an external collaborator to one specific project without giving them access to the whole workspace.",
         ],
       },
       {
         heading: "Roles",
         list: [
-          "Owner — Full control over the project including settings, member management, and deletion",
-          "Member — Can view the project, create and manage tasks, write notes, and track time",
+          "Owner — Full control over the workspace or project including settings, member management, and deletion",
+          "Admin — Can manage members and settings but cannot delete the workspace",
+          "Member — Can view, create and manage tasks, write notes, and track time",
         ],
       },
       {
