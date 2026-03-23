@@ -34,7 +34,8 @@ import { useProjects } from "@/hooks/use-projects";
 import { useProfiles } from "@/hooks/use-profiles";
 import { useAuth } from "@/hooks/use-auth";
 import { useWorkspaceContext } from "@/contexts/workspace-context";
-import { WorkspaceFilter } from "@/components/filters";
+import { WorkspaceFilter, StatusFilter } from "@/components/filters";
+import type { TaskStatus } from "@/types";
 import type { TaskWithProject } from "@/types";
 import type { CreateTaskInput } from "@/lib/validation";
 
@@ -65,6 +66,7 @@ export default function TodayPage() {
   const { workspaces, activeWorkspace } = useWorkspaceContext();
 
   const [selectedWorkspaceIds, setSelectedWorkspaceIds] = useState<string[]>([]);
+  const [selectedStatuses, setSelectedStatuses] = useState<TaskStatus[]>([]);
   const [summaryWorkspaceId, setSummaryWorkspaceId] = useState<string>(() => "");
 
   const handleWorkspacesChange = useCallback((ids: string[]) => {
@@ -134,27 +136,42 @@ export default function TodayPage() {
     return ids;
   }, [selectedWorkspaceIds, projects]);
 
+  const statusSet = useMemo(
+    () => (selectedStatuses.length > 0 ? new Set(selectedStatuses) : null),
+    [selectedStatuses]
+  );
+
   const filteredTodayGroups = useMemo(() => {
-    if (!workspaceProjectIds) return todayGroups;
     return todayGroups
-      .filter((g) => g.projectId && workspaceProjectIds.has(g.projectId))
-      .map((g) => ({ ...g, tasks: g.tasks.filter((t) => t.project_id && workspaceProjectIds.has(t.project_id)) }))
+      .map((g) => ({
+        ...g,
+        tasks: g.tasks.filter(
+          (t) =>
+            (!workspaceProjectIds || (t.project_id && workspaceProjectIds.has(t.project_id))) &&
+            (!statusSet || statusSet.has(t.status as TaskStatus))
+        ),
+      }))
       .filter((g) => g.tasks.length > 0);
-  }, [todayGroups, workspaceProjectIds]);
+  }, [todayGroups, workspaceProjectIds, statusSet]);
 
   const filteredWeekDayGroups = useMemo(() => {
-    if (!workspaceProjectIds) return weekDayGroups;
     return weekDayGroups
       .map((dayGroup) => {
         const filteredProjectGroups = dayGroup.projectGroups
-          .filter((pg) => pg.projectId === null || workspaceProjectIds.has(pg.projectId))
-          .map((pg) => ({ ...pg, tasks: pg.tasks.filter((t) => !t.project_id || workspaceProjectIds.has(t.project_id)) }))
+          .map((pg) => ({
+            ...pg,
+            tasks: pg.tasks.filter(
+              (t) =>
+                (!workspaceProjectIds || !t.project_id || workspaceProjectIds.has(t.project_id)) &&
+                (!statusSet || statusSet.has(t.status as TaskStatus))
+            ),
+          }))
           .filter((pg) => pg.tasks.length > 0);
         const totalCount = filteredProjectGroups.reduce((s, pg) => s + pg.tasks.length, 0);
         return { ...dayGroup, projectGroups: filteredProjectGroups, totalCount };
       })
       .filter((dayGroup) => dayGroup.totalCount > 0);
-  }, [weekDayGroups, workspaceProjectIds]);
+  }, [weekDayGroups, workspaceProjectIds, statusSet]);
 
   const activeTotalCount = viewMode === "today"
     ? filteredTodayGroups.flatMap((g) => g.tasks).length
@@ -264,6 +281,11 @@ export default function TodayPage() {
                   onWorkspacesChange={handleWorkspacesChange}
                 />
               )}
+
+              <StatusFilter
+                selectedStatuses={selectedStatuses}
+                onStatusesChange={setSelectedStatuses}
+              />
 
               {viewMode === "week" && (
                 <WeeklySummaryButton
