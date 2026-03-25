@@ -46,6 +46,7 @@ import {
   Hash,
   Link2,
   Focus,
+  Target,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -68,6 +69,38 @@ interface ChangelogEntry {
 }
 
 const changelog: ChangelogEntry[] = [
+  {
+    date: "March 25, 2026",
+    version: "0.30.0",
+    title: "Goals + Task Completion Animation",
+    description: "A new lightweight Goal primitive lets you track named outcomes with due dates and linked tasks — surfaced across all task views. Tasks completing now feel satisfying with a smooth animation.",
+    features: [
+      {
+        icon: Target,
+        title: "Goals",
+        description: "Create a Goal from the Projects page — a named outcome with a due date, optional entity link, and a short description. Goals use the same project architecture but with a stripped-down UI: no project management chrome, just a description, progress bar, and a task list. Goals appear in a dedicated Goals section on the Projects page.",
+        tag: "new",
+      },
+      {
+        icon: List,
+        title: "Goals in All Task Views",
+        description: "Active goals surface at the top of the Tasks and Today views as a collapsible Goals section. Each row shows the goal name, a mini progress bar, task count, and due date. Clicking navigates to the goal's focus view. Tasks belonging to a goal show a purple goal pill alongside entity pills.",
+        tag: "new",
+      },
+      {
+        icon: Brain,
+        title: "Goals Feed Entity Memory",
+        description: "Goals linked to an entity are included as a source in memory refresh. The AI sees the goal title, description, due date, task progress, and status — so the memory brief reflects active strategic objectives alongside journal entries and linked tasks.",
+        tag: "new",
+      },
+      {
+        icon: CheckCircle2,
+        title: "Task Completion Animation",
+        description: "Completing a task now plays a satisfying bounce animation on the checkbox and a brief green flash on the row. If the task disappears (show-completed off), the row smoothly fades and collapses. The API call fires immediately — the animation is purely visual.",
+        tag: "improved",
+      },
+    ],
+  },
   {
     date: "March 23, 2026",
     version: "0.29.0",

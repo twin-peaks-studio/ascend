@@ -57,6 +57,7 @@ import { useProjectDocuments, useDocumentMutations } from "@/hooks/use-documents
 import { useProjectMembers } from "@/hooks/use-project-members";
 import { useProjectNotes } from "@/hooks/use-notes";
 import { InviteMemberDialog, PropertiesPanel } from "@/components/project";
+import { GoalDetailPage } from "@/components/project/goal-detail-page";
 import { TimeReportDialog } from "@/components/time/project-time-report";
 import { useProjectTotalTime } from "@/hooks/use-time-tracking";
 import { NoteListItem } from "@/components/note";
@@ -358,6 +359,11 @@ export default function ProjectDetailPage() {
         </div>
       </AppShell>
     );
+  }
+
+  // Goals use a lightweight stripped-down view
+  if (project.type === "goal") {
+    return <GoalDetailPage projectId={projectId} workspaceId={workspaceId} />;
   }
 
   return (

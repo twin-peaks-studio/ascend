@@ -176,6 +176,11 @@ export type TaskPriority = "low" | "medium" | "high" | "urgent";
 export type ProjectStatus = "active" | "completed" | "archived";
 
 /**
+ * Project type — standard (full project) or goal (lightweight outcome)
+ */
+export type ProjectType = "standard" | "goal";
+
+/**
  * Document type
  */
 export type DocumentType = "link" | "document" | "note";

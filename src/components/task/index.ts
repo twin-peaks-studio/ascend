@@ -7,3 +7,5 @@ export { TaskListView, TaskListItem, PRIORITY_CIRCLE_COLORS } from "./task-list-
 export { TaskSortSelect } from "./task-sort-select";
 export { SortableTaskListItem } from "./sortable-task-list-item";
 export { SectionedTaskListView } from "./sectioned-task-list-view";
+export { GoalsSection } from "./goals-section";
+export { GoalListRow } from "./goal-list-row";

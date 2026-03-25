@@ -242,6 +242,9 @@ export function useProjectMutations() {
           status: validated.status,
           color: validated.color,
           created_by: user.id,
+          type: validated.type ?? "standard",
+          entity_id: validated.entity_id ?? null,
+          due_date: validated.due_date ?? null,
         };
 
         const insertResult = await withTimeout(

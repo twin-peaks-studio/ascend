@@ -41,6 +41,16 @@ interface LinkedTaskData {
   contextEntries: Array<{ content: string; created_at: string }>;
 }
 
+interface LinkedGoalData {
+  id: string;
+  title: string;
+  description: string | null;
+  due_date: string | null;
+  status: string;
+  taskCount: number;
+  doneCount: number;
+}
+
 interface MemoryRefreshSuccessResponse {
   success: true;
   aiMemory: string;
@@ -237,7 +247,8 @@ function buildUserPrompt(
   foundationalContext: string | null,
   journalEntries: Array<{ content: string; created_at: string }>,
   mentionedContent: Array<{ title: string; content: string; source_type: string }>,
-  linkedTasks: LinkedTaskData[]
+  linkedTasks: LinkedTaskData[],
+  linkedGoals: LinkedGoalData[] = []
 ): string {
   const parts: string[] = [];
 
@@ -269,7 +280,27 @@ function buildUserPrompt(
     parts.push(`=== MENTIONED IN ${mentionedContent.length} DOCUMENT(S) ===\n${mentionsText}`);
   }
 
-  // 4. Linked tasks — summarized with urgency signals
+  // 4. Linked goals — active goals scoped to this entity
+  if (linkedGoals.length > 0) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const goalsText = linkedGoals.map((g) => {
+      const progress = g.taskCount > 0 ? `${g.doneCount}/${g.taskCount} tasks done` : "no tasks yet";
+      const overdue = g.due_date && new Date(g.due_date) < today && g.status !== "completed";
+      const dueLine = g.due_date
+        ? `due ${new Date(g.due_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}${overdue ? " ⚠ OVERDUE" : ""}`
+        : "no due date";
+      const lines = [`Goal: "${g.title}" (${dueLine}, ${progress}, status: ${g.status})`];
+      if (g.description?.trim()) {
+        lines.push(`Context: ${g.description.trim()}`);
+      }
+      return lines.join("\n");
+    }).join("\n\n");
+    parts.push(`=== ACTIVE GOALS (${linkedGoals.length}) ===\n${goalsText}`);
+  }
+
+  // 5. Linked tasks — summarized with urgency signals
   if (linkedTasks.length > 0) {
     const cats = categorizeLinkedTasks(linkedTasks);
 
@@ -363,7 +394,8 @@ function computeSourceHash(
   journalEntries: Array<{ content: string; created_at: string }>,
   mentionedContent: Array<{ title: string; content: string; source_type: string }>,
   memoryGuidance: string | null,
-  linkedTasks: LinkedTaskData[]
+  linkedTasks: LinkedTaskData[],
+  linkedGoals: LinkedGoalData[] = []
 ): string {
   const hash = createHash("sha256");
   hash.update(foundationalContext ?? "");
@@ -398,6 +430,18 @@ function computeSourceHash(
       hash.update(ce.content);
       hash.update(ce.created_at);
     }
+    hash.update("\x00");
+  }
+  // Sort goals by ID for determinism
+  const sortedGoals = [...linkedGoals].sort((a, b) => a.id.localeCompare(b.id));
+  for (const g of sortedGoals) {
+    hash.update(g.id);
+    hash.update(g.title);
+    hash.update(g.status);
+    hash.update(g.description ?? "");
+    hash.update(g.due_date ?? "");
+    hash.update(String(g.taskCount));
+    hash.update(String(g.doneCount));
     hash.update("\x00");
   }
   return hash.digest("hex");
@@ -580,13 +624,54 @@ export async function POST(
       }
     }
 
-    // 8. Check we have at least some data
+    // 8. Fetch linked goals (projects with type='goal' where entity_id matches)
+    let linkedGoals: LinkedGoalData[] = [];
+    const { data: goalProjects } = await supabase
+      .from("projects")
+      .select("id, title, description, due_date, status")
+      .eq("entity_id", entityId)
+      .eq("type", "goal")
+      .neq("status", "archived");
+
+    if (goalProjects && goalProjects.length > 0) {
+      const goalIds = goalProjects.map((g: { id: string }) => g.id);
+      const { data: goalTasks } = await supabase
+        .from("tasks")
+        .select("project_id, status")
+        .in("project_id", goalIds)
+        .eq("is_archived", false);
+
+      const taskCountByGoal = new Map<string, { total: number; done: number }>();
+      if (goalTasks) {
+        for (const t of goalTasks as { project_id: string; status: string }[]) {
+          const counts = taskCountByGoal.get(t.project_id) ?? { total: 0, done: 0 };
+          counts.total++;
+          if (t.status === "done") counts.done++;
+          taskCountByGoal.set(t.project_id, counts);
+        }
+      }
+
+      linkedGoals = goalProjects.map((g: { id: string; title: string; description: string | null; due_date: string | null; status: string }) => {
+        const counts = taskCountByGoal.get(g.id) ?? { total: 0, done: 0 };
+        return {
+          id: g.id,
+          title: g.title,
+          description: g.description,
+          due_date: g.due_date,
+          status: g.status,
+          taskCount: counts.total,
+          doneCount: counts.done,
+        };
+      });
+    }
+
+    // 9. Check we have at least some data
     const hasFoundational = !!entity.foundational_context?.trim();
     const journalCount = journalEntries?.length ?? 0;
     const mentionCount = mentionedContent.length;
     const taskCount = linkedTasks.length;
 
-    if (!hasFoundational && journalCount === 0 && mentionCount === 0 && taskCount === 0) {
+    if (!hasFoundational && journalCount === 0 && mentionCount === 0 && taskCount === 0 && linkedGoals.length === 0) {
       return NextResponse.json(
         {
           success: false,
@@ -599,7 +684,7 @@ export async function POST(
       );
     }
 
-    // 9. Compute source hash and check for changes
+    // 10. Compute source hash and check for changes
     //    memory_guidance and memory_source_hash are optional columns
     const memoryGuidance = entity.memory_guidance ?? null;
     const existingSourceHash = entity.memory_source_hash ?? null;
@@ -609,7 +694,8 @@ export async function POST(
       journalEntries ?? [],
       mentionedContent,
       memoryGuidance,
-      linkedTasks
+      linkedTasks,
+      linkedGoals
     );
 
     if (!force && existingSourceHash === sourceHash && entity.ai_memory) {
@@ -646,7 +732,8 @@ export async function POST(
       entity.foundational_context,
       journalEntries ?? [],
       mentionedContent,
-      linkedTasks
+      linkedTasks,
+      linkedGoals
     );
 
     const aiResponse = await withTimeoutAndAbort(

@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { AppShell, Header } from "@/components/layout";
 import type { ViewMode } from "@/components/layout";
 import { KanbanBoard } from "@/components/board";
-import { TaskDialog, QuickAddTask, TaskListView, TaskSortSelect } from "@/components/task";
+import { TaskDialog, QuickAddTask, TaskListView, TaskSortSelect, GoalsSection } from "@/components/task";
 import { Button } from "@/components/ui/button";
 import { parseSortOptionKey, type TaskSortField, type TaskSortDirection } from "@/lib/task-sort";
 import { ProjectFilter, PROJECT_FILTER_NO_PROJECT, AssigneeFilter, ASSIGNEE_FILTER_ASSIGNED_TO_ME, ASSIGNEE_FILTER_UNASSIGNED, WorkspaceFilter } from "@/components/filters";
@@ -187,6 +187,13 @@ export default function TasksPage() {
     if (showCompleted) return assigneeFilteredTasks;
     return assigneeFilteredTasks.filter((task) => task.status !== "done");
   }, [assigneeFilteredTasks, showCompleted]);
+
+  // Active goals - filtered by selected workspaces if workspace filter is active
+  const activeGoals = useMemo(() => {
+    const goals = projects.filter((p) => p.type === "goal" && p.status !== "archived" && p.status !== "completed");
+    if (selectedWorkspaceIds.length === 0) return goals;
+    return goals.filter((g) => g.workspace_id && selectedWorkspaceIds.includes(g.workspace_id));
+  }, [projects, selectedWorkspaceIds]);
 
   // Scope assignee profiles to selected projects (when project filter is active)
   const currentUserId = user?.id ?? null;
@@ -491,14 +498,17 @@ export default function TasksPage() {
             showCompleted={showCompleted}
           />
         ) : (
-          <TaskListView
-            tasks={filteredTasks}
-            onTaskClick={handleOpenDetails}
-            onStatusToggle={handleStatusToggle}
-            onAddTask={handleAddTask}
-            sortField={sortField}
-            sortDirection={sortDirection}
-          />
+          <>
+            <GoalsSection goals={activeGoals} />
+            <TaskListView
+              tasks={filteredTasks}
+              onTaskClick={handleOpenDetails}
+              onStatusToggle={handleStatusToggle}
+              onAddTask={handleAddTask}
+              sortField={sortField}
+              sortDirection={sortDirection}
+            />
+          </>
         )}
       </div>
 

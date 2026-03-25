@@ -74,6 +74,8 @@ export const projectColorSchema = z
 
 export const projectPrioritySchema = z.enum(["low", "medium", "high", "urgent"]);
 
+export const projectTypeSchema = z.enum(["standard", "goal"]);
+
 /**
  * Schema for creating a new project
  */
@@ -86,6 +88,8 @@ export const createProjectSchema = z.object({
   color: projectColorSchema,
   lead_id: z.string().uuid("Invalid lead ID").nullable().optional(),
   due_date: z.string().datetime().nullable().optional(),
+  type: projectTypeSchema.default("standard"),
+  entity_id: z.string().uuid("Invalid entity ID").nullable().optional(),
 });
 
 /**
@@ -99,6 +103,8 @@ export const updateProjectSchema = z.object({
   color: projectColorSchema.optional(),
   lead_id: z.string().uuid("Invalid lead ID").nullable().optional(),
   due_date: z.string().datetime().nullable().optional(),
+  type: projectTypeSchema.optional(),
+  entity_id: z.string().uuid("Invalid entity ID").nullable().optional(),
 });
 
 // ============================================

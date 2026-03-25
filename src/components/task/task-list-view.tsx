@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   Circle,
   CheckCircle2,
@@ -10,6 +10,7 @@ import {
   Rocket,
   User,
   Plus,
+  Target,
 } from "lucide-react";
 import { ENTITY_TYPE_COLORS } from "@/lib/utils/entity-colors";
 import { cn } from "@/lib/utils";
@@ -60,8 +61,17 @@ export function TaskListItem({ task, onTaskClick, onStatusToggle, assignee }: Ta
   const priorityColor = PRIORITY_CIRCLE_COLORS[task.priority] || PRIORITY_CIRCLE_COLORS.medium;
   const taskOverdue = task.due_date && isOverdue(task.due_date) && !isCompleted;
 
+  const [animState, setAnimState] = useState<"idle" | "completing" | "exiting">("idle");
+
   const handleStatusClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
+    // Only animate when completing (not un-completing)
+    if (task.status !== "done") {
+      setAnimState("completing");
+      setTimeout(() => setAnimState("exiting"), 300);
+      // Reset after exit animation so optimistic update takes over
+      setTimeout(() => setAnimState("idle"), 650);
+    }
     onStatusToggle?.(task);
   }, [task, onStatusToggle]);
 
@@ -81,6 +91,11 @@ export function TaskListItem({ task, onTaskClick, onStatusToggle, assignee }: Ta
   // Get entities from task (only on TaskWithProject with enriched data)
   const entities = ('entities' in task && task.entities) ? task.entities : [];
 
+  // Show goal pill if the task belongs to a goal project
+  const goalProject = ('project' in task && task.project && (task.project as { type?: string }).type === "goal")
+    ? task.project as { id: string; title: string; type?: string }
+    : null;
+
   // Get assignee - either from the task (TaskWithProject) or from the prop (Task)
   const taskAssignee = ('assignee' in task && task.assignee) ? task.assignee : assignee;
 
@@ -90,7 +105,9 @@ export function TaskListItem({ task, onTaskClick, onStatusToggle, assignee }: Ta
       className={cn(
         "group flex items-start gap-3 py-3 px-2 border-b border-border/40 cursor-pointer",
         "hover:bg-muted/30 transition-colors",
-        isCompleted && "opacity-60"
+        isCompleted && "opacity-60",
+        animState === "completing" && "task-completing-row",
+        animState === "exiting" && "task-completing-row-exit"
       )}
     >
       {/* Priority circle / checkbox */}
@@ -98,7 +115,8 @@ export function TaskListItem({ task, onTaskClick, onStatusToggle, assignee }: Ta
         onClick={handleStatusClick}
         className={cn(
           "mt-0.5 shrink-0 transition-colors",
-          priorityColor
+          priorityColor,
+          animState === "completing" && "task-completing-checkbox"
         )}
       >
         {isCompleted ? (
@@ -125,9 +143,15 @@ export function TaskListItem({ task, onTaskClick, onStatusToggle, assignee }: Ta
           </p>
         )}
 
-        {/* Meta row: entities, due date, attachments count */}
-        {(entities.length > 0 || task.due_date || attachmentCount > 0) && (
+        {/* Meta row: goal pill, entities, due date, attachments count */}
+        {(goalProject || entities.length > 0 || task.due_date || attachmentCount > 0) && (
           <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+            {goalProject && (
+              <span className="inline-flex items-center gap-1 text-xs text-violet-600 dark:text-violet-400">
+                <Target className="h-3 w-3" />
+                {goalProject.title}
+              </span>
+            )}
             {entities.map((entity) => {
               const colors = ENTITY_TYPE_COLORS[entity.entity_type] || ENTITY_TYPE_COLORS.product;
               const Icon = entity.entity_type === "initiative" ? Rocket : entity.entity_type === "stakeholder" ? User : Package;

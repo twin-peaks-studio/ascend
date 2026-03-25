@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { FolderKanban, Plus } from "lucide-react";
+import { FolderKanban, Plus, Target } from "lucide-react";
 import { AppShell, Header } from "@/components/layout";
-import { ProjectCard, ProjectDialog } from "@/components/project";
+import { ProjectCard, ProjectDialog, GoalCard, CreateGoalSheet } from "@/components/project";
 import { QuickAddTask } from "@/components/task";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -28,18 +28,29 @@ export default function ProjectsPage() {
 
   // State
   const [showProjectDialog, setShowProjectDialog] = useState(false);
+  const [showGoalSheet, setShowGoalSheet] = useState(false);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<ProjectStatus | "all">("all");
 
-  // Get active projects for task assignment
-  const activeProjects = projects.filter((p) => p.status === "active");
+  // Separate goals from standard projects
+  const standardProjects = projects.filter((p) => p.type !== "goal");
+  const goals = projects.filter((p) => p.type === "goal");
 
-  // Filter projects by status
+  // Get active projects for task assignment
+  const activeProjects = standardProjects.filter((p) => p.status === "active");
+
+  // Filter standard projects by status
   const filteredProjects =
     statusFilter === "all"
-      ? projects
-      : projects.filter((p) => p.status === statusFilter);
+      ? standardProjects
+      : standardProjects.filter((p) => p.status === statusFilter);
+
+  // Filter goals by status too
+  const filteredGoals =
+    statusFilter === "all"
+      ? goals
+      : goals.filter((p) => p.status === statusFilter);
 
   // Handle project creation
   const handleCreateProject = useCallback(
@@ -100,21 +111,50 @@ export default function ProjectsPage() {
 
       <div className="p-4 md:p-6 space-y-6">
         {/* Filters */}
-        <Tabs
-          value={statusFilter}
-          onValueChange={(value) =>
-            setStatusFilter(value as ProjectStatus | "all")
-          }
-        >
-          <TabsList>
-            <TabsTrigger value="all">All</TabsTrigger>
-            <TabsTrigger value="active">Active</TabsTrigger>
-            <TabsTrigger value="completed">Completed</TabsTrigger>
-            <TabsTrigger value="archived">Archived</TabsTrigger>
-          </TabsList>
-        </Tabs>
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <Tabs
+            value={statusFilter}
+            onValueChange={(value) =>
+              setStatusFilter(value as ProjectStatus | "all")
+            }
+          >
+            <TabsList>
+              <TabsTrigger value="all">All</TabsTrigger>
+              <TabsTrigger value="active">Active</TabsTrigger>
+              <TabsTrigger value="completed">Completed</TabsTrigger>
+              <TabsTrigger value="archived">Archived</TabsTrigger>
+            </TabsList>
+          </Tabs>
 
-        {/* Projects grid */}
+          <Button variant="outline" size="sm" onClick={() => setShowGoalSheet(true)}>
+            <Target className="h-4 w-4 mr-1.5" />
+            New Goal
+          </Button>
+        </div>
+
+        {/* Goals section */}
+        {filteredGoals.length > 0 && (
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <Target className="h-4 w-4 text-violet-500" />
+              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                Goals
+              </h2>
+              <span className="text-xs text-muted-foreground">({filteredGoals.length})</span>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {filteredGoals.map((goal) => (
+                <GoalCard
+                  key={goal.id}
+                  project={goal}
+                  onDelete={(id) => setDeleteConfirm(id)}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Standard projects grid */}
         {loading ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {[1, 2, 3, 4, 5, 6].map((i) => (
@@ -124,7 +164,7 @@ export default function ProjectsPage() {
               />
             ))}
           </div>
-        ) : filteredProjects.length === 0 ? (
+        ) : filteredProjects.length === 0 && filteredGoals.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <FolderKanban className="h-12 w-12 text-muted-foreground mb-4" />
             <h3 className="text-lg font-semibold mb-2">No projects found</h3>
@@ -134,23 +174,39 @@ export default function ProjectsPage() {
                 : `No ${statusFilter} projects found.`}
             </p>
             {statusFilter === "all" && (
-              <Button onClick={() => setShowProjectDialog(true)}>
-                <Plus className="h-4 w-4 mr-1" />
-                Create Project
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button onClick={() => setShowProjectDialog(true)}>
+                  <Plus className="h-4 w-4 mr-1" />
+                  Create Project
+                </Button>
+                <Button variant="outline" onClick={() => setShowGoalSheet(true)}>
+                  <Target className="h-4 w-4 mr-1" />
+                  Create Goal
+                </Button>
+              </div>
             )}
           </div>
-        ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {filteredProjects.map((project) => (
-              <ProjectCard
-                key={project.id}
-                project={project}
-                onDelete={(id) => setDeleteConfirm(id)}
-              />
-            ))}
+        ) : filteredProjects.length > 0 ? (
+          <div>
+            {filteredGoals.length > 0 && (
+              <div className="flex items-center gap-2 mb-3">
+                <FolderKanban className="h-4 w-4 text-muted-foreground" />
+                <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                  Projects
+                </h2>
+              </div>
+            )}
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {filteredProjects.map((project) => (
+                <ProjectCard
+                  key={project.id}
+                  project={project}
+                  onDelete={(id) => setDeleteConfirm(id)}
+                />
+              ))}
+            </div>
           </div>
-        )}
+        ) : null}
       </div>
 
       {/* Project create dialog */}
@@ -159,6 +215,13 @@ export default function ProjectsPage() {
         onOpenChange={setShowProjectDialog}
         onSubmit={handleCreateProject}
         loading={mutationLoading}
+      />
+
+      {/* Goal create sheet */}
+      <CreateGoalSheet
+        open={showGoalSheet}
+        onOpenChange={setShowGoalSheet}
+        onCreated={() => refetch()}
       />
 
       {/* Quick add task drawer (mobile) */}
@@ -176,8 +239,8 @@ export default function ProjectsPage() {
         open={!!deleteConfirm}
         onOpenChange={(open) => !open && setDeleteConfirm(null)}
         onConfirm={handleDeleteConfirm}
-        title="Delete Project"
-        description="Are you sure you want to delete this project? This will also delete its task and all documents. This action cannot be undone."
+        title="Delete"
+        description="Are you sure you want to delete this? This will also delete all its tasks. This action cannot be undone."
       />
     </AppShell>
   );

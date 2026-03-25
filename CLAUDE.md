@@ -219,6 +219,27 @@ Key files:
 
 **Due Date Filters (Phase 4.9):** The workspace Tasks tab and entity Tasks tab both support a due date filter dropdown with options: All, Unscheduled (`due_date IS NULL`), Overdue (`due_date < today AND status != done`), and Due this week. The filter logic lives in `filterTasksByDueDate()` in `src/lib/task-sort.ts`. The active filter button uses `variant="default"` to visually indicate filtering is applied.
 
+### Goals (Lightweight Outcome Tracking)
+
+Goals use the **exact same `projects` table** with `type = "goal"`. All existing RLS policies, relations, and hooks apply unchanged — no new primitive, no migration beyond a single `type` column addition.
+
+**Key rules:**
+- Goals are filtered out of the standard Projects grid and rendered in a separate Goals section on `/projects`
+- Goals use a stripped-down detail page (`GoalDetailPage` component) — no properties panel, no notes/resources sections, just description + progress bar + task list
+- Goals are excluded from the sidebar projects list (sidebar doesn't render projects at all currently, but any future sidebar project listing must filter `type !== "goal"`)
+- `GoalsSection` appears at the top of the Tasks page list view and the Today page — shows all active goals, collapsible
+- Tasks belonging to a goal show a purple goal pill in `TaskListItem` (reads `task.project.type === "goal"`)
+- Goal description feeds into entity memory refresh via the `ACTIVE GOALS` source block in the prompt — linked via `projects.entity_id`
+- Goal creation uses `CreateGoalSheet` (lightweight bottom sheet) — no project dialog ceremony
+
+**Key files:**
+- `src/components/project/create-goal-sheet.tsx` — lightweight goal creation sheet
+- `src/components/project/goal-card.tsx` — compact goal card for `/projects` page
+- `src/components/project/goal-detail-page.tsx` — stripped goal detail view
+- `src/components/task/goal-list-row.tsx` — inline goal row for task views
+- `src/components/task/goals-section.tsx` — collapsible goals section (used in tasks + today)
+- Migration: `supabase/migrations/20260325_project_type.sql`
+
 ### Project Status & Sidebar Filtering
 
 Projects have a `status` field (`"active" | "completed" | "archived"`). The sidebar (`src/components/layout/sidebar.tsx`) filters out archived projects before rendering — if you add new status values, update this filter accordingly.

@@ -33,6 +33,7 @@ export type Database = {
           lead_id: string | null;
           due_date: string | null;
           entity_id: string | null;
+          type: "standard" | "goal";
           created_by: string;
           created_at: string;
           updated_at: string;
@@ -48,6 +49,7 @@ export type Database = {
           lead_id?: string | null;
           due_date?: string | null;
           entity_id?: string | null;
+          type?: "standard" | "goal";
           created_by: string;
           created_at?: string;
           updated_at?: string;
@@ -63,6 +65,7 @@ export type Database = {
           lead_id?: string | null;
           due_date?: string | null;
           entity_id?: string | null;
+          type?: "standard" | "goal";
           created_by?: string;
           created_at?: string;
           updated_at?: string;

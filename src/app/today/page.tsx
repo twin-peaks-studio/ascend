@@ -29,6 +29,7 @@ import { ReschedulePopover } from "@/components/today/reschedule-popover";
 import { DaySummaryBanner } from "@/components/today/day-summary-banner";
 import { WeeklySummaryBanner } from "@/components/today/weekly-summary-banner";
 import { PRIORITY_CIRCLE_COLORS } from "@/components/task/task-list-view";
+import { GoalsSection } from "@/components/task/goals-section";
 import { isOverdue } from "@/lib/date-utils";
 import { useProjects } from "@/hooks/use-projects";
 import { useProfiles } from "@/hooks/use-profiles";
@@ -182,6 +183,13 @@ export default function TodayPage() {
   const loading = viewMode === "today" ? todayLoading : weekLoading;
 
   const allTodayTasks = filteredTodayGroups.flatMap((g) => g.tasks);
+
+  // Active goals — filtered by workspace if workspace filter is active
+  const activeGoals = useMemo(() => {
+    const goals = projects.filter((p) => p.type === "goal" && p.status !== "archived" && p.status !== "completed");
+    if (selectedWorkspaceIds.length === 0) return goals;
+    return goals.filter((g) => g.workspace_id && selectedWorkspaceIds.includes(g.workspace_id));
+  }, [projects, selectedWorkspaceIds]);
 
   const handleStatusToggle = useCallback(
     async (task: TaskWithProject) => {
@@ -339,6 +347,9 @@ export default function TodayPage() {
           {viewMode === "week" && weeklySummary && (
             <WeeklySummaryBanner summary={weeklySummary} />
           )}
+
+          {/* Goals section */}
+          {!loading && <GoalsSection goals={activeGoals} />}
 
           {/* Loading state */}
           {loading && (
