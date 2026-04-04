@@ -6,6 +6,7 @@ import { ArrowLeft, Loader2 } from "lucide-react";
 import { useTaskMutations } from "@/hooks/use-tasks";
 import { useProjects } from "@/hooks/use-projects";
 import { useAuth } from "@/hooks/use-auth";
+import { useWorkspaceContext } from "@/contexts/workspace-context";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -40,7 +41,8 @@ function NewTaskForm() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const { createTask } = useTaskMutations();
-  const { projects } = useProjects();
+  const { activeWorkspace } = useWorkspaceContext();
+  const { projects } = useProjects(activeWorkspace?.id);
   const { user } = useAuth();
 
   const activeProjects = projects.filter((p) => p.status === "active");
@@ -188,26 +190,34 @@ function NewTaskForm() {
         </p>
       </div>
 
-      {/* Footer — project selector + create button */}
+      {/* Footer — workspace label + project selector + create button */}
       <div className="border-t px-4 py-3">
         <div className="mx-auto flex w-full max-w-2xl items-center justify-between gap-3">
-          <Select
-            value={selectedProjectId}
-            onValueChange={setSelectedProjectId}
-            disabled={submitting}
-          >
-            <SelectTrigger className="h-9 w-[180px]">
-              <SelectValue placeholder="No project" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={NO_PROJECT}>No project</SelectItem>
-              {activeProjects.map((project) => (
-                <SelectItem key={project.id} value={project.id}>
-                  {project.title}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex items-center gap-2 min-w-0">
+            {activeWorkspace && (
+              <span className="text-xs text-muted-foreground/60 shrink-0">
+                {activeWorkspace.name}
+              </span>
+            )}
+            {activeWorkspace && <span className="text-muted-foreground/30 text-xs">/</span>}
+            <Select
+              value={selectedProjectId}
+              onValueChange={setSelectedProjectId}
+              disabled={submitting}
+            >
+              <SelectTrigger className="h-9 w-[160px]">
+                <SelectValue placeholder="No project" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={NO_PROJECT}>No project</SelectItem>
+                {activeProjects.map((project) => (
+                  <SelectItem key={project.id} value={project.id}>
+                    {project.title}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
           <Button
             onClick={handleSubmit}
