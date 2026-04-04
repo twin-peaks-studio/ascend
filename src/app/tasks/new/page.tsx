@@ -23,6 +23,7 @@ import {
 import type { TaskStatus } from "@/types";
 
 const NO_PROJECT = "__none__";
+const NO_WORKSPACE = "__none__";
 
 function NewTaskForm() {
   const router = useRouter();
@@ -32,7 +33,21 @@ function NewTaskForm() {
   const fromPath = searchParams.get("from") ?? "/tasks";
   const defaultStatus = (searchParams.get("status") ?? "todo") as TaskStatus;
 
-  const [input, setInput] = useState("");
+  const { activeWorkspace, workspaces } = useWorkspaceContext();
+
+  // Workspace selection is local to this form — doesn't affect the global switcher.
+  // Defaults to: active workspace → first workspace → none
+  const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string>(() => {
+    return activeWorkspace?.id ?? workspaces[0]?.id ?? NO_WORKSPACE;
+  });
+
+  // Once workspaces load (may be async), seed the selection if still unset
+  useEffect(() => {
+    if (selectedWorkspaceId === NO_WORKSPACE && workspaces.length > 0) {
+      setSelectedWorkspaceId(activeWorkspace?.id ?? workspaces[0].id);
+    }
+  }, [activeWorkspace, workspaces, selectedWorkspaceId]);
+
   const [selectedProjectId, setSelectedProjectId] = useState(
     defaultProjectId || NO_PROJECT
   );
@@ -41,11 +56,17 @@ function NewTaskForm() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const { createTask } = useTaskMutations();
-  const { activeWorkspace } = useWorkspaceContext();
-  const { projects } = useProjects(activeWorkspace?.id);
+  const { projects } = useProjects(
+    selectedWorkspaceId === NO_WORKSPACE ? undefined : selectedWorkspaceId
+  );
   const { user } = useAuth();
 
   const activeProjects = projects.filter((p) => p.status === "active");
+
+  const handleWorkspaceChange = useCallback((wsId: string) => {
+    setSelectedWorkspaceId(wsId);
+    setSelectedProjectId(NO_PROJECT); // reset project when workspace changes
+  }, []);
 
   // Auto-focus on mount
   useEffect(() => {
@@ -55,12 +76,13 @@ function NewTaskForm() {
   const handleInput = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => {
       setInput(e.target.value);
-      // Auto-resize
       e.target.style.height = "auto";
       e.target.style.height = `${e.target.scrollHeight}px`;
     },
     []
   );
+
+  const [input, setInput] = useState("");
 
   const handleSubmit = useCallback(async () => {
     const trimmed = input.trim();
@@ -69,12 +91,9 @@ function NewTaskForm() {
     setSubmitting(true);
 
     const now = new Date();
-
-    // Date + priority extracted client-side — free, no network
     const extractedDate = extractDateFromText(trimmed, now);
     const extractedPriority = extractPriority(trimmed);
 
-    // Title via AI, with synchronous fallback
     let title: string;
     try {
       const res = await fetch("/api/ai/parse-task", {
@@ -107,7 +126,6 @@ function NewTaskForm() {
     if (result) {
       router.push(`/tasks/${result.id}`);
     } else {
-      // createTask already shows an error toast
       setSubmitting(false);
     }
   }, [
@@ -118,7 +136,6 @@ function NewTaskForm() {
     createTask,
     user,
     router,
-    fromPath,
   ]);
 
   const handleKeyDown = useCallback(
@@ -152,7 +169,7 @@ function NewTaskForm() {
           New Task
         </span>
 
-        {/* Mobile create button — visible only on small screens */}
+        {/* Mobile create button */}
         <Button
           size="sm"
           onClick={handleSubmit}
@@ -190,22 +207,37 @@ function NewTaskForm() {
         </p>
       </div>
 
-      {/* Footer — workspace label + project selector + create button */}
+      {/* Footer — workspace / project / create */}
       <div className="border-t px-4 py-3">
         <div className="mx-auto flex w-full max-w-2xl items-center justify-between gap-3">
-          <div className="flex items-center gap-2 min-w-0">
-            {activeWorkspace && (
-              <span className="text-xs text-muted-foreground/60 shrink-0">
-                {activeWorkspace.name}
-              </span>
-            )}
-            {activeWorkspace && <span className="text-muted-foreground/30 text-xs">/</span>}
+
+          {/* Workspace → Project selectors */}
+          <div className="flex items-center gap-1.5 min-w-0">
+            <Select
+              value={selectedWorkspaceId}
+              onValueChange={handleWorkspaceChange}
+              disabled={submitting}
+            >
+              <SelectTrigger className="h-9 w-[140px]">
+                <SelectValue placeholder="Workspace" />
+              </SelectTrigger>
+              <SelectContent>
+                {workspaces.map((ws) => (
+                  <SelectItem key={ws.id} value={ws.id}>
+                    {ws.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <span className="text-muted-foreground/40 text-sm select-none">/</span>
+
             <Select
               value={selectedProjectId}
               onValueChange={setSelectedProjectId}
               disabled={submitting}
             >
-              <SelectTrigger className="h-9 w-[160px]">
+              <SelectTrigger className="h-9 w-[140px]">
                 <SelectValue placeholder="No project" />
               </SelectTrigger>
               <SelectContent>
@@ -219,11 +251,7 @@ function NewTaskForm() {
             </Select>
           </div>
 
-          <Button
-            onClick={handleSubmit}
-            disabled={!canSubmit}
-            className="gap-2"
-          >
+          <Button onClick={handleSubmit} disabled={!canSubmit} className="gap-2">
             {submitting ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
