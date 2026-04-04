@@ -1,8 +1,6 @@
 "use client";
 
-export const dynamic = "force-dynamic";
-
-import { useState, useRef, useEffect, useCallback } from "react";
+import { Suspense, useState, useRef, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { useTaskMutations } from "@/hooks/use-tasks";
@@ -25,7 +23,7 @@ import type { TaskStatus } from "@/types";
 
 const NO_PROJECT = "__none__";
 
-export default function NewTaskPage() {
+function NewTaskForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -228,5 +226,13 @@ export default function NewTaskPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function NewTaskPage() {
+  return (
+    <Suspense>
+      <NewTaskForm />
+    </Suspense>
   );
 }
