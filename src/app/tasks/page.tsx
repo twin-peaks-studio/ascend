@@ -376,14 +376,7 @@ export default function TasksPage() {
   );
 
   const handleQuickCreate = () => {
-    setDefaultStatus("todo");
-    setEditingTask(null);
-    // Use QuickAddTask drawer on mobile, TaskDialog on desktop
-    if (isMobile) {
-      setShowQuickAdd(true);
-    } else {
-      setShowTaskDialog(true);
-    }
+    router.push("/tasks/new?from=/tasks");
   };
 
   return (

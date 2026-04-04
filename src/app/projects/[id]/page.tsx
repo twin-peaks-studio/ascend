@@ -534,7 +534,11 @@ export default function ProjectDetailPage() {
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => setShowTaskDialog(true)}
+                      onClick={() =>
+                        router.push(
+                          `/tasks/new?project=${projectId}&from=${encodeURIComponent(`/projects/${projectId}`)}`
+                        )
+                      }
                     >
                       <Plus className="h-4 w-4 mr-1" />
                       Add Task
