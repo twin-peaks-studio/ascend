@@ -96,6 +96,7 @@ export default function NewTaskPage() {
       priority: extractedPriority,
       due_date: extractedDate ? extractedDate.toISOString() : null,
       status: defaultStatus,
+      position: 0,
       project_id:
         selectedProjectId === NO_PROJECT ? null : selectedProjectId || null,
       assignee_id: user?.id ?? null,
