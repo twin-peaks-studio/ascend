@@ -103,7 +103,7 @@ function NewTaskForm() {
     });
 
     if (result) {
-      router.push(fromPath);
+      router.push(`/tasks/${result.id}`);
     } else {
       // createTask already shows an error toast
       setSubmitting(false);
