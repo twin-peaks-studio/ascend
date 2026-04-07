@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Eye } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AppShell, Header } from "@/components/layout";
+import { useQuickCapture } from "@/components/layout/app-shell";
 import type { ViewMode } from "@/components/layout";
 import { KanbanBoard } from "@/components/board";
 import { TaskDialog, QuickAddTask, TaskListView, TaskSortSelect } from "@/components/task";
@@ -375,13 +376,11 @@ export default function TasksPage() {
     [createTask, refetch, trackCreatedTask]
   );
 
-  const handleQuickCreate = () => {
-    router.push("/tasks/new?from=/tasks");
-  };
+  const { openQuickCapture } = useQuickCapture();
+  const handleQuickCreate = openQuickCapture;
 
   return (
     <AppShell
-      onAddTask={handleQuickCreate}
       viewMode={viewMode}
       onViewModeChange={handleViewModeChange}
       projects={projects as Project[]}

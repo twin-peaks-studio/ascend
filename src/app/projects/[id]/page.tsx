@@ -20,6 +20,7 @@ import {
   History,
 } from "lucide-react";
 import { AppShell } from "@/components/layout";
+import { useQuickCapture } from "@/components/layout/app-shell";
 import { TaskDialog, TaskListItem } from "@/components/task";
 import { sortTasks } from "@/lib/task-sort";
 import { Badge } from "@/components/ui/badge";
@@ -249,6 +250,7 @@ export default function ProjectDetailPage() {
   }, [projectId, deleteProject, router]);
 
   const { trackCreatedTask, linkEntities } = useLinkEntitiesToTask();
+  const { openQuickCapture } = useQuickCapture();
 
   // Handle task creation
   const handleCreateTask = useCallback(
@@ -534,11 +536,7 @@ export default function ProjectDetailPage() {
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() =>
-                        router.push(
-                          `/tasks/new?project=${projectId}&from=${encodeURIComponent(`/projects/${projectId}`)}`
-                        )
-                      }
+                      onClick={openQuickCapture}
                     >
                       <Plus className="h-4 w-4 mr-1" />
                       Add Task
