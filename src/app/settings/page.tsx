@@ -3,6 +3,7 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ProfileSection } from "@/components/settings/profile-section";
 import { AccountSection } from "@/components/settings/account-section";
+import { WorkspaceSection } from "@/components/settings/workspace-section";
 
 export default function SettingsPage() {
   return (
@@ -18,7 +19,7 @@ export default function SettingsPage() {
         <TabsList>
           <TabsTrigger value="profile">Profile</TabsTrigger>
           <TabsTrigger value="account">Account</TabsTrigger>
-          <TabsTrigger value="appearance">Appearance</TabsTrigger>
+          <TabsTrigger value="preferences">Preferences</TabsTrigger>
         </TabsList>
 
         <TabsContent value="profile" className="space-y-6">
@@ -29,13 +30,8 @@ export default function SettingsPage() {
           <AccountSection />
         </TabsContent>
 
-        <TabsContent value="appearance" className="space-y-6">
-          <div className="rounded-lg border p-6">
-            <h3 className="text-lg font-semibold mb-2">Appearance</h3>
-            <p className="text-sm text-muted-foreground">
-              Coming soon: Theme customization and display preferences.
-            </p>
-          </div>
+        <TabsContent value="preferences" className="space-y-6">
+          <WorkspaceSection />
         </TabsContent>
       </Tabs>
     </div>

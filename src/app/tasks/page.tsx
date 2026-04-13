@@ -375,20 +375,8 @@ export default function TasksPage() {
     [createTask, refetch, trackCreatedTask]
   );
 
-  const handleQuickCreate = () => {
-    setDefaultStatus("todo");
-    setEditingTask(null);
-    // Use QuickAddTask drawer on mobile, TaskDialog on desktop
-    if (isMobile) {
-      setShowQuickAdd(true);
-    } else {
-      setShowTaskDialog(true);
-    }
-  };
-
   return (
     <AppShell
-      onAddTask={handleQuickCreate}
       viewMode={viewMode}
       onViewModeChange={handleViewModeChange}
       projects={projects as Project[]}
@@ -408,7 +396,7 @@ export default function TasksPage() {
       <Header
         title="Tasks"
         description={viewMode === "board" ? "Manage your tasks with the Kanban board" : "View all your tasks"}
-        onQuickCreate={handleQuickCreate}
+        showCreateButton
         quickCreateLabel="New Task"
         viewMode={viewMode}
         onViewModeChange={handleViewModeChange}

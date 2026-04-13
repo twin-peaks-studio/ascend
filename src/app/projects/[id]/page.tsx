@@ -20,6 +20,7 @@ import {
   History,
 } from "lucide-react";
 import { AppShell } from "@/components/layout";
+import { useQuickCapture } from "@/components/layout/app-shell";
 import { TaskDialog, TaskListItem } from "@/components/task";
 import { sortTasks } from "@/lib/task-sort";
 import { Badge } from "@/components/ui/badge";
@@ -69,6 +70,16 @@ import {
 import type { DocumentType, Project, ProjectStatus, TaskPriority, TaskWithProject, Task, TaskStatus } from "@/types";
 import type { CreateTaskInput, UpdateTaskInput, CreateDocumentInput } from "@/lib/validation";
 import { STATUS_CONFIG, PRIORITY_CONFIG } from "@/types";
+
+function AddTaskButton() {
+  const { openQuickCapture } = useQuickCapture();
+  return (
+    <Button size="sm" variant="outline" onClick={openQuickCapture}>
+      <Plus className="h-4 w-4 mr-1" />
+      Add Task
+    </Button>
+  );
+}
 
 export default function ProjectDetailPage() {
   const params = useParams();
@@ -531,14 +542,7 @@ export default function ProjectDetailPage() {
                         </Link>
                       </Button>
                     )}
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setShowTaskDialog(true)}
-                    >
-                      <Plus className="h-4 w-4 mr-1" />
-                      Add Task
-                    </Button>
+                    <AddTaskButton />
                   </div>
                 </div>
 

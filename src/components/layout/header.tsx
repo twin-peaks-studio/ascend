@@ -16,7 +16,7 @@ import {
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useAuth } from "@/hooks/use-auth";
 import { getInitials } from "@/lib/profile-utils";
-import { useSearchDialog, useFeedbackDialog, useTheme } from "./app-shell";
+import { useSearchDialog, useFeedbackDialog, useTheme, useQuickCapture } from "./app-shell";
 
 export type ViewMode = "board" | "list";
 
@@ -24,6 +24,7 @@ interface HeaderProps {
   title: string;
   description?: string;
   onQuickCreate?: () => void;
+  showCreateButton?: boolean;
   quickCreateLabel?: string;
   viewMode?: ViewMode;
   onViewModeChange?: (mode: ViewMode) => void;
@@ -33,6 +34,7 @@ export function Header({
   title,
   description,
   onQuickCreate,
+  showCreateButton = false,
   quickCreateLabel = "Create",
   viewMode,
   onViewModeChange,
@@ -41,6 +43,10 @@ export function Header({
   const { openSearch } = useSearchDialog();
   const { openFeedback } = useFeedbackDialog();
   const { isDark, toggleTheme, mounted } = useTheme();
+  const { openQuickCapture } = useQuickCapture();
+
+  const handleCreate = onQuickCreate ?? openQuickCapture;
+  const shouldShowCreate = !!(onQuickCreate || showCreateButton);
 
   return (
     <header className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -73,9 +79,9 @@ export function Header({
           )}
 
           {/* Quick create button (hidden on mobile; use bottom nav + instead) */}
-          {onQuickCreate && (
+          {shouldShowCreate && (
             <Button
-              onClick={onQuickCreate}
+              onClick={handleCreate}
               size="sm"
               className="hidden gap-2 md:inline-flex"
             >
