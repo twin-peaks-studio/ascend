@@ -71,6 +71,16 @@ import type { DocumentType, Project, ProjectStatus, TaskPriority, TaskWithProjec
 import type { CreateTaskInput, UpdateTaskInput, CreateDocumentInput } from "@/lib/validation";
 import { STATUS_CONFIG, PRIORITY_CONFIG } from "@/types";
 
+function AddTaskButton() {
+  const { openQuickCapture } = useQuickCapture();
+  return (
+    <Button size="sm" variant="outline" onClick={openQuickCapture}>
+      <Plus className="h-4 w-4 mr-1" />
+      Add Task
+    </Button>
+  );
+}
+
 export default function ProjectDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -250,7 +260,6 @@ export default function ProjectDetailPage() {
   }, [projectId, deleteProject, router]);
 
   const { trackCreatedTask, linkEntities } = useLinkEntitiesToTask();
-  const { openQuickCapture } = useQuickCapture();
 
   // Handle task creation
   const handleCreateTask = useCallback(
@@ -533,14 +542,7 @@ export default function ProjectDetailPage() {
                         </Link>
                       </Button>
                     )}
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={openQuickCapture}
-                    >
-                      <Plus className="h-4 w-4 mr-1" />
-                      Add Task
-                    </Button>
+                    <AddTaskButton />
                   </div>
                 </div>
 
