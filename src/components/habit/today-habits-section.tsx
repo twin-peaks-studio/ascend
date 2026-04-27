@@ -110,7 +110,16 @@ export function TodayHabitsSection() {
     user?.id ?? null
   );
 
-  const activeHabits = habits.filter((h) => !h.is_archived);
+  const todayDow = new Date().getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+
+  const activeHabits = habits.filter((h) => {
+    if (h.is_archived) return false;
+    // For specific-day weekly habits, only show on required days
+    if (h.frequency_type === "weekly" && h.frequency_days?.length) {
+      return h.frequency_days.includes(todayDow);
+    }
+    return true;
+  });
 
   if (habitsLoading || entriesLoading) return null;
   if (activeHabits.length === 0) return null;
