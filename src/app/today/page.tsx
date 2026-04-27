@@ -28,6 +28,7 @@ import { QuickAddTask } from "@/components/task";
 import { ReschedulePopover } from "@/components/today/reschedule-popover";
 import { DaySummaryBanner } from "@/components/today/day-summary-banner";
 import { WeeklySummaryBanner } from "@/components/today/weekly-summary-banner";
+import { TodayHabitsSection } from "@/components/habit/today-habits-section";
 import { PRIORITY_CIRCLE_COLORS } from "@/components/task/task-list-view";
 import { isOverdue } from "@/lib/date-utils";
 import { useProjects } from "@/hooks/use-projects";
@@ -334,6 +335,9 @@ export default function TodayPage() {
 
           {/* Day Summary Banner (today view) */}
           {viewMode === "today" && daySummary && <DaySummaryBanner summary={daySummary} />}
+
+          {/* Habits section (today view only) */}
+          {viewMode === "today" && !loading && <TodayHabitsSection />}
 
           {/* Weekly Summary Banner (week view) */}
           {viewMode === "week" && weeklySummary && (

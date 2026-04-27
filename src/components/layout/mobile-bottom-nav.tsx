@@ -25,6 +25,7 @@ import {
   CalendarDays,
   Sparkles,
   Briefcase,
+  Flame,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -71,9 +72,9 @@ const navItems: NavItem[] = [
     icon: CheckSquare,
   },
   {
-    href: "/workspaces",
-    label: "Spaces",
-    icon: Briefcase,
+    href: "/habits",
+    label: "Habits",
+    icon: Flame,
   },
 ];
 

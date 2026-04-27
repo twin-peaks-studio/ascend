@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Plus, Briefcase, Brain, Trash2, FolderKanban, BookOpen, Package, Network, CheckSquare } from "lucide-react";
+import { Plus, Briefcase, Brain, Trash2, FolderKanban, BookOpen, Package, Network, CheckSquare, Flame } from "lucide-react";
 import { AppShell, Header } from "@/components/layout";
 import { ProjectCard, ProjectDialog } from "@/components/project";
 import { TaskDialog } from "@/components/task";
@@ -20,6 +20,7 @@ import { WorkspaceCapturesTab } from "@/components/workspace/workspace-captures-
 import { WorkspaceProductsTab } from "@/components/workspace/workspace-products-tab";
 import { WorkspaceEntitiesTab } from "@/components/workspace/workspace-entities-tab";
 import { WorkspaceTasksTab } from "@/components/workspace/workspace-tasks-tab";
+import { WorkspaceHabitsTab } from "@/components/workspace/workspace-habits-tab";
 import { workspaceTaskKeys } from "@/hooks/use-workspace-tasks";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
@@ -27,7 +28,7 @@ import type { ProjectStatus, Project } from "@/types";
 import { useLinkEntitiesToTask } from "@/hooks/use-link-entities-to-task";
 import type { CreateProjectInput, UpdateProjectInput, CreateTaskInput, UpdateTaskInput } from "@/lib/validation";
 
-type WorkspaceTab = "projects" | "tasks" | "captures" | "products" | "entities";
+type WorkspaceTab = "projects" | "tasks" | "captures" | "products" | "entities" | "habits";
 
 function WorkspaceContent() {
   const params = useParams();
@@ -123,6 +124,7 @@ function WorkspaceContent() {
   const workspaceTabs: { key: WorkspaceTab; label: string; icon: React.ElementType }[] = [
     { key: "projects", label: "Projects", icon: FolderKanban },
     { key: "tasks", label: "Tasks", icon: CheckSquare },
+    { key: "habits", label: "Habits", icon: Flame },
     ...(isIntelligence
       ? [
           { key: "captures" as WorkspaceTab, label: "Captures", icon: BookOpen },
@@ -267,6 +269,10 @@ function WorkspaceContent() {
 
         {activeTab === "entities" && (
           <WorkspaceEntitiesTab workspaceId={workspaceId} />
+        )}
+
+        {activeTab === "habits" && (
+          <WorkspaceHabitsTab workspaceId={workspaceId} />
         )}
       </div>
 

@@ -56,7 +56,19 @@ export type {
 
 export type { WorkspaceType, CaptureType } from "./database";
 
+export type {
+  Habit,
+  HabitInsert,
+  HabitUpdate,
+  HabitEntry,
+  HabitEntryInsert,
+  HabitEntryUpdate,
+  HabitFrequencyType,
+} from "./database";
+
 import type {
+  Habit as DBHabit,
+  HabitEntry as DBHabitEntry,
   Project as DBProject,
   Task as DBTask,
   ProjectDocument as DBProjectDocument,
@@ -359,6 +371,40 @@ export interface TrackerAttachment {
   mimeType: string;
   /** Public URL for direct download. */
   url: string;
+}
+
+// ============================================================
+// Habit types
+// ============================================================
+
+export interface CalendarDay {
+  date: string; // YYYY-MM-DD
+  status: "completed" | "partial" | "missed" | "future" | "today";
+  durationMinutes: number;
+  entryCount: number;
+}
+
+export interface HabitStats {
+  currentStreak: number;
+  longestStreak: number;
+  completedThisWeek: number;
+  completedThisMonth: number;
+  completedTotal: number;
+  targetThisWeek: number;
+  targetThisMonth: number;
+  completionRateThisWeek: number;
+  completionRateLast30Days: number;
+  lastCheckedIn: string | null;
+  isCompletedToday: boolean;
+  calendarData: CalendarDay[];
+}
+
+export interface HabitWithStats extends DBHabit {
+  stats: HabitStats;
+}
+
+export interface HabitEntryWithHabit extends DBHabitEntry {
+  habit: DBHabit;
 }
 
 /**

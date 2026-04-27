@@ -219,6 +219,30 @@ Key files:
 
 **Due Date Filters (Phase 4.9):** The workspace Tasks tab and entity Tasks tab both support a due date filter dropdown with options: All, Unscheduled (`due_date IS NULL`), Overdue (`due_date < today AND status != done`), and Due this week. The filter logic lives in `filterTasksByDueDate()` in `src/lib/task-sort.ts`. The active filter button uses `variant="default"` to visually indicate filtering is applied.
 
+### Habit Tracker
+
+Habits are personal recurring practices. They live in two new DB tables (`habits`, `habit_entries`) and are scoped by `user_id` — **not** workspace-required (workspace_id is nullable). Habits can optionally be linked to a workspace, in which case they also appear in the workspace Habits tab.
+
+**Key architecture decisions:**
+- Streak and completion-rate logic is computed client-side in `src/hooks/use-habit-stats.ts` — no denormalized streak columns. The `computeHabitStats(habit, entries)` function is pure and re-exported for use outside React (e.g., in the Today section which loads per-habit entries individually).
+- Multiple `habit_entries` per day are allowed (e.g., two reading sessions). Stats aggregate by distinct dates. A day is "completed" if: at least one entry exists AND total duration ≥ `time_goal_minutes` (if set).
+- The `TodayHabitsSection` component is self-contained — it fetches its own data and renders nothing if the user has no active habits (safe to include on Today page unconditionally).
+- The `HabitDashboardWidget` also self-fetches and returns null when there are no active habits.
+- Calendar heatmap uses `date-fns` for ISO-week grouping (Monday-start). Clicking any past cell opens the check-in dialog with that date pre-filled (backdating support).
+
+**Streak semantics:**
+- Daily habits: consecutive completed days going back from today; today's in-progress state doesn't break it.
+- Weekly habits (Nx/week): counts consecutive complete ISO weeks; the current in-progress week never breaks the streak.
+
+**Key files:**
+- `src/hooks/use-habits.ts` — CRUD + React Query keys
+- `src/hooks/use-habit-entries.ts` — entry CRUD, today entries query
+- `src/hooks/use-habit-stats.ts` — pure streak/completion computation
+- `src/components/habit/` — all habit UI components
+- `src/app/habits/page.tsx` — /habits list page
+- `src/app/habits/[id]/page.tsx` — habit detail with heatmap + journal
+- `supabase/migrations/20260428_habit_tables.sql` — schema
+
 ### Project Status & Sidebar Filtering
 
 Projects have a `status` field (`"active" | "completed" | "archived"`). The sidebar (`src/components/layout/sidebar.tsx`) filters out archived projects before rendering — if you add new status values, update this filter accordingly.
@@ -234,6 +258,7 @@ Task view preferences are persisted in localStorage so they survive page navigat
 - `tasks-show-completed` / `project-tasks-show-completed` — whether completed (done) tasks are visible
 - `active-workspace-id` — currently selected workspace ID (used by `WorkspaceProvider`)
 - `today-view-mode` — last selected view on the Today page (`"today"` or `"week"`); weekly summary is stored separately in `sessionStorage` under `today-weekly-summary`
+- `habits-view-filter` — active filter on the /habits page (`"active"` | `"archived"` | `"all"`)
 
 When adding new filterable state to task pages, follow this pattern: initialize with a `useState` lazy initializer that reads from localStorage, and persist on every change via a `useCallback` handler.
 

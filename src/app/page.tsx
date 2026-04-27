@@ -24,6 +24,7 @@ import { useProfiles } from "@/hooks/use-profiles";
 import { useIsMobile } from "@/hooks/use-media-query";
 import { useWorkspaceContext } from "@/contexts/workspace-context";
 import { WorkspaceFilter } from "@/components/filters";
+import { HabitDashboardWidget } from "@/components/habit/habit-dashboard-widget";
 import type { CreateProjectInput, UpdateProjectInput, CreateTaskInput } from "@/lib/validation";
 
 interface StatCardProps {
@@ -195,6 +196,9 @@ function Dashboard() {
             href="/tasks"
           />
         </div>
+
+        {/* Habit Health widget */}
+        <HabitDashboardWidget />
 
         {/* Quick actions */}
         <div className="grid gap-4 md:grid-cols-2">
