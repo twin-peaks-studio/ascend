@@ -982,7 +982,7 @@ export type Database = {
           id: string;
           entity_id: string;
           workspace_id: string;
-          source_type: "note" | "comment" | "task_description" | "capture";
+          source_type: "note" | "comment" | "task_description" | "capture" | "habit_entry";
           source_id: string;
           created_at: string;
         };
@@ -990,7 +990,7 @@ export type Database = {
           id?: string;
           entity_id: string;
           workspace_id: string;
-          source_type: "note" | "comment" | "task_description" | "capture";
+          source_type: "note" | "comment" | "task_description" | "capture" | "habit_entry";
           source_id: string;
           created_at?: string;
         };
@@ -998,7 +998,7 @@ export type Database = {
           id?: string;
           entity_id?: string;
           workspace_id?: string;
-          source_type?: "note" | "comment" | "task_description" | "capture";
+          source_type?: "note" | "comment" | "task_description" | "capture" | "habit_entry";
           source_id?: string;
           created_at?: string;
         };
