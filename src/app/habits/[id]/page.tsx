@@ -71,9 +71,16 @@ export default function HabitDetailPage({ params }: HabitDetailPageProps) {
     );
   }
 
+  const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const MON_FIRST = [1, 2, 3, 4, 5, 6, 0];
+
   const frequencyLabel =
     habit.frequency_type === "daily"
       ? "Every day"
+      : habit.frequency_type === "weekly" && habit.frequency_days?.length
+      ? MON_FIRST.filter((d) => habit.frequency_days!.includes(d))
+          .map((d) => DAY_NAMES[d])
+          .join(", ")
       : habit.frequency_type === "weekly"
       ? `${habit.frequency_count}× per week`
       : `${habit.frequency_count}× per month`;

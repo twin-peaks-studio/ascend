@@ -255,7 +255,9 @@ function buildCalendarData(
     if (d > today) {
       status = "future";
     } else if (d === today) {
-      status = isDayCompleted(data, timeGoalMinutes) ? "completed" : "today";
+      if (isDayCompleted(data, timeGoalMinutes)) status = "completed";
+      else if (isRequired) status = "today";
+      else status = "future"; // today is not a required day → show empty
     } else if (isDayCompleted(data, timeGoalMinutes)) {
       status = "completed"; // show bonus check-ins on non-required days too
     } else if (data && data.count > 0) {
