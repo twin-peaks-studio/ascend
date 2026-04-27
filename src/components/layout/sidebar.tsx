@@ -14,7 +14,7 @@ import {
   Newspaper,
   CalendarDays,
   Sparkles,
-
+  Flame,
   Briefcase,
   Brain,
   Plus,
@@ -53,6 +53,11 @@ const navItems: NavItem[] = [
     href: "/projects",
     label: "Projects",
     icon: FolderKanban,
+  },
+  {
+    href: "/habits",
+    label: "Habits",
+    icon: Flame,
   },
 ];
 

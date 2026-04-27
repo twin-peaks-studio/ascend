@@ -1142,6 +1142,129 @@ export type Database = {
           }
         ];
       };
+      habits: {
+        Row: {
+          id: string;
+          user_id: string;
+          workspace_id: string | null;
+          title: string;
+          description: string | null;
+          color: string | null;
+          icon: string | null;
+          frequency_type: "daily" | "weekly" | "monthly";
+          frequency_count: number;
+          time_goal_minutes: number | null;
+          start_date: string;
+          is_archived: boolean;
+          archived_at: string | null;
+          created_by: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          workspace_id?: string | null;
+          title: string;
+          description?: string | null;
+          color?: string | null;
+          icon?: string | null;
+          frequency_type?: "daily" | "weekly" | "monthly";
+          frequency_count?: number;
+          time_goal_minutes?: number | null;
+          start_date?: string;
+          is_archived?: boolean;
+          archived_at?: string | null;
+          created_by: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          workspace_id?: string | null;
+          title?: string;
+          description?: string | null;
+          color?: string | null;
+          icon?: string | null;
+          frequency_type?: "daily" | "weekly" | "monthly";
+          frequency_count?: number;
+          time_goal_minutes?: number | null;
+          start_date?: string;
+          is_archived?: boolean;
+          archived_at?: string | null;
+          created_by?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "habits_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "habits_workspace_id_fkey";
+            columns: ["workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "workspaces";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      habit_entries: {
+        Row: {
+          id: string;
+          habit_id: string;
+          user_id: string;
+          entry_date: string;
+          checked_in_at: string;
+          duration_minutes: number | null;
+          notes: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          habit_id: string;
+          user_id: string;
+          entry_date: string;
+          checked_in_at?: string;
+          duration_minutes?: number | null;
+          notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          habit_id?: string;
+          user_id?: string;
+          entry_date?: string;
+          checked_in_at?: string;
+          duration_minutes?: number | null;
+          notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "habit_entries_habit_id_fkey";
+            columns: ["habit_id"];
+            isOneToOne: false;
+            referencedRelation: "habits";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "habit_entries_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
@@ -1253,4 +1376,14 @@ export type TaskContextEntryUpdate = UpdateTables<"task_context_entries">;
 
 export type EntityType = "product" | "initiative" | "stakeholder";
 export type EntityLinkType = "initiative_product" | "stakeholder_product" | "stakeholder_initiative";
-export type MentionSourceType = "note" | "comment" | "task_description" | "capture";
+export type MentionSourceType = "note" | "comment" | "task_description" | "capture" | "habit_entry";
+
+export type Habit = Tables<"habits">;
+export type HabitInsert = InsertTables<"habits">;
+export type HabitUpdate = UpdateTables<"habits">;
+
+export type HabitEntry = Tables<"habit_entries">;
+export type HabitEntryInsert = InsertTables<"habit_entries">;
+export type HabitEntryUpdate = UpdateTables<"habit_entries">;
+
+export type HabitFrequencyType = "daily" | "weekly" | "monthly";

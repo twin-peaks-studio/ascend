@@ -32,6 +32,9 @@ import {
   ClipboardList,
   Network,
   Package,
+  Flame,
+  BookOpen,
+  CheckCircle2,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -1069,6 +1072,97 @@ const sections: WikiSection[] = [
         paragraphs: [
           "Both the workspace Tasks tab and the entity Tasks tab include a date filter dropdown with four options: All dates (default), Unscheduled (tasks with no due date), Overdue (past due and not completed), and Due this week (due between today and end of the current week).",
           "When a date filter is active, the button switches to a filled style so you can see at a glance that a filter is applied. The task count summary also shows how many unscheduled tasks exist.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "habits",
+    icon: Flame,
+    title: "Habits",
+    description: "Build consistency with recurring habit tracking, streaks, and a per-session journal.",
+    content: [
+      {
+        heading: "Creating a habit",
+        paragraphs: [
+          "Go to Habits in the sidebar (or navigate to /habits) and click New habit. Give your habit a name, icon, and color, then choose a frequency:",
+        ],
+        list: [
+          "Every day — you aim to do this habit on every calendar day",
+          "X times per week — e.g. 5 times per week for fasting; any 5 days count",
+          "X times per month — for lower-frequency recurring practices",
+        ],
+      },
+      {
+        heading: "Time goals",
+        paragraphs: [
+          "Optionally set a time goal per session (e.g. 30 minutes for reading). When a time goal is set, the check-in dialog will ask you to log how long you spent. A day only counts as 'completed' toward your streak if the total time logged meets or exceeds the goal.",
+          "If you log time across two sessions on the same day, the totals are combined when calculating completion.",
+        ],
+      },
+      {
+        heading: "Checking in",
+        paragraphs: [
+          "Click Check in on a habit card or detail page. The check-in dialog lets you:",
+        ],
+        list: [
+          "Select the date (defaults to today — change to backdate a missed day)",
+          "Log time spent (minutes)",
+          "Write session notes in rich text — key takeaways, what you worked on, reflections",
+        ],
+      },
+      {
+        heading: "Backdating missed days",
+        paragraphs: [
+          "Forgot to log yesterday? Open the habit detail page and click on the greyed-out cell in the calendar heatmap for that day. The check-in dialog will pre-fill with that date. Your streak will update immediately after saving.",
+        ],
+      },
+      {
+        heading: "Understanding the calendar heatmap",
+        paragraphs: [
+          "The habit detail page shows a 3-month rolling calendar heatmap (similar to a GitHub contribution graph):",
+        ],
+        list: [
+          "Green cell — completed (time goal met or no time goal set)",
+          "Amber cell — partial (entry exists but time goal not met)",
+          "Muted grey cell — missed (past day with no entry)",
+          "Highlighted ring — today",
+          "Empty cell — future date",
+        ],
+      },
+      {
+        heading: "Streaks",
+        paragraphs: [
+          "For daily habits, a streak is the number of consecutive completed days going back from today. If today isn't done yet, the streak counts back from yesterday (so your streak doesn't break mid-day).",
+          "For weekly habits (e.g. 5×/week), a streak counts consecutive completed weeks. A week in progress never breaks your streak — you have until Sunday night to hit your target.",
+        ],
+        tip: "Streaks shown in amber/orange indicate 7+ days. A filled flame icon means you're on a roll!",
+      },
+      {
+        heading: "The journal view",
+        paragraphs: [
+          "On the habit detail page, scroll down to the Journal section. All your check-in notes appear as a continuous scrollable document, newest first, grouped by date.",
+          "Click the pencil icon on any entry to edit its notes or time logged inline. Click the date heading to add another entry for that day.",
+          "This is ideal for reading or learning habits where you want to review everything you've captured over time in one place.",
+        ],
+      },
+      {
+        heading: "Habits on the Today page",
+        paragraphs: [
+          "The Today page shows a Habits section above your tasks. Each row shows the habit's icon, name, weekly progress (e.g. '3/5 this week'), current streak, and a quick Check in button.",
+          "When you've completed all habits for the day, the section header turns green with a celebration indicator.",
+        ],
+      },
+      {
+        heading: "Habits on the Dashboard",
+        paragraphs: [
+          "The Dashboard shows a Habit Health widget with circular progress rings (like Apple Watch activity rings) for each of your active habits. The ring fills based on this week's completions vs. your target. A flame appears next to habits with a streak of 7+ days.",
+        ],
+      },
+      {
+        heading: "Linking habits to workspaces",
+        paragraphs: [
+          "Habits are personal by default and appear in your universal /habits view regardless of workspace. Optionally, you can link a habit to a workspace when creating or editing it. Linked habits also appear in the Habits tab on that workspace's detail page.",
         ],
       },
     ],

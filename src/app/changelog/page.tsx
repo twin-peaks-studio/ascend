@@ -46,6 +46,7 @@ import {
   Hash,
   Link2,
   Focus,
+  Flame,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -68,6 +69,50 @@ interface ChangelogEntry {
 }
 
 const changelog: ChangelogEntry[] = [
+  {
+    date: "April 27, 2026",
+    version: "0.30.0",
+    title: "Habit Tracker",
+    description: "Build consistency with a dedicated habit tracker — define recurring practices, log check-ins with notes and time, track streaks, and see your progress on the dashboard and Today page.",
+    features: [
+      {
+        icon: Flame,
+        title: "Habit definitions",
+        description: "Create habits with a name, icon, color, and frequency target: every day, X times per week, or X times per month. Optionally set a time goal per session (e.g. 30 min of reading). Habits can be linked to a workspace or kept personal.",
+        tag: "new",
+      },
+      {
+        icon: CheckCircle2,
+        title: "Check-in with journal notes",
+        description: "Log each session with optional time logged and rich-text notes. Great for capturing key learnings after a reading or trading session. Supports backdating — tap any past day in the calendar to log a missed session.",
+        tag: "new",
+      },
+      {
+        icon: BarChart3,
+        title: "Streaks, stats & calendar heatmap",
+        description: "Each habit shows current streak, longest streak, weekly/monthly completion rate, and a GitHub-style calendar heatmap. Green = completed, amber = partial, grey = missed. Click any past cell to backdate an entry.",
+        tag: "new",
+      },
+      {
+        icon: BookOpen,
+        title: "Scrollable journal view",
+        description: "All session notes for a habit flow as a continuous, date-grouped document on the habit detail page. Inline editing — click any entry to edit notes or time logged directly in the journal.",
+        tag: "new",
+      },
+      {
+        icon: CalendarDays,
+        title: "Habits on the Today page",
+        description: "A dedicated Habits section appears above your tasks in the Today view, showing each habit's check-in status, weekly progress, and a quick check-in button. Turns green when all habits are done for the day.",
+        tag: "new",
+      },
+      {
+        icon: Sparkles,
+        title: "Dashboard Habit Health widget",
+        description: "The dashboard now shows a Habits widget with circular progress rings per habit (like Apple Watch) and streak flames for habits on a streak of 7+ days.",
+        tag: "new",
+      },
+    ],
+  },
   {
     date: "March 23, 2026",
     version: "0.29.0",
