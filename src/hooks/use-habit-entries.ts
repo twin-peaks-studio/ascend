@@ -17,7 +17,18 @@ export const habitEntryKeys = {
   range: (habitId: string, from: string, to: string) =>
     [...habitEntryKeys.list(habitId), from, to] as const,
   today: (userId: string) => [...habitEntryKeys.all, "today", userId] as const,
+  allEntries: (userId: string, from?: string, to?: string, habitId?: string) =>
+    [...habitEntryKeys.all, "all-entries", userId, from, to, habitId] as const,
 };
+
+export interface HabitEntryWithHabit extends HabitEntry {
+  habits: {
+    id: string;
+    title: string;
+    icon: string | null;
+    color: string | null;
+  } | null;
+}
 
 async function fetchHabitEntries(
   habitId: string,
@@ -86,6 +97,52 @@ export function useTodayHabitEntries(userId: string | null) {
       return (data as HabitEntry[]) || [];
     },
     enabled: !!userId,
+    staleTime: 30 * 1000,
+    refetchOnWindowFocus: true,
+  });
+
+  return { entries, loading: isLoading };
+}
+
+export function useAllHabitEntries(options?: {
+  from?: string;
+  to?: string;
+  habitId?: string;
+}) {
+  const { user } = useAuth();
+
+  const { data: entries = [], isLoading } = useQuery({
+    queryKey: habitEntryKeys.allEntries(
+      user?.id ?? "",
+      options?.from,
+      options?.to,
+      options?.habitId
+    ),
+    queryFn: async () => {
+      const supabase = getClient();
+      let query = supabase
+        .from("habit_entries")
+        .select("*, habits(id, title, icon, color)")
+        .eq("user_id", user!.id)
+        .order("entry_date", { ascending: false })
+        .order("checked_in_at", { ascending: false });
+
+      if (options?.from) query = query.gte("entry_date", options.from);
+      if (options?.to) query = query.lte("entry_date", options.to);
+      if (options?.habitId) query = query.eq("habit_id", options.habitId);
+
+      const { data, error } = await withTimeout(
+        query,
+        TIMEOUTS.DATA_QUERY,
+        "Fetching habit log timed out"
+      );
+      if (error) {
+        logger.error("Error fetching all habit entries", { error });
+        throw error;
+      }
+      return (data ?? []) as HabitEntryWithHabit[];
+    },
+    enabled: !!user,
     staleTime: 30 * 1000,
     refetchOnWindowFocus: true,
   });
