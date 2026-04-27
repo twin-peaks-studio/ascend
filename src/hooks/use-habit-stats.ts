@@ -108,6 +108,69 @@ function computeLongestStreakDaily(
   return longest;
 }
 
+/** Parse a YYYY-MM-DD string to a local Date without UTC offset shifting. */
+function parseDateStr(dateStr: string): Date {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
+
+/** Returns JS getDay() (0=Sun … 6=Sat) for a YYYY-MM-DD string, timezone-safe. */
+function getDayOfWeek(dateStr: string): number {
+  return parseDateStr(dateStr).getDay();
+}
+
+function computeCurrentStreakSpecificDays(
+  completedDates: Map<string, { totalDuration: number; count: number }>,
+  timeGoalMinutes: number | null,
+  frequencyDays: number[],
+  today: string
+): number {
+  let streak = 0;
+  let check = new Date(today);
+  const startMs = check.getTime();
+
+  while (check.getTime() >= startMs - 365 * 2 * 86400000) {
+    const dateStr = toDateString(check);
+    const dow = check.getDay();
+
+    if (frequencyDays.includes(dow)) {
+      if (dateStr === today) {
+        // today in-progress: count if done, don't break if not
+        if (isDayCompleted(completedDates.get(dateStr), timeGoalMinutes)) streak++;
+      } else {
+        if (!isDayCompleted(completedDates.get(dateStr), timeGoalMinutes)) break;
+        streak++;
+      }
+    }
+    // non-required day: skip without breaking
+
+    check = addDays(check, -1);
+  }
+
+  return streak;
+}
+
+function computeLongestStreakSpecificDays(
+  completedDates: Map<string, { totalDuration: number; count: number }>,
+  timeGoalMinutes: number | null,
+  frequencyDays: number[],
+  startDate: string,
+  today: string
+): number {
+  let longest = 0;
+  let current = 0;
+  for (const d of dateRange(parseDateStr(startDate), parseDateStr(today))) {
+    if (!frequencyDays.includes(getDayOfWeek(d))) continue;
+    if (isDayCompleted(completedDates.get(d), timeGoalMinutes)) {
+      current++;
+      longest = Math.max(longest, current);
+    } else {
+      current = 0;
+    }
+  }
+  return longest;
+}
+
 function computeStreakWeekly(
   completedDates: Map<string, { totalDuration: number; count: number }>,
   timeGoalMinutes: number | null,
@@ -169,6 +232,7 @@ function buildCalendarData(
   timeGoalMinutes: number | null,
   startDate: string,
   today: string,
+  frequencyDays: number[] | null = null, // null = all days required
   daysBack = 91 // ~3 months
 ): CalendarDay[] {
   const todayDate = new Date(today);
@@ -186,15 +250,18 @@ function buildCalendarData(
 
   for (const d of [...allDates, ...futureDates]) {
     const data = completedDates.get(d);
+    const isRequired = frequencyDays === null || frequencyDays.includes(getDayOfWeek(d));
     let status: CalendarDay["status"];
     if (d > today) {
       status = "future";
     } else if (d === today) {
       status = isDayCompleted(data, timeGoalMinutes) ? "completed" : "today";
     } else if (isDayCompleted(data, timeGoalMinutes)) {
-      status = "completed";
+      status = "completed"; // show bonus check-ins on non-required days too
     } else if (data && data.count > 0) {
-      status = "partial"; // entry exists but time goal not met
+      status = "partial";
+    } else if (!isRequired) {
+      status = "future"; // non-required, no entry → show empty (reuse future style)
     } else {
       status = "missed";
     }
@@ -239,13 +306,14 @@ export function computeHabitStats(habit: Habit, entries: HabitEntry[]): HabitSta
     isDayCompleted(completedDates.get(d), habit.time_goal_minutes)
   ).length;
 
-  // Weekly target
-  const targetThisWeek =
-    habit.frequency_type === "daily"
-      ? weekDates.length // days elapsed in week so far
-      : habit.frequency_type === "weekly"
-      ? habit.frequency_count
-      : habit.frequency_count; // monthly: same for simplicity
+  // Weekly target: for specific-day habits, count only required days elapsed this week
+  const targetThisWeek = (() => {
+    if (habit.frequency_type === "daily") return weekDates.length;
+    if (habit.frequency_type === "weekly" && habit.frequency_days?.length) {
+      return weekDates.filter((d) => habit.frequency_days!.includes(getDayOfWeek(d))).length;
+    }
+    return habit.frequency_count;
+  })();
 
   const targetThisMonth =
     habit.frequency_type === "daily"
@@ -259,25 +327,13 @@ export function computeHabitStats(habit: Habit, entries: HabitEntry[]): HabitSta
   let longestStreak: number;
 
   if (habit.frequency_type === "daily") {
-    currentStreak = computeCurrentStreakDaily(
-      completedDates,
-      habit.time_goal_minutes,
-      todayStr
-    );
-    longestStreak = computeLongestStreakDaily(
-      completedDates,
-      habit.time_goal_minutes,
-      habit.start_date,
-      todayStr
-    );
+    currentStreak = computeCurrentStreakDaily(completedDates, habit.time_goal_minutes, todayStr);
+    longestStreak = computeLongestStreakDaily(completedDates, habit.time_goal_minutes, habit.start_date, todayStr);
+  } else if (habit.frequency_type === "weekly" && habit.frequency_days?.length) {
+    currentStreak = computeCurrentStreakSpecificDays(completedDates, habit.time_goal_minutes, habit.frequency_days, todayStr);
+    longestStreak = computeLongestStreakSpecificDays(completedDates, habit.time_goal_minutes, habit.frequency_days, habit.start_date, todayStr);
   } else {
-    const { current, longest } = computeStreakWeekly(
-      completedDates,
-      habit.time_goal_minutes,
-      habit.frequency_count,
-      habit.start_date,
-      today
-    );
+    const { current, longest } = computeStreakWeekly(completedDates, habit.time_goal_minutes, habit.frequency_count, habit.start_date, today);
     currentStreak = current;
     longestStreak = longest;
   }
@@ -305,7 +361,8 @@ export function computeHabitStats(habit: Habit, entries: HabitEntry[]): HabitSta
       completedDates,
       habit.time_goal_minutes,
       habit.start_date,
-      todayStr
+      todayStr,
+      habit.frequency_type === "weekly" ? (habit.frequency_days ?? null) : null
     ),
   };
 }

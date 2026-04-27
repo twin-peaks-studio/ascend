@@ -38,6 +38,17 @@ const HABIT_COLORS = [
 
 const HABIT_ICONS = ["📚", "🏃", "🧘", "💪", "✍️", "🎯", "🍎", "💧", "🧠", "📊", "🎨", "🎵"];
 
+// Mon-first display order; values match JS Date.getDay() (0=Sun, 1=Mon, ..., 6=Sat)
+const DAYS_OF_WEEK = [
+  { label: "M", value: 1, name: "Mon" },
+  { label: "T", value: 2, name: "Tue" },
+  { label: "W", value: 3, name: "Wed" },
+  { label: "T", value: 4, name: "Thu" },
+  { label: "F", value: 5, name: "Fri" },
+  { label: "S", value: 6, name: "Sat" },
+  { label: "S", value: 0, name: "Sun" },
+];
+
 interface HabitCreateDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -66,6 +77,15 @@ export function HabitCreateDialog({
   const [frequencyCount, setFrequencyCount] = useState(
     editHabit?.frequency_count?.toString() ?? "1"
   );
+  const [selectedDays, setSelectedDays] = useState<number[]>(
+    editHabit?.frequency_days ?? []
+  );
+
+  const toggleDay = (day: number) => {
+    setSelectedDays((prev) =>
+      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day].sort((a, b) => a - b)
+    );
+  };
   const [timeGoal, setTimeGoal] = useState(
     editHabit?.time_goal_minutes?.toString() ?? ""
   );
@@ -78,12 +98,18 @@ export function HabitCreateDialog({
   const handleSubmit = async () => {
     if (!title.trim()) return;
 
+    const days = frequencyType === "weekly" ? selectedDays : null;
     const payload = {
       title: title.trim(),
       description: description.trim() || null,
       frequency_type: frequencyType,
       frequency_count:
-        frequencyType === "daily" ? 1 : parseInt(frequencyCount, 10) || 1,
+        frequencyType === "daily"
+          ? 1
+          : frequencyType === "weekly" && selectedDays.length > 0
+          ? selectedDays.length
+          : parseInt(frequencyCount, 10) || 1,
+      frequency_days: days && days.length > 0 ? days : null,
       time_goal_minutes: timeGoal ? parseInt(timeGoal, 10) : null,
       color: selectedColor,
       icon: selectedIcon,
@@ -112,12 +138,14 @@ export function HabitCreateDialog({
     }
   };
 
-  const frequencyLabel =
-    frequencyType === "daily"
-      ? "Every day"
-      : frequencyType === "weekly"
-      ? `${frequencyCount}× per week`
-      : `${frequencyCount}× per month`;
+  const frequencyLabel = (() => {
+    if (frequencyType === "daily") return "Every day";
+    if (frequencyType === "monthly") return `${frequencyCount}× per month`;
+    if (selectedDays.length === 0) return "Select days below";
+    // Show days in Mon-first order
+    const ordered = DAYS_OF_WEEK.filter((d) => selectedDays.includes(d.value));
+    return ordered.map((d) => d.name).join(", ");
+  })();
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -183,7 +211,7 @@ export function HabitCreateDialog({
           </div>
 
           {/* Frequency */}
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             <Label>Frequency</Label>
             <div className="flex gap-2">
               <Select
@@ -195,26 +223,43 @@ export function HabitCreateDialog({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="daily">Every day</SelectItem>
-                  <SelectItem value="weekly">X times per week</SelectItem>
+                  <SelectItem value="weekly">Specific days of the week</SelectItem>
                   <SelectItem value="monthly">X times per month</SelectItem>
                 </SelectContent>
               </Select>
-              {frequencyType !== "daily" && (
+              {frequencyType === "monthly" && (
                 <div className="flex items-center gap-1.5">
                   <Input
                     type="number"
                     min="1"
-                    max={frequencyType === "weekly" ? "7" : "31"}
+                    max="31"
                     value={frequencyCount}
                     onChange={(e) => setFrequencyCount(e.target.value)}
                     className="w-16 text-center"
                   />
-                  <span className="text-sm text-muted-foreground whitespace-nowrap">
-                    × / {frequencyType === "weekly" ? "wk" : "mo"}
-                  </span>
+                  <span className="text-sm text-muted-foreground whitespace-nowrap">× / mo</span>
                 </div>
               )}
             </div>
+            {frequencyType === "weekly" && (
+              <div className="flex gap-1.5">
+                {DAYS_OF_WEEK.map((day) => (
+                  <button
+                    key={day.value}
+                    type="button"
+                    onClick={() => toggleDay(day.value)}
+                    className={cn(
+                      "flex-1 h-9 rounded-md text-xs font-semibold transition-colors",
+                      selectedDays.includes(day.value)
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted text-muted-foreground hover:bg-muted/70"
+                    )}
+                  >
+                    {day.label}
+                  </button>
+                ))}
+              </div>
+            )}
             <p className="text-xs text-muted-foreground">{frequencyLabel}</p>
           </div>
 
@@ -289,7 +334,14 @@ export function HabitCreateDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
             Cancel
           </Button>
-          <Button onClick={handleSubmit} disabled={loading || !title.trim()}>
+          <Button
+            onClick={handleSubmit}
+            disabled={
+              loading ||
+              !title.trim() ||
+              (frequencyType === "weekly" && selectedDays.length === 0)
+            }
+          >
             {loading ? "Saving..." : isEditing ? "Save changes" : "Create habit"}
           </Button>
         </DialogFooter>

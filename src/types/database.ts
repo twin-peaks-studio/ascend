@@ -1153,6 +1153,7 @@ export type Database = {
           icon: string | null;
           frequency_type: "daily" | "weekly" | "monthly";
           frequency_count: number;
+          frequency_days: number[] | null;
           time_goal_minutes: number | null;
           start_date: string;
           is_archived: boolean;
@@ -1171,6 +1172,7 @@ export type Database = {
           icon?: string | null;
           frequency_type?: "daily" | "weekly" | "monthly";
           frequency_count?: number;
+          frequency_days?: number[] | null;
           time_goal_minutes?: number | null;
           start_date?: string;
           is_archived?: boolean;
@@ -1189,6 +1191,7 @@ export type Database = {
           icon?: string | null;
           frequency_type?: "daily" | "weekly" | "monthly";
           frequency_count?: number;
+          frequency_days?: number[] | null;
           time_goal_minutes?: number | null;
           start_date?: string;
           is_archived?: boolean;

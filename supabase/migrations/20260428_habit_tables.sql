@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS public.habits (
   icon TEXT,
   frequency_type TEXT NOT NULL DEFAULT 'daily' CHECK (frequency_type IN ('daily', 'weekly', 'monthly')),
   frequency_count INTEGER NOT NULL DEFAULT 1,
+  frequency_days INTEGER[],  -- JS getDay() values (0=Sun,1=Mon,...,6=Sat); set for specific-day weekly habits
   time_goal_minutes INTEGER,
   start_date DATE NOT NULL DEFAULT CURRENT_DATE,
   is_archived BOOLEAN NOT NULL DEFAULT FALSE,
