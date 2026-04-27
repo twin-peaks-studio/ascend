@@ -8,6 +8,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -130,18 +131,30 @@ export function HabitCreateDialog({
           <div className="flex gap-2 items-start">
             <div>
               <Label className="sr-only">Icon</Label>
-              <Select value={selectedIcon} onValueChange={setSelectedIcon}>
-                <SelectTrigger className="w-16 text-xl h-10">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {HABIT_ICONS.map((icon) => (
-                    <SelectItem key={icon} value={icon} className="text-xl">
-                      {icon}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-12 h-10 text-xl px-0">
+                    {selectedIcon}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-2" align="start">
+                  <div className="grid grid-cols-4 gap-1">
+                    {HABIT_ICONS.map((icon) => (
+                      <button
+                        key={icon}
+                        type="button"
+                        onClick={() => setSelectedIcon(icon)}
+                        className={cn(
+                          "w-10 h-10 text-xl flex items-center justify-center rounded-md hover:bg-muted transition-colors",
+                          selectedIcon === icon && "bg-muted ring-2 ring-primary"
+                        )}
+                      >
+                        {icon}
+                      </button>
+                    ))}
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
             <div className="flex-1 space-y-1.5">
               <Label>Name</Label>
